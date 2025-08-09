@@ -1,11 +1,17 @@
 import { app, IpcMain } from "electron";
 import path from "node:path";
 import { createRequire } from "node:module";
-import * as XLSX from 'xlsx';
+import axios from 'axios';
+import * as dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 const require = createRequire(import.meta.url);
-// Load native module in CJS context to avoid ESM __filename issues
 const Database = require("better-sqlite3") as any;
+
+// Cache for API results to avoid hitting rate limits
+const barcodeCache = new Map<string, any>();
 
 let _db: any;
 
@@ -51,13 +57,10 @@ export function addToInventory(sku: string, name: string, qty: number) {
 function normalizeUPC(value: any): string {
   if (value === null || value === undefined) return '';
   
-  // Handle different data types
   let upcStr = '';
   
   if (typeof value === 'number') {
-    // Handle scientific notation and large numbers
     if (value > 1e10) {
-      // Likely a large number that might be in scientific notation
       upcStr = value.toFixed(0);
     } else {
       upcStr = value.toString();
@@ -66,10 +69,7 @@ function normalizeUPC(value: any): string {
     upcStr = value.toString().trim();
   }
   
-  // Remove all non-digit characters
   const digitsOnly = upcStr.replace(/\D/g, '');
-  
-  // Pad with leading zeros to make it 12 digits if it's shorter
   return digitsOnly.padStart(12, '0');
 }
 
@@ -84,15 +84,12 @@ function parseCSVLine(line: string): string[] {
     
     if (char === '"') {
       if (inQuotes && nextChar === '"') {
-        // Escaped quote
         current += '"';
-        i++; // Skip next quote
+        i++;
       } else {
-        // Toggle quote state
         inQuotes = !inQuotes;
       }
     } else if (char === ',' && !inQuotes) {
-      // Field separator
       result.push(current);
       current = '';
     } else {
@@ -104,53 +101,36 @@ function parseCSVLine(line: string): string[] {
   return result;
 }
 
-export function searchProductByUPC(upc: string) {
-  console.log('Searching for UPC:', upc);
+// Search local CSV file
+function searchLocalCSV(upc: string) {
+  console.log('Searching local CSV for UPC:', upc);
   try {
     const fs = require('fs');
-    
-    // Look for CSV file
     const csvPath = path.join(process.cwd(), 'Products.csv');
-    
-    console.log('Looking for CSV file at:', csvPath);
     
     if (!fs.existsSync(csvPath)) {
       console.log('CSV file not found');
       return null;
     }
     
-    // Read CSV file
     const csvContent = fs.readFileSync(csvPath, 'utf8');
     const lines = csvContent.split('\n').filter(line => line.trim().length > 0);
     
-    console.log('CSV data loaded, rows:', lines.length - 1);
-    
     if (lines.length === 0) {
-      console.log('No data found in CSV file');
       return null;
     }
     
-    // Parse headers
     const headers = parseCSVLine(lines[0]);
-    console.log('Headers found:', headers.map(h => `"${h}"`));
-    
-    // Find UPC column
     const upcColumnIndex = headers.findIndex((header: string) => 
       header && header.toLowerCase().trim() === 'upc'
     );
     
-    console.log('UPC column index:', upcColumnIndex);
-    
     if (upcColumnIndex === -1) {
-      console.log('No UPC column found');
       return null;
     }
     
-    // Normalize the search UPC
     const searchUPC = normalizeUPC(upc);
-    console.log('Normalized search UPC:', searchUPC);
     
-    // Search through rows
     for (let i = 1; i < lines.length; i++) {
       const row = parseCSVLine(lines[i]);
       if (!row || row.length <= upcColumnIndex) continue;
@@ -158,19 +138,11 @@ export function searchProductByUPC(upc: string) {
       const rowUPCRaw = row[upcColumnIndex];
       if (!rowUPCRaw) continue;
       
-      // Normalize the row UPC
       const rowUPC = normalizeUPC(rowUPCRaw);
       
-      // Only log first few rows and potential matches to avoid spam
-      if (i <= 5 || rowUPC === searchUPC) {
-        console.log(`Row ${i}: Raw UPC = "${rowUPCRaw}" (type: ${typeof rowUPCRaw}), Normalized = "${rowUPC}", Target = "${searchUPC}"`);
-      }
-      
       if (rowUPC === searchUPC) {
-        console.log('Found matching UPC at row', i);
-        
-        // Build product object using the actual header names
-        const result = {
+        console.log('Found in local CSV');
+        return {
           itemNumber: (row[headers.indexOf('Item Number')] || '').toString(),
           categoryName: (row[headers.indexOf('Category Name')] || '').toString(),
           itemDescription: (row[headers.indexOf('Item Description')] || '').toString(),
@@ -182,18 +154,153 @@ export function searchProductByUPC(upc: string) {
           stateBottleCost: (row[headers.indexOf('State Bottle Cost')] || '').toString(),
           stateBottleRetail: (row[headers.indexOf('State Bottle Retail')] || '').toString()
         };
-        
-        console.log('Returning product:', result);
-        return result;
       }
     }
     
-    console.log(`No matching UPC found for: ${searchUPC} in ${lines.length - 1} rows`);
     return null;
   } catch (error) {
     console.error('Error reading CSV file:', error);
     return null;
   }
+}
+
+// Append product to CSV file
+function appendToCSV(product: any) {
+  try {
+    const fs = require('fs');
+    const csvPath = path.join(process.cwd(), 'Products.csv');
+    
+    // Create backup first time we modify the CSV each day
+    const today = new Date().toISOString().split('T')[0];
+    const backupPath = path.join(process.cwd(), `Products_backup_${today}.csv`);
+    
+    if (fs.existsSync(csvPath) && !fs.existsSync(backupPath)) {
+      fs.copyFileSync(csvPath, backupPath);
+      console.log('Created daily backup:', backupPath);
+    }
+    
+    // Check if CSV exists
+    if (!fs.existsSync(csvPath)) {
+      console.log('Creating new Products.csv file');
+      // Create header if file doesn't exist
+      const headers = 'Item Number,Category Name,Item Description,Vendor,Vendor Name,Bottle Volume (ml),Pack,UPC,State Bottle Cost,State Bottle Retail\n';
+      fs.writeFileSync(csvPath, headers);
+    }
+    
+    // Format product data for CSV
+    const csvRow = [
+      product.itemNumber || '',
+      product.categoryName || '',
+      `"${(product.itemDescription || '').replace(/"/g, '""')}"`, // Escape quotes
+      product.vendor || '',
+      product.vendorName || '',
+      product.bottleVolumeML || '',
+      product.pack || '1',
+      product.upc || '',
+      product.stateBottleCost || '',
+      product.stateBottleRetail || ''
+    ].join(',');
+    
+    // Append to CSV
+    fs.appendFileSync(csvPath, '\n' + csvRow);
+    console.log('Added product to CSV:', product.itemDescription);
+    
+    return true;
+  } catch (error) {
+    console.error('Error appending to CSV:', error);
+    return false;
+  }
+}
+
+// Search using BarcodeLookup API
+async function searchBarcodeLookupAPI(upc: string) {
+  // Check cache first
+  if (barcodeCache.has(upc)) {
+    console.log('Returning cached result for UPC:', upc);
+    return barcodeCache.get(upc);
+  }
+
+  const apiKey = process.env.BARCODE_LOOKUP_API_KEY;
+  
+  if (!apiKey) {
+    console.log('BarcodeLookup API key not configured');
+    return null;
+  }
+
+  try {
+    console.log('Calling BarcodeLookup API for UPC:', upc);
+    
+    const response = await axios.get('https://api.barcodelookup.com/v3/products', {
+      params: {
+        barcode: upc,
+        key: apiKey
+      },
+      timeout: 5000 // 5 second timeout
+    });
+
+    if (response.data && response.data.products && response.data.products.length > 0) {
+      const product = response.data.products[0];
+      console.log('Found product via API:', product.title);
+      
+      // Map API response to your product structure
+      const mappedProduct = {
+        itemNumber: product.mpn || '',
+        categoryName: product.category || '',
+        itemDescription: product.title || product.product_name || '',
+        vendor: product.manufacturer || product.brand || '',
+        vendorName: product.manufacturer || product.brand || '',
+        bottleVolumeML: product.size || '',
+        pack: '1', // API doesn't provide pack info
+        upc: product.barcode_number || upc,
+        stateBottleCost: '', // API doesn't provide cost
+        stateBottleRetail: product.stores && product.stores.length > 0 
+          ? product.stores[0].price 
+          : ''
+      };
+      
+      // Cache the result
+      barcodeCache.set(upc, mappedProduct);
+      
+      // Auto-save to CSV for future lookups
+      appendToCSV(mappedProduct);
+      
+      return mappedProduct;
+    }
+    
+    // Cache null result to avoid repeated API calls for not found items
+    barcodeCache.set(upc, null);
+    return null;
+    
+  } catch (error: any) {
+    if (error.response?.status === 404) {
+      console.log('Product not found in BarcodeLookup API');
+      barcodeCache.set(upc, null);
+    } else if (error.response?.status === 403) {
+      console.error('BarcodeLookup API key invalid or rate limit exceeded');
+    } else {
+      console.error('BarcodeLookup API error:', error.message);
+    }
+    return null;
+  }
+}
+
+export async function searchProductByUPC(upc: string) {
+  console.log('Starting product search for UPC:', upc);
+  
+  // Try local CSV first (faster and no API limits)
+  const localResult = searchLocalCSV(upc);
+  if (localResult) {
+    return localResult;
+  }
+  
+  // If not found locally, try BarcodeLookup API
+  const apiResult = await searchBarcodeLookupAPI(upc);
+  if (apiResult) {
+    return apiResult;
+  }
+  
+  console.log('Product not found in any source');
+  return null;
 }
 
 export function registerInventoryIpc(ipcMain: IpcMain) {

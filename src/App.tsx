@@ -21,12 +21,6 @@ export default function App() {
     setMsg(`Added. On hand for ${sku}: ${res.onHand}`);
   }
 
-  const handleProductFound = (product: ProductData | null, upc?: string) => {
-    setFoundProduct(product);
-    if (upc) setSearchedUPC(upc);
-    setActiveTab('view');
-  };
-
   const handleScannerSearch = (product: ProductData | null, searchedUPC: string) => {
     console.log('App: handleScannerSearch called with product:', product, 'UPC:', searchedUPC);
     setFoundProduct(product);

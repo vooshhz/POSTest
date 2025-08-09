@@ -3,6 +3,10 @@ import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { registerInventoryIpc } from './db'
+import * as dotenv from 'dotenv'
+
+// Load environment variables
+dotenv.config()
 
 const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
