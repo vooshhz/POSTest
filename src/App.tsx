@@ -1,11 +1,17 @@
-import BarcodeScanner from "./BarcodeScanner";
+// REPLACE THE ENTIRE src/App.tsx file with this:
+
+import CartScanner from "./CartScanner";
+import InventoryList from "./InventoryList";
 import "./App.css";
 import { useState } from "react";
 
 export default function App() {
+  const [currentView, setCurrentView] = useState<"scanner" | "inventory">("scanner");
+
+  /* Commented out CSV import functionality - preserved for future use
   const [importStatus, setImportStatus] = useState("");
   const [importing, setImporting] = useState(false);
-
+  
   const handleImport = async () => {
     setImporting(true);
     setImportStatus("Importing CSV data...");
@@ -23,33 +29,28 @@ export default function App() {
       setImporting(false);
     }
   };
+  */
 
   return (
     <div className="app">
       <h1>Liquor Inventory System</h1>
       
-      <div style={{ marginBottom: "2rem" }}>
+      <div className="nav-tabs">
         <button 
-          onClick={handleImport}
-          disabled={importing}
-          style={{
-            padding: "10px 20px",
-            fontSize: "16px",
-            backgroundColor: importing ? "#ccc" : "#4CAF50",
-            color: "white",
-            border: "none",
-            borderRadius: "5px",
-            cursor: importing ? "not-allowed" : "pointer"
-          }}
+          className={`nav-tab ${currentView === "scanner" ? "active" : ""}`}
+          onClick={() => setCurrentView("scanner")}
         >
-          {importing ? "Importing..." : "Import CSV Data"}
+          Scanner
         </button>
-        {importStatus && (
-          <p style={{ marginTop: "10px" }}>{importStatus}</p>
-        )}
+        <button 
+          className={`nav-tab ${currentView === "inventory" ? "active" : ""}`}
+          onClick={() => setCurrentView("inventory")}
+        >
+          Inventory
+        </button>
       </div>
       
-      <BarcodeScanner />
+      {currentView === "scanner" ? <CartScanner /> : <InventoryList />}
     </div>
   );
 }

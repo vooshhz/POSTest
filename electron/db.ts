@@ -1,4 +1,5 @@
-// electron/db.ts
+// REPLACE THE ENTIRE electron/db.ts file with this:
+
 import { IpcMain } from "electron";
 import Database from "better-sqlite3";
 import path from "node:path";
@@ -11,6 +12,9 @@ const inventoryDbPath = path.join(process.cwd(), "LiquorInventory.db");
 
 let productsDb: Database.Database | null = null;
 let inventoryDb: Database.Database | null = null;
+
+// Track if handlers are already registered
+let handlersRegistered = false;
 
 // Get products database (read-only for product catalog)
 function getProductsDb() {
@@ -59,6 +63,15 @@ interface InventoryItem {
 }
 
 export function registerInventoryIpc(ipcMain: IpcMain) {
+  // Only register handlers once
+  if (handlersRegistered) {
+    console.log("IPC handlers already registered, skipping...");
+    return;
+  }
+  
+  handlersRegistered = true;
+  console.log("Registering IPC handlers...");
+
   // Import CSV data
   ipcMain.handle("import-csv", async () => {
     try {
@@ -237,6 +250,106 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
       return {
         success: false,
         error: error instanceof Error ? error.message : "Database error"
+      };
+    }
+  });
+
+  // Get all inventory items
+  ipcMain.handle("get-inventory", async () => {
+    try {
+      const invDb = getInventoryDb();
+      const prodDb = getProductsDb();
+      
+      // Get all inventory items with product details
+      const inventoryItems = invDb.prepare(`
+        SELECT 
+          i.id,
+          i.upc,
+          i.cost,
+          i.price,
+          i.quantity,
+          i.updated_at
+        FROM inventory i
+        ORDER BY i.updated_at DESC
+      `).all();
+      
+      // Enrich with product details
+      const enrichedItems = inventoryItems.map((item: any) => {
+        const product = prodDb.prepare(`
+          SELECT 
+            "Item Description" as description,
+            "Category Name" as category,
+            "Bottle Volume (ml)" as volume
+          FROM products 
+          WHERE "UPC" = ?
+        `).get(item.upc) as any;
+        
+        return {
+          ...item,
+          description: product?.description || null,
+          category: product?.category || null,
+          volume: product?.volume || null
+        };
+      });
+      
+      return {
+        success: true,
+        data: enrichedItems
+      };
+    } catch (error) {
+      console.error("Get inventory error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to load inventory"
+      };
+    }
+  });
+
+  // Check if item exists in inventory (for cart scanner)
+  ipcMain.handle("check-inventory", async (_, upc: string) => {
+    try {
+      const invDb = getInventoryDb();
+      
+      // Check if item exists in inventory
+      const inventoryItem = invDb.prepare(`
+        SELECT * FROM inventory WHERE upc = ?
+      `).get(upc) as any;
+      
+      if (inventoryItem) {
+        // Get product details from products database
+        const prodDb = getProductsDb();
+        const product = prodDb.prepare(`
+          SELECT 
+            "Item Description" as description,
+            "Category Name" as category,
+            "Bottle Volume (ml)" as volume
+          FROM products 
+          WHERE "UPC" = ?
+        `).get(upc) as any;
+        
+        return {
+          success: true,
+          data: {
+            upc: inventoryItem.upc,
+            description: product?.description || null,
+            category: product?.category || null,
+            volume: product?.volume || null,
+            cost: inventoryItem.cost,
+            price: inventoryItem.price,
+            quantity: inventoryItem.quantity
+          }
+        };
+      } else {
+        return {
+          success: false,
+          error: "Item not in inventory"
+        };
+      }
+    } catch (error) {
+      console.error("Check inventory error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to check inventory"
       };
     }
   });

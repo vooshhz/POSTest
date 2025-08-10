@@ -1,0 +1,186 @@
+.inventory-container {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  height: calc(100vh - 200px); /* Adjust based on your header height */
+  display: flex;
+  flex-direction: column;
+}
+
+.inventory-container h2 {
+  margin-bottom: 1.5rem;
+  color: #333;
+  flex-shrink: 0; /* Prevents shrinking */
+}
+
+.inventory-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-shrink: 0; /* Prevents shrinking */
+}
+
+.summary-card {
+  background: linear-gradient(135deg, #646cff 0%, #535bf2 100%);
+  color: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.summary-label {
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.summary-value {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.inventory-loading,
+.inventory-error,
+.no-inventory {
+  text-align: center;
+  padding: 2rem;
+  font-size: 1.1rem;
+  color: #333;
+}
+
+.inventory-error {
+  color: #c00;
+}
+
+.inventory-table-wrapper {
+  flex: 1; /* Takes remaining space */
+  overflow: auto; /* Enable scrolling */
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  background: white;
+  min-height: 0; /* Important for Firefox */
+}
+
+.inventory-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+}
+
+.inventory-table thead {
+  background: #f5f5f5;
+  position: sticky; /* Keep header visible while scrolling */
+  top: 0;
+  z-index: 10;
+}
+
+.inventory-table th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #666;
+  border-bottom: 2px solid #ddd;
+  white-space: nowrap;
+  background: #f5f5f5; /* Ensure background stays during scroll */
+}
+
+.inventory-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s;
+}
+
+.inventory-table th.sortable:hover {
+  background: #e8e8e8;
+}
+
+.inventory-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #eee;
+  color: #333;
+}
+
+.inventory-table tbody tr:hover {
+  background: #f9f9ff;
+}
+
+.upc-cell {
+  font-family: monospace;
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.description-cell {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #333;
+}
+
+.quantity-cell {
+  font-weight: 600;
+  text-align: center;
+  color: #333;
+}
+
+.total-cell {
+  font-weight: 600;
+  color: #646cff;
+}
+
+/* Dark mode override - ensure text stays dark */
+@media (prefers-color-scheme: dark) {
+  .inventory-table td,
+  .upc-cell,
+  .description-cell,
+  .quantity-cell {
+    color: #333 !important;
+  }
+  
+  .inventory-table {
+    background: white;
+  }
+  
+  .inventory-table tbody tr:hover {
+    background: #f9f9ff;
+  }
+}
+
+/* Custom scrollbar for the table */
+.inventory-table-wrapper::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.inventory-table-wrapper::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.inventory-table-wrapper::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.inventory-table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+@media (max-width: 768px) {
+  .inventory-table {
+    font-size: 0.85rem;
+  }
+  
+  .inventory-table th,
+  .inventory-table td {
+    padding: 0.5rem;
+  }
+  
+  .inventory-container {
+    height: calc(100vh - 150px); /* Smaller adjustment for mobile */
+  }
+}
