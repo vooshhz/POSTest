@@ -1,8 +1,5 @@
-import { contextBridge, ipcRenderer } from "electron";
+import { contextBridge } from "electron";
 
 contextBridge.exposeInMainWorld("api", {
-  addToInventory: (sku: string, name: string, qty: number) =>
-    ipcRenderer.invoke("inventory:add", { sku, name, qty }),
-  searchProductByUPC: (upc: string) =>
-    ipcRenderer.invoke("product:searchByUPC", upc),
+  // API methods will go here
 });
