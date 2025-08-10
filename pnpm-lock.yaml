@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@types/papaparse':
+        specifier: ^5.3.16
+        version: 5.3.16
       axios:
         specifier: ^1.6.0
         version: 1.11.0
@@ -23,6 +26,9 @@ importers:
       jsbarcode:
         specifier: ^3.12.1
         version: 3.12.1
+      papaparse:
+        specifier: ^5.5.3
+        version: 5.5.3
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -36,6 +42,9 @@ importers:
       '@electron/rebuild':
         specifier: ^4.0.1
         version: 4.0.1
+      '@types/node':
+        specifier: ^24.2.1
+        version: 24.2.1
       '@types/react':
         specifier: ^18.2.64
         version: 18.3.23
@@ -740,6 +749,9 @@ packages:
 
   '@types/node@24.2.1':
     resolution: {integrity: sha512-DRh5K+ka5eJic8CjH7td8QpYEV6Zo10gfRkjHCO3weqZHWDtAaSTFtl4+VMqOJ4N5jcuhZ9/l+yy8rVgw7BQeQ==}
+
+  '@types/papaparse@5.3.16':
+    resolution: {integrity: sha512-T3VuKMC2H0lgsjI9buTB3uuKj3EMD2eap1MOuEQuBQ44EnDx/IkGhU6EwiTf9zG3za4SKlmwKAImdDKdNnCsXg==}
 
   '@types/plist@3.0.5':
     resolution: {integrity: sha512-E6OCaRmAe4WDmWNsL/9RMqdkkzDCY1etutkflWk4c+AcjDU07Pcz1fQwTX0TQz+Pxqn9i4L1TU3UFpjnrcDgxA==}
@@ -1987,6 +1999,9 @@ packages:
   package-json-from-dist@1.0.1:
     resolution: {integrity: sha512-UEZIS3/by4OC8vL3P2dTXRETpebLI2NiI5vIrjaD/5UtrkFX/tNbwjTSRAGC/+7CAo2pIcBaRgWmcBBHcsaCIw==}
 
+  papaparse@5.5.3:
+    resolution: {integrity: sha512-5QvjGxYVjxO59MGU2lHVYpRWBBtKHnlIAcSe1uNFCkkptUh63NFRj0FJQm7nR67puEruUci/ZkjmEFrjCAyP4A==}
+
   parent-module@1.0.1:
     resolution: {integrity: sha512-GQ2EWRpQV8/o+Aw8YqtfZZPfNRWZYkbidE9k5rpl/hC3vtHHBfGm2Ifi6qWV+coDGkrUKZAxE3Lot5kcsRlh+g==}
     engines: {node: '>=6'}
@@ -3075,7 +3090,7 @@ snapshots:
     dependencies:
       '@types/http-cache-semantics': 4.0.4
       '@types/keyv': 3.1.4
-      '@types/node': 20.19.10
+      '@types/node': 24.2.1
       '@types/responselike': 1.0.3
 
   '@types/debug@4.1.12':
@@ -3092,7 +3107,7 @@ snapshots:
 
   '@types/keyv@3.1.4':
     dependencies:
-      '@types/node': 20.19.10
+      '@types/node': 24.2.1
 
   '@types/ms@2.1.0': {}
 
@@ -3103,6 +3118,10 @@ snapshots:
   '@types/node@24.2.1':
     dependencies:
       undici-types: 7.10.0
+
+  '@types/papaparse@5.3.16':
+    dependencies:
+      '@types/node': 24.2.1
 
   '@types/plist@3.0.5':
     dependencies:
@@ -3123,14 +3142,14 @@ snapshots:
 
   '@types/responselike@1.0.3':
     dependencies:
-      '@types/node': 20.19.10
+      '@types/node': 24.2.1
 
   '@types/verror@1.10.11':
     optional: true
 
   '@types/yauzl@2.10.3':
     dependencies:
-      '@types/node': 20.19.10
+      '@types/node': 24.2.1
     optional: true
 
   '@typescript-eslint/eslint-plugin@7.18.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.9.2))(eslint@8.57.1)(typescript@5.9.2)':
@@ -4559,6 +4578,8 @@ snapshots:
   p-map@7.0.3: {}
 
   package-json-from-dist@1.0.1: {}
+
+  papaparse@5.5.3: {}
 
   parent-module@1.0.1:
     dependencies:
