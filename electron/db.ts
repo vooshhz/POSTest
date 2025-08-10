@@ -1,18 +1,31 @@
+// electron/db.ts
 import { IpcMain } from "electron";
 import Database from "better-sqlite3";
 import path from "node:path";
 import fs from "node:fs";
 import Papa from "papaparse";
 
-// Create database connection
-const dbPath = path.join(process.cwd(), "LiquorDatabase.db");
-let db: Database.Database | null = null;
+// Separate database connections
+const productsDbPath = path.join(process.cwd(), "LiquorDatabase.db");
+const inventoryDbPath = path.join(process.cwd(), "LiquorInventory.db");
 
-function getDb() {
-  if (!db) {
-    db = new Database(dbPath);
+let productsDb: Database.Database | null = null;
+let inventoryDb: Database.Database | null = null;
+
+// Get products database (read-only for product catalog)
+function getProductsDb() {
+  if (!productsDb) {
+    productsDb = new Database(productsDbPath, { readonly: true });
+  }
+  return productsDb;
+}
+
+// Get inventory database (read-write for inventory tracking)
+function getInventoryDb() {
+  if (!inventoryDb) {
+    inventoryDb = new Database(inventoryDbPath);
     // Create inventory table if it doesn't exist
-    db.exec(`
+    inventoryDb.exec(`
       CREATE TABLE IF NOT EXISTS inventory (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         upc TEXT NOT NULL UNIQUE,
@@ -24,8 +37,9 @@ function getDb() {
       );
       CREATE INDEX IF NOT EXISTS idx_inventory_upc ON inventory(upc);
     `);
+    console.log("✅ Inventory database initialized at:", inventoryDbPath);
   }
-  return db;
+  return inventoryDb;
 }
 
 // Product interface
@@ -75,13 +89,13 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
         console.error('CSV parsing errors:', errors);
       }
 
-      // Close existing connection and create writable one
-      if (db) {
-        db.close();
-        db = null;
+      // Close existing products connection and create writable one
+      if (productsDb) {
+        productsDb.close();
+        productsDb = null;
       }
 
-      const newDb = new Database(dbPath);
+      const newDb = new Database(productsDbPath);
       
       // Create table with EXACT column names
       newDb.exec(`
@@ -162,7 +176,7 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
       const count = newDb.prepare('SELECT COUNT(*) as count FROM products').get() as any;
       
       newDb.close();
-      db = null; // Reset to force reconnection
+      productsDb = null; // Reset to force reconnection
 
       return {
         success: true,
@@ -181,9 +195,10 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
   // Search product by UPC
   ipcMain.handle("search-by-upc", async (_, upc: string) => {
     try {
-      const db = getDb();
+      const prodDb = getProductsDb();
+      const invDb = getInventoryDb();
       
-      // Using the EXACT column names from the database
+      // Search in products database
       const query = `
         SELECT 
           "UPC" as upc,
@@ -195,11 +210,11 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
         WHERE "UPC" = ?
       `;
       
-      const product = db.prepare(query).get(upc) as Product | undefined;
+      const product = prodDb.prepare(query).get(upc) as Product | undefined;
       
       if (product) {
-        // Check if already in inventory
-        const inventoryCheck = db.prepare(`
+        // Check if already in inventory database
+        const inventoryCheck = invDb.prepare(`
           SELECT * FROM inventory WHERE upc = ?
         `).get(upc);
         
@@ -229,16 +244,16 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
   // Add to inventory
   ipcMain.handle("add-to-inventory", async (_, item: InventoryItem) => {
     try {
-      const db = getDb();
+      const invDb = getInventoryDb();
       
-      // Check if already exists
-      const existing = db.prepare(`
+      // Check if already exists in inventory
+      const existing = invDb.prepare(`
         SELECT * FROM inventory WHERE upc = ?
       `).get(item.upc);
       
       if (existing) {
         // Update existing record
-        const stmt = db.prepare(`
+        const stmt = invDb.prepare(`
           UPDATE inventory 
           SET quantity = quantity + ?, 
               cost = ?, 
@@ -255,7 +270,7 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
         };
       } else {
         // Insert new record
-        const stmt = db.prepare(`
+        const stmt = invDb.prepare(`
           INSERT INTO inventory (upc, cost, price, quantity)
           VALUES (?, ?, ?, ?)
         `);
@@ -279,7 +294,12 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
 
 // Cleanup on app quit
 process.on("exit", () => {
-  if (db) {
-    db.close();
+  if (productsDb) {
+    productsDb.close();
+    console.log("Closed products database");
+  }
+  if (inventoryDb) {
+    inventoryDb.close();
+    console.log("Closed inventory database");
   }
 });
