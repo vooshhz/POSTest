@@ -24,7 +24,14 @@ interface Product {
 type SortField = 'upc' | 'description' | 'category' | 'volume' | 'cost' | 'price' | 'quantity' | 'totalCost' | 'totalValue' | 'updated_at';
 type SortDirection = 'asc' | 'desc';
 
-export default function InventoryList() {
+interface InventoryListProps {
+  barcode: string;
+  setBarcode: (value: string) => void;
+  searchFilter: string;
+  setSearchFilter: (value: string) => void;
+}
+
+export default function InventoryList({ barcode, setBarcode, searchFilter, setSearchFilter }: InventoryListProps) {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -38,13 +45,18 @@ export default function InventoryList() {
   });
   
   // Scanner states
-  const [barcode, setBarcode] = useState("");
   const [product, setProduct] = useState<Product | null>(null);
   const [scanError, setScanError] = useState("");
   const [scanning, setScanning] = useState(false);
   const [inInventory, setInInventory] = useState(false);
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [inventoryForm, setInventoryForm] = useState({
+    cost: "",
+    price: "",
+    quantity: ""
+  });
+  const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+  const [editForm, setEditForm] = useState({
     cost: "",
     price: "",
     quantity: ""
@@ -147,14 +159,24 @@ export default function InventoryList() {
     setScanning(true);
     setScanError("");
     setProduct(null);
-    setShowAddForm(false);
+    setShowAddModal(false);
 
     try {
       const result = await window.api.searchByUpc(barcode.trim());
+      console.log("Search result:", result); // Debug log
       
       if (result.success && result.data) {
         setProduct(result.data);
         setInInventory(result.inInventory || false);
+        
+        if (result.inInventory) {
+          // If in inventory, just filter the table
+          setSearchFilter(barcode.trim());
+        } else {
+          // If not in inventory, open the modal
+          console.log("Opening modal for non-inventory item"); // Debug log
+          setShowAddModal(true);
+        }
       } else {
         setScanError(result.error || "Product not found");
       }
@@ -176,11 +198,29 @@ export default function InventoryList() {
     setBarcode("");
     setProduct(null);
     setScanError("");
-    setShowAddForm(false);
+    setShowAddModal(false);
     setInventoryForm({ cost: "", price: "", quantity: "" });
     setInInventory(false);
+    setSearchFilter(""); // Clear the filter
     inputRef.current?.focus();
   };
+
+  const closeAddModal = () => {
+    setShowAddModal(false);
+    setInventoryForm({ cost: "", price: "", quantity: "" });
+  };
+
+  // Handle ESC key for modals
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (showAddModal) closeAddModal();
+        if (editingItem) closeEditModal();
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [showAddModal, editingItem]);
 
   const handleAddToInventory = async () => {
     if (!product) return;
@@ -212,8 +252,7 @@ export default function InventoryList() {
 
       if (result.success) {
         alert(result.message);
-        setShowAddForm(false);
-        setInventoryForm({ cost: "", price: "", quantity: "" });
+        closeAddModal();
         setInInventory(true);
         clearSearch();
         loadInventory(); // Reload the inventory list
@@ -242,6 +281,63 @@ export default function InventoryList() {
   const getSortIndicator = (field: SortField) => {
     if (sortField !== field) return ' ↕';
     return sortDirection === 'desc' ? ' ↓' : ' ↑';
+  };
+
+  // Filter inventory based on search
+  const filteredInventory = searchFilter 
+    ? inventory.filter(item => item.upc.includes(searchFilter))
+    : inventory;
+
+  // Handle edit modal
+  const openEditModal = (item: InventoryItem) => {
+    setEditingItem(item);
+    setEditForm({
+      cost: item.cost.toString(),
+      price: item.price.toString(),
+      quantity: item.quantity.toString()
+    });
+  };
+
+  const closeEditModal = () => {
+    setEditingItem(null);
+    setEditForm({ cost: "", price: "", quantity: "" });
+  };
+
+  const handleUpdateItem = async () => {
+    if (!editingItem) return;
+    
+    const cost = parseFloat(editForm.cost);
+    const price = parseFloat(editForm.price);
+    const quantity = parseInt(editForm.quantity);
+
+    if (isNaN(cost) || isNaN(price) || isNaN(quantity)) {
+      alert("Please enter valid numbers");
+      return;
+    }
+
+    if (cost < 0 || price < 0 || quantity < 0) {
+      alert("Please enter positive values");
+      return;
+    }
+
+    try {
+      const result = await window.api.addToInventory({
+        upc: editingItem.upc,
+        cost,
+        price,
+        quantity
+      });
+
+      if (result.success) {
+        closeEditModal();
+        loadInventory();
+      } else {
+        alert(result.error || "Failed to update item");
+      }
+    } catch (err) {
+      alert("Failed to update item");
+      console.error(err);
+    }
   };
 
   if (loading) {
@@ -283,90 +379,9 @@ export default function InventoryList() {
           </div>
         )}
 
-        {product && (
-          <div className="product-info">
-            <h4>Product Found {inInventory && <span className="in-inventory">✓ In Inventory</span>}</h4>
-            <div className="product-details">
-              <div className="detail-row">
-                <span className="label">UPC:</span>
-                <span className="value">{product.upc}</span>
-              </div>
-              <div className="detail-row">
-                <span className="label">Description:</span>
-                <span className="value">{product.description || "N/A"}</span>
-              </div>
-              <div className="detail-row">
-                <span className="label">Category:</span>
-                <span className="value">{product.category || "N/A"}</span>
-              </div>
-              <div className="detail-row">
-                <span className="label">Volume:</span>
-                <span className="value">{product.volume ? `${product.volume} mL` : "N/A"}</span>
-              </div>
-            </div>
-
-            {!showAddForm && (
-              <button 
-                onClick={() => setShowAddForm(true)}
-                className="add-inventory-btn"
-              >
-                {inInventory ? "Update Inventory" : "Add to Inventory"}
-              </button>
-            )}
-
-            {showAddForm && (
-              <div className="inventory-form">
-                <h4>Inventory Details</h4>
-                <div className="form-group">
-                  <label>Cost ($):</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={inventoryForm.cost}
-                    onChange={(e) => setInventoryForm({...inventoryForm, cost: e.target.value})}
-                    placeholder="0.00"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Price ($):</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={inventoryForm.price}
-                    onChange={(e) => setInventoryForm({...inventoryForm, price: e.target.value})}
-                    placeholder="0.00"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Quantity:</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={inventoryForm.quantity}
-                    onChange={(e) => setInventoryForm({...inventoryForm, quantity: e.target.value})}
-                    placeholder="0"
-                  />
-                </div>
-                <div className="form-buttons">
-                  <button 
-                    onClick={handleAddToInventory} 
-                    className="submit-btn"
-                    disabled={scanning}
-                  >
-                    {scanning ? "Processing..." : (inInventory ? "Update" : "Add")}
-                  </button>
-                  <button 
-                    onClick={() => setShowAddForm(false)} 
-                    className="cancel-btn"
-                    disabled={scanning}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
+        {product && inInventory && (
+          <div className="in-inventory-notice">
+            ✓ Item found in inventory - showing filtered results below
           </div>
         )}
       </div>
@@ -394,8 +409,17 @@ export default function InventoryList() {
       {/* Inventory Table */}
       {error && <div className="inventory-error">Error: {error}</div>}
       
-      {inventory.length === 0 ? (
-        <div className="no-inventory">No items in inventory</div>
+      {searchFilter && (
+        <div className="filter-notice">
+          Showing results for UPC: {searchFilter} 
+          <button onClick={() => setSearchFilter("")} className="clear-filter-btn">Show All</button>
+        </div>
+      )}
+      
+      {filteredInventory.length === 0 ? (
+        <div className="no-inventory">
+          {searchFilter ? `No items found for UPC: ${searchFilter}` : "No items in inventory"}
+        </div>
       ) : (
         <div className="inventory-table-wrapper">
           <table className="inventory-table">
@@ -431,10 +455,11 @@ export default function InventoryList() {
                 <th onClick={() => handleSort('updated_at')} className="sortable">
                   Updated{getSortIndicator('updated_at')}
                 </th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {inventory.map((item) => (
+              {filteredInventory.map((item) => (
                 <tr key={item.id}>
                   <td className="upc-cell">{item.upc}</td>
                   <td className="description-cell">{item.description || "N/A"}</td>
@@ -446,10 +471,124 @@ export default function InventoryList() {
                   <td className="total-cell">{formatCurrency(item.cost * item.quantity)}</td>
                   <td className="total-cell">{formatCurrency(item.price * item.quantity)}</td>
                   <td>{formatDate(item.updated_at)}</td>
+                  <td>
+                    <button onClick={() => openEditModal(item)} className="modify-btn">Modify</button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+      
+      {/* Edit Modal */}
+      {editingItem && (
+        <div className="modal-overlay" onClick={closeEditModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3>Modify Inventory Item</h3>
+            <div className="modal-item-info">
+              <p><strong>UPC:</strong> {editingItem.upc}</p>
+              <p><strong>Description:</strong> {editingItem.description || "N/A"}</p>
+            </div>
+            <div className="modal-form">
+              <div className="form-group">
+                <label>Cost ($):</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={editForm.cost}
+                  onChange={(e) => setEditForm({...editForm, cost: e.target.value})}
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="form-group">
+                <label>Price ($):</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={editForm.price}
+                  onChange={(e) => setEditForm({...editForm, price: e.target.value})}
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="form-group">
+                <label>Quantity:</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={editForm.quantity}
+                  onChange={(e) => setEditForm({...editForm, quantity: e.target.value})}
+                  placeholder="0"
+                />
+              </div>
+              <div className="modal-buttons">
+                <button onClick={handleUpdateItem} className="save-btn">Save</button>
+                <button onClick={closeEditModal} className="cancel-btn">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Add to Inventory Modal */}
+      {console.log("Modal state:", { showAddModal, product })}
+      {showAddModal && product && (
+        <div className="modal-overlay" onClick={closeAddModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Add to Inventory</h3>
+              <button className="modal-close-btn" onClick={closeAddModal}>×</button>
+            </div>
+            <div className="modal-item-info">
+              <p><strong>UPC:</strong> {product.upc}</p>
+              <p><strong>Description:</strong> {product.description || "N/A"}</p>
+              <p><strong>Category:</strong> {product.category || "N/A"}</p>
+              <p><strong>Volume:</strong> {product.volume ? `${product.volume} mL` : "N/A"}</p>
+            </div>
+            <div className="modal-form">
+              <div className="form-group">
+                <label>Cost ($):</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={inventoryForm.cost}
+                  onChange={(e) => setInventoryForm({...inventoryForm, cost: e.target.value})}
+                  placeholder="0.00"
+                  autoFocus
+                />
+              </div>
+              <div className="form-group">
+                <label>Price ($):</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={inventoryForm.price}
+                  onChange={(e) => setInventoryForm({...inventoryForm, price: e.target.value})}
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="form-group">
+                <label>Quantity:</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={inventoryForm.quantity}
+                  onChange={(e) => setInventoryForm({...inventoryForm, quantity: e.target.value})}
+                  placeholder="0"
+                />
+              </div>
+              <div className="modal-buttons">
+                <button onClick={handleAddToInventory} className="save-btn" disabled={scanning}>
+                  {scanning ? "Processing..." : "Add"}
+                </button>
+                <button onClick={closeAddModal} className="cancel-btn">Cancel</button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -10,16 +10,51 @@ interface CartItem {
   price: number;
 }
 
-export default function CartScanner() {
-  const [barcode, setBarcode] = useState("");
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [error, setError] = useState("");
+interface CartScannerProps {
+  barcode: string;
+  setBarcode: (value: string) => void;
+  cart: CartItem[];
+  setCart: (value: CartItem[]) => void;
+  error: string;
+  setError: (value: string) => void;
+}
+
+export default function CartScanner({ barcode, setBarcode, cart, setCart, error, setError }: CartScannerProps) {
   const [loading, setLoading] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [scannedUpc, setScannedUpc] = useState("");
+  const [inventoryForm, setInventoryForm] = useState({
+    cost: "",
+    price: "",
+    quantity: ""
+  });
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'credit' | 'debit' | null>(null);
+  const [amountTendered, setAmountTendered] = useState("");
+  const [showSuccess, setShowSuccess] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  const closeAddModal = () => {
+    setShowAddModal(false);
+    setInventoryForm({ cost: "", price: "", quantity: "" });
+    setScannedUpc("");
+    inputRef.current?.focus();
+  };
+
+  // Handle ESC key for modal
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showAddModal) {
+        closeAddModal();
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [showAddModal]);
 
   const handleScan = async () => {
     if (!barcode.trim()) return;
@@ -57,7 +92,10 @@ export default function CartScanner() {
         setBarcode("");
         inputRef.current?.focus();
       } else {
-        setError(result.error || "Item not found in inventory");
+        // Instead of showing error, open modal to add to inventory
+        setScannedUpc(barcode.trim());
+        setShowAddModal(true);
+        setBarcode("");
       }
     } catch (err) {
       setError("Failed to add item to cart");
@@ -94,11 +132,62 @@ export default function CartScanner() {
   };
 
   const calculateTotals = () => {
-    return cart.reduce((totals, item) => ({
-      totalItems: totals.totalItems + item.quantity,
-      totalCost: totals.totalCost + (item.cost * item.quantity),
-      totalPrice: totals.totalPrice + (item.price * item.quantity)
-    }), { totalItems: 0, totalCost: 0, totalPrice: 0 });
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const tax = subtotal * 0.06; // Michigan 6% sales tax
+    const total = subtotal + tax;
+    const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+    
+    return {
+      totalItems,
+      subtotal,
+      tax,
+      total
+    };
+  };
+
+  const voidCart = () => {
+    if (confirm("Are you sure you want to void the entire cart?")) {
+      setCart([]);
+      setBarcode("");
+      inputRef.current?.focus();
+    }
+  };
+
+  const handleCheckout = () => {
+    if (cart.length === 0) return;
+    setShowPaymentModal(true);
+  };
+
+  const closePaymentModal = () => {
+    setShowPaymentModal(false);
+    setPaymentMethod(null);
+    setAmountTendered("");
+  };
+
+  const processPayment = () => {
+    if (paymentMethod === 'cash') {
+      const tendered = parseFloat(amountTendered);
+      if (isNaN(tendered) || tendered < totals.total) {
+        alert("Insufficient payment amount");
+        return;
+      }
+    }
+
+    // Simulate payment processing
+    setTimeout(() => {
+      setShowPaymentModal(false);
+      setCart([]);
+      setBarcode("");
+      setPaymentMethod(null);
+      setAmountTendered("");
+      setShowSuccess(true);
+      
+      // Hide success message after 3 seconds
+      setTimeout(() => {
+        setShowSuccess(false);
+        inputRef.current?.focus();
+      }, 3000);
+    }, paymentMethod === 'cash' ? 100 : 1500);
   };
 
   const formatCurrency = (amount: number) => {
@@ -106,6 +195,57 @@ export default function CartScanner() {
       style: 'currency',
       currency: 'USD'
     }).format(amount);
+  };
+
+  const handleAddToInventory = async () => {
+    const cost = parseFloat(inventoryForm.cost);
+    const price = parseFloat(inventoryForm.price);
+    const quantity = parseInt(inventoryForm.quantity);
+
+    if (isNaN(cost) || isNaN(price) || isNaN(quantity)) {
+      alert("Please enter valid numbers");
+      return;
+    }
+
+    if (cost < 0 || price < 0 || quantity < 1) {
+      alert("Please enter positive values");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const result = await window.api.addToInventory({
+        upc: scannedUpc,
+        cost,
+        price,
+        quantity
+      });
+
+      if (result.success) {
+        // After successfully adding to inventory, try to add to cart
+        const checkResult = await window.api.checkInventory(scannedUpc);
+        if (checkResult.success && checkResult.data) {
+          const newItem: CartItem = {
+            upc: checkResult.data.upc,
+            description: checkResult.data.description,
+            volume: checkResult.data.volume,
+            quantity: 1,
+            cost: checkResult.data.cost,
+            price: checkResult.data.price
+          };
+          setCart([...cart, newItem]);
+        }
+        closeAddModal();
+      } else {
+        alert(result.error || "Failed to add to inventory");
+      }
+    } catch (err) {
+      alert("Failed to add to inventory");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const totals = calculateTotals();
@@ -140,6 +280,12 @@ export default function CartScanner() {
             ⚠️ {error}
           </div>
         )}
+        
+        {showSuccess && (
+          <div className="success-message">
+            ✅ Payment successful! Transaction completed.
+          </div>
+        )}
       </div>
 
       <div className="cart-section">
@@ -160,10 +306,11 @@ export default function CartScanner() {
               <table className="cart-table">
                 <thead>
                   <tr>
+                    <th>#</th>
                     <th>Description</th>
                     <th>Volume</th>
                     <th>Qty</th>
-                    <th>Unit Cost</th>
+                    <th>Unit Price</th>
                     <th>Total</th>
                     <th>Actions</th>
                   </tr>
@@ -171,6 +318,7 @@ export default function CartScanner() {
                 <tbody>
                   {cart.map((item, index) => (
                     <tr key={index}>
+                      <td className="item-number">{index + 1}</td>
                       <td className="description-cell">{item.description || "N/A"}</td>
                       <td>{item.volume ? `${item.volume} mL` : "N/A"}</td>
                       <td>
@@ -213,25 +361,187 @@ export default function CartScanner() {
             </div>
 
             <div className="cart-summary">
-              <div className="summary-row">
-                <span>Total Items:</span>
-                <span>{totals.totalItems}</span>
+              <div className="summary-totals">
+                <div className="summary-row">
+                  <span>Total Items:</span>
+                  <span>{totals.totalItems}</span>
+                </div>
+                <div className="summary-row">
+                  <span>Subtotal:</span>
+                  <span>{formatCurrency(totals.subtotal)}</span>
+                </div>
+                <div className="summary-row">
+                  <span>Tax (6%):</span>
+                  <span>{formatCurrency(totals.tax)}</span>
+                </div>
+                <div className="summary-row total">
+                  <span>Total:</span>
+                  <span>{formatCurrency(totals.total)}</span>
+                </div>
               </div>
-              <div className="summary-row">
-                <span>Total Cost:</span>
-                <span>{formatCurrency(totals.totalCost)}</span>
+              <div className="cart-action-buttons">
+                <button className="void-cart-btn" onClick={voidCart}>
+                  Void
+                </button>
+                <button className="checkout-btn" onClick={handleCheckout}>
+                  Checkout
+                </button>
               </div>
-              <div className="summary-row total">
-                <span>Total Price:</span>
-                <span>{formatCurrency(totals.totalPrice)}</span>
-              </div>
-              <button className="checkout-btn">
-                Checkout
-              </button>
             </div>
           </>
         )}
       </div>
+
+      {/* Payment Modal */}
+      {showPaymentModal && (
+        <div className="modal-overlay" onClick={closePaymentModal}>
+          <div className="modal-content payment-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Payment - Total: {formatCurrency(totals.total)}</h3>
+              <button className="modal-close-btn" onClick={closePaymentModal}>×</button>
+            </div>
+            
+            {!paymentMethod ? (
+              <div className="payment-methods">
+                <h4>Select Payment Method:</h4>
+                <div className="payment-buttons">
+                  <button 
+                    className="payment-method-btn cash-btn"
+                    onClick={() => setPaymentMethod('cash')}
+                  >
+                    💵 Cash
+                  </button>
+                  <button 
+                    className="payment-method-btn credit-btn"
+                    onClick={() => setPaymentMethod('credit')}
+                  >
+                    💳 Credit Card
+                  </button>
+                  <button 
+                    className="payment-method-btn debit-btn"
+                    onClick={() => setPaymentMethod('debit')}
+                  >
+                    💳 Debit Card
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="payment-process">
+                {paymentMethod === 'cash' ? (
+                  <div className="cash-payment">
+                    <div className="amount-due">
+                      <strong>Amount Due:</strong> {formatCurrency(totals.total)}
+                    </div>
+                    <div className="form-group">
+                      <label>Amount Tendered:</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min={totals.total.toString()}
+                        value={amountTendered}
+                        onChange={(e) => setAmountTendered(e.target.value)}
+                        placeholder="0.00"
+                        autoFocus
+                      />
+                    </div>
+                    {amountTendered && parseFloat(amountTendered) >= totals.total && (
+                      <div className="change-due">
+                        <strong>Change Due:</strong> {formatCurrency(parseFloat(amountTendered) - totals.total)}
+                      </div>
+                    )}
+                    <div className="modal-buttons">
+                      <button 
+                        onClick={processPayment} 
+                        className="complete-sale-btn"
+                        disabled={!amountTendered || parseFloat(amountTendered) < totals.total}
+                      >
+                        Complete Sale
+                      </button>
+                      <button onClick={() => setPaymentMethod(null)} className="back-btn">
+                        Back
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="card-payment">
+                    <div className="amount-due">
+                      <strong>Amount Due:</strong> {formatCurrency(totals.total)}
+                    </div>
+                    <div className="processing">
+                      <div className="spinner"></div>
+                      <p>Processing {paymentMethod} card payment...</p>
+                    </div>
+                    <div className="modal-buttons">
+                      <button 
+                        onClick={processPayment} 
+                        className="complete-sale-btn"
+                      >
+                        Process Payment
+                      </button>
+                      <button onClick={() => setPaymentMethod(null)} className="back-btn">
+                        Back
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Add to Inventory Modal */}
+      {showAddModal && (
+        <div className="modal-overlay" onClick={closeAddModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Add to Inventory - {scannedUpc}</h3>
+              <button className="modal-close-btn" onClick={closeAddModal}>×</button>
+            </div>
+            <div className="modal-form">
+              <div className="form-group">
+                <label>Cost ($):</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={inventoryForm.cost}
+                  onChange={(e) => setInventoryForm({...inventoryForm, cost: e.target.value})}
+                  placeholder="0.00"
+                  autoFocus
+                />
+              </div>
+              <div className="form-group">
+                <label>Price ($):</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={inventoryForm.price}
+                  onChange={(e) => setInventoryForm({...inventoryForm, price: e.target.value})}
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="form-group">
+                <label>Quantity:</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={inventoryForm.quantity}
+                  onChange={(e) => setInventoryForm({...inventoryForm, quantity: e.target.value})}
+                  placeholder="0"
+                />
+              </div>
+              <div className="modal-buttons">
+                <button onClick={handleAddToInventory} className="add-btn" disabled={loading}>
+                  {loading ? "Adding..." : "Add"}
+                </button>
+                <button onClick={closeAddModal} className="cancel-btn">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

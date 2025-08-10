@@ -5,8 +5,31 @@ import InventoryList from "./InventoryList";
 import "./App.css";
 import { useState } from "react";
 
+interface CartItem {
+  upc: string;
+  description: string | null;
+  volume: string | null;
+  quantity: number;
+  cost: number;
+  price: number;
+}
+
+interface InventoryState {
+  barcode: string;
+  searchFilter: string;
+}
+
 export default function App() {
   const [currentView, setCurrentView] = useState<"scanner" | "inventory">("scanner");
+  
+  // Cart Scanner state
+  const [cartBarcode, setCartBarcode] = useState("");
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cartError, setCartError] = useState("");
+  
+  // Inventory state
+  const [inventoryBarcode, setInventoryBarcode] = useState("");
+  const [searchFilter, setSearchFilter] = useState("");
 
   /* Commented out CSV import functionality - preserved for future use
   const [importStatus, setImportStatus] = useState("");
@@ -50,7 +73,23 @@ export default function App() {
         </button>
       </div>
       
-      {currentView === "scanner" ? <CartScanner /> : <InventoryList />}
+      {currentView === "scanner" ? (
+        <CartScanner 
+          barcode={cartBarcode}
+          setBarcode={setCartBarcode}
+          cart={cart}
+          setCart={setCart}
+          error={cartError}
+          setError={setCartError}
+        />
+      ) : (
+        <InventoryList 
+          barcode={inventoryBarcode}
+          setBarcode={setInventoryBarcode}
+          searchFilter={searchFilter}
+          setSearchFilter={setSearchFilter}
+        />
+      )}
     </div>
   );
 }
