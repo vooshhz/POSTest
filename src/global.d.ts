@@ -8,12 +8,24 @@ export interface InventoryAPI {
       volume: string | null;
       pack: number | null;
     };
+    inInventory?: boolean;
     error?: string;
   }>;
   importCsv: () => Promise<{
     success: boolean;
     message?: string;
     count?: number;
+    error?: string;
+  }>;
+  addToInventory: (item: {
+    upc: string;
+    cost: number;
+    price: number;
+    quantity: number;
+  }) => Promise<{
+    success: boolean;
+    message?: string;
+    updated?: boolean;
     error?: string;
   }>;
 }

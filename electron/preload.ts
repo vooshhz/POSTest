@@ -11,6 +11,7 @@ interface InventoryAPI {
       volume: string | null;
       pack: number | null;
     };
+    inInventory?: boolean;
     error?: string;
   }>;
   importCsv: () => Promise<{
@@ -19,12 +20,24 @@ interface InventoryAPI {
     count?: number;
     error?: string;
   }>;
+  addToInventory: (item: {
+    upc: string;
+    cost: number;
+    price: number;
+    quantity: number;
+  }) => Promise<{
+    success: boolean;
+    message?: string;
+    updated?: boolean;
+    error?: string;
+  }>;
 }
 
 // Expose protected methods to the renderer
 const api: InventoryAPI = {
   searchByUpc: (upc: string) => ipcRenderer.invoke("search-by-upc", upc),
-  importCsv: () => ipcRenderer.invoke("import-csv")
+  importCsv: () => ipcRenderer.invoke("import-csv"),
+  addToInventory: (item) => ipcRenderer.invoke("add-to-inventory", item)
 };
 
 contextBridge.exposeInMainWorld("api", api);
