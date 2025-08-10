@@ -1,1 +1,9 @@
-/* App styles */
+.app {
+  text-align: center;
+  padding: 1rem;
+}
+
+.app h1 {
+  color: #333;
+  margin-bottom: 2rem;
+}
