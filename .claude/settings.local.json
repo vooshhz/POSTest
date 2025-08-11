@@ -6,7 +6,8 @@
       "Bash(rm:*)",
       "Bash(pnpm dev:*)",
       "Bash(copy Products.xlsx Products_Copy.xlsx)",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(powershell:*)"
     ],
     "deny": []
   }

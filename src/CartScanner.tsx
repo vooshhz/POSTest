@@ -33,11 +33,50 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
   const [amountTendered, setAmountTendered] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
   const [manualEntry, setManualEntry] = useState("");
+  const [searchResults, setSearchResults] = useState<Array<{
+    upc: string;
+    description: string | null;
+    volume: string | null;
+    price: number;
+    quantity: number;
+  }>>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  // Search inventory when input changes
+  useEffect(() => {
+    const searchTimer = setTimeout(async () => {
+      if (barcode.length > 2 && isNaN(Number(barcode))) {
+        // It's text, not a UPC
+        try {
+          const result = await window.api.searchInventoryByDescription(barcode);
+          if (result.success && result.data) {
+            setSearchResults(result.data.slice(0, 5)); // Limit to 5 results
+            setShowDropdown(true); // Always show dropdown when searching
+            setSelectedIndex(0);
+          } else {
+            setSearchResults([]);
+            setShowDropdown(true); // Show dropdown even with no results
+          }
+        } catch (err) {
+          console.error("Search error:", err);
+          setSearchResults([]);
+          setShowDropdown(true); // Show dropdown even on error
+        }
+      } else {
+        setSearchResults([]);
+        setShowDropdown(false);
+      }
+    }, 300); // Debounce for 300ms
+
+    return () => clearTimeout(searchTimer);
+  }, [barcode]);
 
   const closeAddModal = () => {
     setShowAddModal(false);
@@ -106,8 +145,53 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
     }
   };
 
+  const selectSearchItem = async (item: typeof searchResults[0]) => {
+    // Check if item already in cart
+    const existingIndex = cart.findIndex(cartItem => cartItem.upc === item.upc);
+    
+    if (existingIndex >= 0) {
+      // Update quantity if already in cart
+      const updatedCart = [...cart];
+      updatedCart[existingIndex].quantity += 1;
+      setCart(updatedCart);
+    } else {
+      // Add new item to cart
+      const newItem: CartItem = {
+        upc: item.upc,
+        description: item.description,
+        volume: item.volume,
+        quantity: 1,
+        cost: 0, // We don't have cost from search
+        price: item.price
+      };
+      setCart([...cart, newItem]);
+    }
+    
+    // Clear input and hide dropdown
+    setBarcode("");
+    setShowDropdown(false);
+    setSearchResults([]);
+    inputRef.current?.focus();
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
+    if (showDropdown && searchResults.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSelectedIndex(prev => (prev + 1) % searchResults.length);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSelectedIndex(prev => prev === 0 ? searchResults.length - 1 : prev - 1);
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        if (searchResults[selectedIndex]) {
+          selectSearchItem(searchResults[selectedIndex]);
+        }
+      } else if (e.key === "Escape") {
+        setShowDropdown(false);
+        setSearchResults([]);
+      }
+    } else if (e.key === "Enter") {
       handleScan();
     }
   };
@@ -353,24 +437,54 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
         {/* Left Section - Scanner and Cart */}
         <div className="left-section">
           <div className="scanner-section">
-            <div className="scanner-input-group">
-              <input
-                ref={inputRef}
-                type="text"
-                value={barcode}
-                onChange={(e) => setBarcode(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Scan or enter UPC"
-                className="scanner-input"
-                disabled={loading}
-              />
-              <button 
-                onClick={handleScan}
-                className="scan-btn"
-                disabled={loading}
-              >
-                Add
-              </button>
+            <div className="scanner-input-wrapper">
+              <div className="scanner-input-group">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={barcode}
+                  onChange={(e) => setBarcode(e.target.value)}
+                  onKeyDown={handleKeyPress}
+                  placeholder="Scan or enter UPC / Search by name"
+                  className="scanner-input"
+                  disabled={loading}
+                />
+                <button 
+                  onClick={handleScan}
+                  className="scan-btn"
+                  disabled={loading}
+                >
+                  Add
+                </button>
+              </div>
+              
+              {showDropdown && barcode.length > 2 && isNaN(Number(barcode)) && (
+                <div className="search-dropdown" ref={dropdownRef}>
+                  {searchResults.length > 0 ? (
+                    searchResults.map((item, index) => (
+                      <div 
+                        key={item.upc}
+                        className={`search-item ${index === selectedIndex ? 'selected' : ''}`}
+                        onClick={() => selectSearchItem(item)}
+                        onMouseEnter={() => setSelectedIndex(index)}
+                      >
+                        <div className="search-item-left">
+                          <span className="search-item-name">{item.description}</span>
+                          {item.volume && <span className="search-item-volume">{item.volume} mL</span>}
+                        </div>
+                        <div className="search-item-right">
+                          <span className="search-item-qty">Qty: {item.quantity}</span>
+                          <span className="search-item-price">${item.price.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="search-no-results">
+                      Cannot find "{barcode}" in inventory
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             
             {error && (

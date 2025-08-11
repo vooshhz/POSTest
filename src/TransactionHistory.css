@@ -127,7 +127,7 @@
 
 .transaction-table th {
   padding: 1rem;
-  text-align: left;
+  text-align: center;
   font-weight: 600;
   color: #666;
   border-bottom: 2px solid #ddd;
@@ -149,6 +149,7 @@
   padding: 0.75rem 1rem;
   border-bottom: 1px solid #eee;
   color: #333;
+  text-align: center;
 }
 
 .transaction-table tbody tr:hover {
@@ -159,12 +160,14 @@
   font-weight: 600;
   color: #646cff;
   font-family: monospace;
+  text-align: center;
 }
 
 .date-cell .date-time {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  align-items: center;
 }
 
 .date-cell .date {
@@ -212,14 +215,14 @@
 }
 
 .currency-cell {
-  text-align: right;
+  text-align: center;
   font-family: monospace;
   font-size: 0.95rem;
   color: #333;
 }
 
 .total-cell {
-  text-align: right;
+  text-align: center;
   font-family: monospace;
   font-size: 1rem;
   font-weight: 600;

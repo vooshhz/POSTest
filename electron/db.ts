@@ -522,6 +522,56 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
     }
   });
 
+  // Search inventory by description
+  ipcMain.handle("search-inventory-by-description", async (_, searchTerm: string) => {
+    try {
+      const invDb = getInventoryDb();
+      const prodDb = getProductsDb();
+      
+      // Get all inventory items
+      const inventoryItems = invDb.prepare(`
+        SELECT * FROM inventory WHERE quantity > 0
+      `).all() as InventoryItem[];
+      
+      // Search and enrich with product details
+      const searchResults = [];
+      for (const item of inventoryItems) {
+        const product = prodDb.prepare(`
+          SELECT 
+            "Item Description" as description,
+            "Category Name" as category,
+            "Bottle Volume (ml)" as volume
+          FROM products 
+          WHERE "UPC" = ?
+        `).get(item.upc) as { description?: string; category?: string; volume?: string } | undefined;
+        
+        if (product?.description && product.description.toLowerCase().includes(searchTerm.toLowerCase())) {
+          searchResults.push({
+            upc: item.upc,
+            description: product.description,
+            category: product.category || null,
+            volume: product.volume || null,
+            cost: item.cost,
+            price: item.price,
+            quantity: item.quantity
+          });
+        }
+      }
+      
+      // Limit to 10 results
+      return {
+        success: true,
+        data: searchResults.slice(0, 10)
+      };
+    } catch (error) {
+      console.error("Search inventory error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to search inventory"
+      };
+    }
+  });
+
   // Add to inventory
   ipcMain.handle("add-to-inventory", async (_, item: InventoryItem) => {
     try {

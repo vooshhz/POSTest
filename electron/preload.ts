@@ -59,6 +59,19 @@ interface InventoryAPI {
     };
     error?: string;
   }>;
+  searchInventoryByDescription: (searchTerm: string) => Promise<{
+    success: boolean;
+    data?: Array<{
+      upc: string;
+      description: string | null;
+      category: string | null;
+      volume: string | null;
+      cost: number;
+      price: number;
+      quantity: number;
+    }>;
+    error?: string;
+  }>;
   saveTransaction: (transaction: {
     items: string;
     subtotal: number;
@@ -152,6 +165,7 @@ const api: InventoryAPI = {
   addToInventory: (item) => ipcRenderer.invoke("add-to-inventory", item),
   getInventory: () => ipcRenderer.invoke("get-inventory"),
   checkInventory: (upc: string) => ipcRenderer.invoke("check-inventory", upc),
+  searchInventoryByDescription: (searchTerm: string) => ipcRenderer.invoke("search-inventory-by-description", searchTerm),
   saveTransaction: (transaction) => ipcRenderer.invoke("save-transaction", transaction),
   getTransactions: () => ipcRenderer.invoke("get-transactions"),
   openTransactionDetails: (transaction) => ipcRenderer.invoke("open-transaction-details", transaction),
