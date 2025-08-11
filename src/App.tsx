@@ -56,8 +56,6 @@ export default function App() {
 
   return (
     <div className="app">
-      <h1>Liquor Inventory System</h1>
-      
       <div className="nav-tabs">
         <button 
           className={`nav-tab ${currentView === "scanner" ? "active" : ""}`}
@@ -72,6 +70,8 @@ export default function App() {
           Inventory
         </button>
       </div>
+      
+      <h1>Liquor Inventory System</h1>
       
       {currentView === "scanner" ? (
         <CartScanner 

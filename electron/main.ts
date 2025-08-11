@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, screen } from 'electron'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
@@ -18,11 +18,51 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 
 let win: BrowserWindow | null
 
 function createWindow() {
+  // Get primary display dimensions
+  const primaryDisplay = screen.getPrimaryDisplay()
+  const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize
+  
+  // Set fixed dimensions with 16:10 aspect ratio (common for POS systems)
+  // Use 90% of screen height and calculate width based on aspect ratio
+  const windowHeight = Math.floor(screenHeight * 0.9)
+  const windowWidth = Math.floor(windowHeight * 1.6) // 16:10 aspect ratio
+  
+  // Center the window
+  const x = Math.floor((screenWidth - windowWidth) / 2)
+  const y = Math.floor((screenHeight - windowHeight) / 2)
+
   win = new BrowserWindow({
     icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
     },
+    width: windowWidth,
+    height: windowHeight,
+    x: x,
+    y: y,
+    minWidth: 1280,
+    minHeight: 800,
+    show: false,
+    frame: true,
+    titleBarStyle: 'default',
+    resizable: false,
+    maximizable: false,
+    fullScreenable: false
+  })
+
+  // Set aspect ratio to maintain consistent layout
+  win.setAspectRatio(16/10)
+  
+  // Prevent window from being moved or resized
+  win.setMovable(false)
+  win.setResizable(false)
+  
+  // Show window after all settings are applied
+  win.show()
+
+  // Prevent any window state changes
+  win.on('minimize', (event) => {
+    event.preventDefault()
   })
 
   win.webContents.on('did-finish-load', () => {
