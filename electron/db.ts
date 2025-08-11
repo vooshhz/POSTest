@@ -9,9 +9,11 @@ import Papa from "papaparse";
 // Separate database connections
 const productsDbPath = path.join(process.cwd(), "LiquorDatabase.db");
 const inventoryDbPath = path.join(process.cwd(), "LiquorInventory.db");
+const storeInfoDbPath = path.join(process.cwd(), "StoreInformation.db");
 
 let productsDb: Database.Database | null = null;
 let inventoryDb: Database.Database | null = null;
+let storeInfoDb: Database.Database | null = null;
 
 // Track if handlers are already registered
 let handlersRegistered = false;
@@ -22,6 +24,32 @@ function getProductsDb() {
     productsDb = new Database(productsDbPath, { readonly: true });
   }
   return productsDb;
+}
+
+// Get store info database
+function getStoreInfoDb() {
+  if (!storeInfoDb) {
+    storeInfoDb = new Database(storeInfoDbPath);
+    // Create store_info table if it doesn't exist
+    storeInfoDb.exec(`
+      CREATE TABLE IF NOT EXISTS store_info (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        store_name TEXT NOT NULL,
+        address_line1 TEXT NOT NULL,
+        address_line2 TEXT,
+        city TEXT NOT NULL,
+        state TEXT NOT NULL,
+        zip_code TEXT NOT NULL,
+        phone_number TEXT NOT NULL,
+        tax_rate REAL NOT NULL DEFAULT 6.0,
+        receipt_header TEXT,
+        receipt_footer TEXT DEFAULT 'Thank you for your business!',
+        created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+        last_modified DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+  }
+  return storeInfoDb;
 }
 
 // Get inventory database (read-write for inventory tracking)
@@ -96,6 +124,121 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
   
   handlersRegistered = true;
   console.log("Registering IPC handlers...");
+
+  // Check if store info exists
+  ipcMain.handle("check-store-info", async () => {
+    try {
+      const storeDb = getStoreInfoDb();
+      const storeInfo = storeDb.prepare("SELECT * FROM store_info LIMIT 1").get();
+      
+      return {
+        success: true,
+        hasStoreInfo: !!storeInfo,
+        data: storeInfo || null
+      };
+    } catch (error) {
+      console.error("Check store info error:", error);
+      return {
+        success: false,
+        hasStoreInfo: false,
+        error: error instanceof Error ? error.message : "Failed to check store info"
+      };
+    }
+  });
+
+  // Save store info
+  ipcMain.handle("save-store-info", async (_, storeInfo) => {
+    try {
+      const storeDb = getStoreInfoDb();
+      
+      // Check if store info already exists
+      const existing = storeDb.prepare("SELECT id FROM store_info LIMIT 1").get();
+      
+      if (existing) {
+        // Update existing
+        const stmt = storeDb.prepare(`
+          UPDATE store_info SET
+            store_name = ?,
+            address_line1 = ?,
+            address_line2 = ?,
+            city = ?,
+            state = ?,
+            zip_code = ?,
+            phone_number = ?,
+            tax_rate = ?,
+            receipt_header = ?,
+            receipt_footer = ?,
+            last_modified = datetime('now')
+          WHERE id = ?
+        `);
+        
+        stmt.run(
+          storeInfo.store_name,
+          storeInfo.address_line1,
+          storeInfo.address_line2 || null,
+          storeInfo.city,
+          storeInfo.state,
+          storeInfo.zip_code,
+          storeInfo.phone_number,
+          storeInfo.tax_rate,
+          storeInfo.receipt_header || null,
+          storeInfo.receipt_footer || 'Thank you for your business!',
+          (existing as any).id
+        );
+      } else {
+        // Insert new
+        const stmt = storeDb.prepare(`
+          INSERT INTO store_info (
+            store_name, address_line1, address_line2, city, state,
+            zip_code, phone_number, tax_rate, receipt_header, receipt_footer
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        
+        stmt.run(
+          storeInfo.store_name,
+          storeInfo.address_line1,
+          storeInfo.address_line2 || null,
+          storeInfo.city,
+          storeInfo.state,
+          storeInfo.zip_code,
+          storeInfo.phone_number,
+          storeInfo.tax_rate,
+          storeInfo.receipt_header || null,
+          storeInfo.receipt_footer || 'Thank you for your business!'
+        );
+      }
+      
+      return {
+        success: true,
+        message: "Store information saved successfully"
+      };
+    } catch (error) {
+      console.error("Save store info error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to save store info"
+      };
+    }
+  });
+
+  // Get store info
+  ipcMain.handle("get-store-info", async () => {
+    try {
+      const storeDb = getStoreInfoDb();
+      const storeInfo = storeDb.prepare("SELECT * FROM store_info LIMIT 1").get();
+      
+      return {
+        success: true,
+        data: storeInfo || null
+      };
+    } catch (error) {
+      console.error("Get store info error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to get store info"
+      };
+    }
+  });
 
   // Import CSV data
   ipcMain.handle("import-csv", async () => {
@@ -434,26 +577,69 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
     try {
       const invDb = getInventoryDb();
       
-      const stmt = invDb.prepare(`
-        INSERT INTO transactions (items, subtotal, tax, total, payment_type, cash_given, change_given)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `);
+      // Start a transaction for data consistency
+      invDb.prepare("BEGIN TRANSACTION").run();
       
-      const result = stmt.run(
-        transaction.items,
-        transaction.subtotal,
-        transaction.tax,
-        transaction.total,
-        transaction.payment_type,
-        transaction.cash_given || null,
-        transaction.change_given || null
-      );
-      
-      return {
-        success: true,
-        transactionId: result.lastInsertRowid,
-        message: "Transaction saved successfully"
-      };
+      try {
+        // Parse the items to deduct from inventory
+        const items = JSON.parse(transaction.items);
+        
+        // Deduct each item from inventory
+        for (const item of items) {
+          // Check current quantity
+          const currentItem = invDb.prepare(`
+            SELECT quantity FROM inventory WHERE upc = ?
+          `).get(item.upc) as { quantity: number } | undefined;
+          
+          if (!currentItem) {
+            throw new Error(`Item with UPC ${item.upc} not found in inventory`);
+          }
+          
+          const newQuantity = currentItem.quantity - item.quantity;
+          
+          if (newQuantity < 0) {
+            throw new Error(`Insufficient inventory for ${item.description}. Available: ${currentItem.quantity}, Requested: ${item.quantity}`);
+          }
+          
+          // Update inventory quantity
+          const updateStmt = invDb.prepare(`
+            UPDATE inventory 
+            SET quantity = ?, updated_at = datetime('now')
+            WHERE upc = ?
+          `);
+          
+          updateStmt.run(newQuantity, item.upc);
+        }
+        
+        // Save the transaction
+        const stmt = invDb.prepare(`
+          INSERT INTO transactions (items, subtotal, tax, total, payment_type, cash_given, change_given)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `);
+        
+        const result = stmt.run(
+          transaction.items,
+          transaction.subtotal,
+          transaction.tax,
+          transaction.total,
+          transaction.payment_type,
+          transaction.cash_given || null,
+          transaction.change_given || null
+        );
+        
+        // Commit the transaction
+        invDb.prepare("COMMIT").run();
+        
+        return {
+          success: true,
+          transactionId: result.lastInsertRowid,
+          message: "Transaction saved and inventory updated successfully"
+        };
+      } catch (error) {
+        // Rollback on any error
+        invDb.prepare("ROLLBACK").run();
+        throw error;
+      }
     } catch (error) {
       console.error("Save transaction error:", error);
       return {
@@ -495,6 +681,76 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
       };
     }
   });
+
+  // Get inventory transactions (shows where inventory went)
+  ipcMain.handle("get-inventory-transactions", async () => {
+    try {
+      const invDb = getInventoryDb();
+      
+      // Get all transactions and parse their items
+      const transactions = invDb.prepare(`
+        SELECT 
+          id as transaction_id,
+          items,
+          payment_type,
+          total,
+          datetime(created_at, 'localtime') as created_at
+        FROM transactions
+        ORDER BY created_at DESC
+      `).all();
+      
+      // Parse items from each transaction to create inventory movement records
+      const inventoryTransactions = [];
+      
+      for (const transaction of transactions) {
+        try {
+          const items = JSON.parse(transaction.items as string);
+          for (const item of items) {
+            // Get product details from the products database if available
+            let product = null;
+            try {
+              const prodDb = getProductsDb();
+              product = prodDb.prepare(`
+                SELECT description, category, volume
+                FROM products
+                WHERE upc = ?
+              `).get(item.upc) as any;
+            } catch (err) {
+              // Products database might not be available
+              console.log("Could not fetch product details:", err);
+            }
+            
+            inventoryTransactions.push({
+              transaction_id: transaction.transaction_id,
+              upc: item.upc,
+              description: item.description || product?.description || 'Unknown Item',
+              category: product?.category || null,
+              volume: product?.volume || null,
+              quantity: item.quantity,
+              unit_price: item.price,
+              total: item.total,
+              payment_type: transaction.payment_type,
+              transaction_total: transaction.total,
+              created_at: transaction.created_at
+            });
+          }
+        } catch (err) {
+          console.error("Error parsing transaction items:", err);
+        }
+      }
+      
+      return {
+        success: true,
+        data: inventoryTransactions
+      };
+    } catch (error) {
+      console.error("Get inventory transactions error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to get inventory transactions"
+      };
+    }
+  });
 }
 
 // Cleanup on app quit
@@ -506,5 +762,9 @@ process.on("exit", () => {
   if (inventoryDb) {
     inventoryDb.close();
     console.log("Closed inventory database");
+  }
+  if (storeInfoDb) {
+    storeInfoDb.close();
+    console.log("Closed store info database");
   }
 });

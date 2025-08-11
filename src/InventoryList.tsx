@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import InventoryTransactions from "./InventoryTransactions";
 import "./InventoryList.css";
 
 interface InventoryItem {
@@ -32,6 +33,7 @@ interface InventoryListProps {
 }
 
 export default function InventoryList({ barcode, setBarcode, searchFilter, setSearchFilter }: InventoryListProps) {
+  const [activeTab, setActiveTab] = useState<'onhand' | 'transactions'>('onhand');
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -348,6 +350,24 @@ export default function InventoryList({ barcode, setBarcode, searchFilter, setSe
     <div className="inventory-container">
       <h2>Inventory Management</h2>
       
+      {/* Sub-tabs */}
+      <div className="inventory-tabs">
+        <button 
+          className={`inventory-tab ${activeTab === 'onhand' ? 'active' : ''}`}
+          onClick={() => setActiveTab('onhand')}
+        >
+          On Hand
+        </button>
+        <button 
+          className={`inventory-tab ${activeTab === 'transactions' ? 'active' : ''}`}
+          onClick={() => setActiveTab('transactions')}
+        >
+          Adjustments
+        </button>
+      </div>
+      
+      {activeTab === 'onhand' ? (
+        <>
       {/* Scanner Section */}
       <div className="scanner-section">
         <h3>Add New Items</h3>
@@ -532,7 +552,13 @@ export default function InventoryList({ barcode, setBarcode, searchFilter, setSe
         </div>
       )}
       
-      {/* Add to Inventory Modal */}
+        </>
+      ) : (
+        /* Inventory Transactions Tab */
+        <InventoryTransactions searchFilter={searchFilter} />
+      )}
+      
+      {/* Add to Inventory Modal - shown for both tabs */}
       {console.log("Modal state:", { showAddModal, product })}
       {showAddModal && product && (
         <div className="modal-overlay" onClick={closeAddModal}>

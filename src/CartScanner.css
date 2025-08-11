@@ -1,11 +1,15 @@
 .cart-scanner-container {
-  max-width: 100%;
+  max-width: 95%;
   margin: 0 auto;
-  padding: 1rem;
-  height: calc(100vh - 140px); /* Adjusted for fixed window */
+  padding: 1.5rem;
+  height: calc(100vh - 160px); /* Consistent with other containers */
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
 .cart-scanner-container h2 {
@@ -14,17 +18,62 @@
   font-size: 1.5rem;
 }
 
+.main-content {
+  display: flex;
+  gap: 1.5rem;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.left-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #f9f9f9;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
 .scanner-section {
-  margin-bottom: 1rem;
+  padding: 1rem;
+  background: white;
+  border-bottom: 2px solid #e0e0e0;
   flex-shrink: 0;
+}
+
+.mode-toggle {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.mode-btn {
+  padding: 0.5rem 1.5rem;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  color: #666;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mode-btn:hover {
+  background: rgba(255, 255, 255, 1);
+  border-color: #667eea;
+}
+
+.mode-btn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: transparent;
 }
 
 .scanner-input-group {
   display: flex;
   gap: 0.5rem;
-  margin-bottom: 0.5rem;
-  max-width: 500px;
-  margin: 0 auto;
 }
 
 .scanner-input {
@@ -61,6 +110,93 @@
   cursor: not-allowed;
 }
 
+
+.amount-display {
+  background: #2c2c2c;
+  color: #00ff00;
+  font-size: 1.8rem;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  text-align: right;
+  min-width: 220px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+  letter-spacing: 1px;
+}
+
+.number-pad {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.number-pad-row {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.num-pad-btn {
+  width: 55px;
+  height: 45px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  background: white;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.1s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.num-pad-btn:hover {
+  background: #f5f5f5;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.num-pad-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.num-pad-btn.clear {
+  background: #ff6b6b;
+  color: white;
+  border-color: #ff5252;
+}
+
+.num-pad-btn.clear:hover {
+  background: #ff5252;
+}
+
+.num-pad-btn.backspace {
+  background: #ffa94d;
+  color: white;
+  border-color: #fd7e14;
+}
+
+.num-pad-btn.backspace:hover {
+  background: #fd7e14;
+}
+
+.num-pad-btn.zero {
+  width: 116px;
+}
+
+.num-pad-btn.enter {
+  width: 116px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: transparent;
+}
+
+.num-pad-btn.enter:hover {
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+}
+
 .error-message {
   background: #fee;
   color: #c00;
@@ -68,8 +204,6 @@
   border-radius: 8px;
   margin-top: 0.5rem;
   text-align: center;
-  max-width: 500px;
-  margin: 0.5rem auto;
   font-size: 0.9rem;
 }
 
@@ -80,15 +214,11 @@
   border-radius: 8px;
   margin-top: 0.5rem;
   text-align: center;
-  max-width: 500px;
-  margin: 0.5rem auto;
   font-weight: 500;
   font-size: 0.9rem;
 }
 
 .cart-section {
-  background: #f9f9f9;
-  border-radius: 8px;
   padding: 1rem;
   flex: 1;
   display: flex;
@@ -97,11 +227,27 @@
   min-height: 0; /* Important for flexbox */
 }
 
+.manual-entry-panel {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  width: 280px;
+  height: 100%;
+}
+
 .cart-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e0e0e0;
   flex-shrink: 0;
 }
 
@@ -158,10 +304,8 @@
   border-radius: 8px;
   overflow-y: auto;
   overflow-x: hidden;
-  margin-bottom: 1rem;
   flex: 1;
-  min-height: 200px;
-  max-height: calc(100vh - 450px); /* Dynamic height based on viewport */
+  min-height: 0;
 }
 
 .cart-table {
@@ -270,46 +414,46 @@
   background: white;
   padding: 1rem;
   border-radius: 8px;
-  max-width: 400px;
-  margin-left: auto;
+  width: 100%;
+  margin-top: auto;
   flex-shrink: 0; /* Prevent summary from shrinking */
+  border-top: 2px solid #ddd;
 }
 
 .summary-totals {
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
 }
 
 .summary-row {
   display: flex;
   justify-content: space-between;
-  padding: 0.3rem 0;
-  font-size: 0.95rem;
+  padding: 0.25rem 0;
+  font-size: 0.9rem;
   color: #333;
 }
 
 .summary-row.total {
   border-top: 2px solid #ddd;
-  padding-top: 0.5rem;
-  margin-top: 0.3rem;
-  font-size: 1.1rem;
+  padding-top: 0.4rem;
+  margin-top: 0.25rem;
+  font-size: 1rem;
   font-weight: bold;
   color: #646cff;
 }
 
 .cart-action-buttons {
   display: flex;
-  gap: 0.75rem;
-  margin-top: 0.75rem;
+  gap: 0.5rem;
 }
 
 .void-cart-btn {
   flex: 1;
-  padding: 0.6rem;
+  padding: 0.5rem;
   background: #f44336;
   color: white;
   border: none;
-  border-radius: 8px;
-  font-size: 0.95rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.3s;
@@ -321,12 +465,12 @@
 
 .checkout-btn {
   flex: 2;
-  padding: 0.6rem;
+  padding: 0.5rem;
   background: #4CAF50;
   color: white;
   border: none;
-  border-radius: 8px;
-  font-size: 1.1rem;
+  border-radius: 6px;
+  font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.3s;
@@ -610,4 +754,22 @@
 .processing p {
   color: #666;
   font-size: 0.95rem;
+}
+
+/* Responsive layout */
+@media (max-width: 1200px) {
+  .main-content {
+    flex-direction: column;
+  }
+  
+  .left-section {
+    min-height: 400px;
+  }
+  
+  .manual-entry-panel {
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+    height: auto;
+  }
 }

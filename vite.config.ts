@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import electron from "vite-plugin-electron/simple";
 import renderer from "vite-plugin-electron-renderer";
+import path from 'path';
 
 export default defineConfig({
   plugins: [
@@ -22,4 +23,12 @@ export default defineConfig({
     }),
     renderer(),
   ],
+  build: {
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+        transactionDetails: path.resolve(__dirname, 'transaction-details.html'),
+      },
+    },
+  },
 });

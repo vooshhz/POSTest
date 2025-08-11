@@ -16,6 +16,7 @@ export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 'public') : RENDERER_DIST
 
 let win: BrowserWindow | null
+const transactionWindows = new Map<string, BrowserWindow>()
 
 function createWindow() {
   // Get primary display dimensions
@@ -87,6 +88,52 @@ app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow()
   }
+})
+
+// Handle opening transaction details window
+ipcMain.handle('open-transaction-details', async (event, transactionData) => {
+  const transactionId = `transaction-${transactionData.id}`
+  
+  // Check if window already exists
+  if (transactionWindows.has(transactionId)) {
+    const existingWindow = transactionWindows.get(transactionId)
+    if (existingWindow && !existingWindow.isDestroyed()) {
+      existingWindow.focus()
+      return
+    }
+  }
+  
+  // Create new window for transaction details
+  const detailsWindow = new BrowserWindow({
+    width: 900,
+    height: 700,
+    resizable: true,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.mjs'),
+      contextIsolation: true,
+      nodeIntegration: false
+    },
+    title: `Transaction #${transactionData.id}`,
+    parent: win || undefined
+  })
+  
+  // Store window reference
+  transactionWindows.set(transactionId, detailsWindow)
+  
+  // Load transaction details page with data
+  const encodedData = encodeURIComponent(JSON.stringify(transactionData))
+  
+  if (VITE_DEV_SERVER_URL) {
+    detailsWindow.loadURL(`${VITE_DEV_SERVER_URL}transaction-details.html?transaction=${encodedData}`)
+  } else {
+    const detailsPath = path.join(RENDERER_DIST, 'transaction-details.html')
+    detailsWindow.loadURL(`file://${detailsPath}?transaction=${encodedData}`)
+  }
+  
+  // Clean up when window is closed
+  detailsWindow.on('closed', () => {
+    transactionWindows.delete(transactionId)
+  })
 })
 
 app.whenReady().then(() => {

@@ -88,6 +88,61 @@ interface InventoryAPI {
     }>;
     error?: string;
   }>;
+  openTransactionDetails: (transaction: {
+    id: number;
+    items: string;
+    subtotal: number;
+    tax: number;
+    total: number;
+    payment_type: string;
+    cash_given: number | null;
+    change_given: number | null;
+    created_at: string;
+  }) => Promise<void>;
+  checkStoreInfo: () => Promise<{
+    success: boolean;
+    hasStoreInfo: boolean;
+    data?: any;
+    error?: string;
+  }>;
+  saveStoreInfo: (storeInfo: {
+    store_name: string;
+    address_line1: string;
+    address_line2?: string;
+    city: string;
+    state: string;
+    zip_code: string;
+    phone_number: string;
+    tax_rate: number;
+    receipt_header?: string;
+    receipt_footer?: string;
+  }) => Promise<{
+    success: boolean;
+    message?: string;
+    error?: string;
+  }>;
+  getStoreInfo: () => Promise<{
+    success: boolean;
+    data?: any;
+    error?: string;
+  }>;
+  getInventoryTransactions: () => Promise<{
+    success: boolean;
+    data?: Array<{
+      transaction_id: number;
+      upc: string;
+      description: string;
+      category: string | null;
+      volume: string | null;
+      quantity: number;
+      unit_price: number;
+      total: number;
+      payment_type: string;
+      transaction_total: number;
+      created_at: string;
+    }>;
+    error?: string;
+  }>;
 }
 
 // Expose protected methods to the renderer
@@ -98,7 +153,12 @@ const api: InventoryAPI = {
   getInventory: () => ipcRenderer.invoke("get-inventory"),
   checkInventory: (upc: string) => ipcRenderer.invoke("check-inventory", upc),
   saveTransaction: (transaction) => ipcRenderer.invoke("save-transaction", transaction),
-  getTransactions: () => ipcRenderer.invoke("get-transactions")
+  getTransactions: () => ipcRenderer.invoke("get-transactions"),
+  openTransactionDetails: (transaction) => ipcRenderer.invoke("open-transaction-details", transaction),
+  checkStoreInfo: () => ipcRenderer.invoke("check-store-info"),
+  saveStoreInfo: (storeInfo) => ipcRenderer.invoke("save-store-info", storeInfo),
+  getStoreInfo: () => ipcRenderer.invoke("get-store-info"),
+  getInventoryTransactions: () => ipcRenderer.invoke("get-inventory-transactions")
 };
 
 contextBridge.exposeInMainWorld("api", api);

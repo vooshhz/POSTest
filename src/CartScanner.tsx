@@ -32,6 +32,7 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'credit' | 'debit' | null>(null);
   const [amountTendered, setAmountTendered] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
+  const [manualEntry, setManualEntry] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -180,6 +181,7 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
       
       // Prepare items data as JSON string
       const itemsData = cart.map(item => ({
+        upc: item.upc,
         description: item.description || 'Unknown Item',
         quantity: item.quantity,
         price: item.price,
@@ -215,7 +217,14 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
           }, 3000);
         }, paymentMethod === 'cash' ? 100 : 1500);
       } else {
-        alert("Failed to save transaction: " + (result.error || "Unknown error"));
+        // Show detailed error message for inventory issues
+        if (result.error?.includes("Insufficient inventory")) {
+          alert("❌ " + result.error);
+        } else if (result.error?.includes("not found in inventory")) {
+          alert("❌ " + result.error);
+        } else {
+          alert("Failed to save transaction: " + (result.error || "Unknown error"));
+        }
       }
     } catch (err) {
       console.error("Transaction save error:", err);
@@ -283,51 +292,109 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
 
   const totals = calculateTotals();
 
+  // Number pad functions
+  const handleNumberPadClick = (value: string) => {
+    if (value === 'C') {
+      setManualEntry("");
+    } else if (value === '←') {
+      setManualEntry(prev => prev.slice(0, -1));
+    } else if (value === '.') {
+      if (!manualEntry.includes('.')) {
+        setManualEntry(prev => prev + value);
+      }
+    } else if (value === 'Enter') {
+      handleManualPriceAdd();
+    } else {
+      // Limit to 2 decimal places if decimal exists
+      if (manualEntry.includes('.')) {
+        const parts = manualEntry.split('.');
+        if (parts[1].length < 2) {
+          setManualEntry(prev => prev + value);
+        }
+      } else {
+        setManualEntry(prev => prev + value);
+      }
+    }
+  };
+
+  const handleManualPriceAdd = () => {
+    if (!manualEntry || parseFloat(manualEntry) <= 0) {
+      setError("Please enter a valid amount");
+      return;
+    }
+
+    const price = parseFloat(manualEntry);
+    const manualItem: CartItem = {
+      upc: `MANUAL-${Date.now()}`,
+      description: "Manual Entry",
+      volume: null,
+      quantity: 1,
+      cost: 0,
+      price: price
+    };
+
+    setCart([...cart, manualItem]);
+    setManualEntry("");
+    setError("");
+  };
+
+  const formatDisplayAmount = (amount: string) => {
+    if (!amount) return "$0.00";
+    const num = parseFloat(amount);
+    if (isNaN(num)) return "$0.00";
+    return `$${num.toFixed(2)}`;
+  };
+
   return (
     <div className="cart-scanner-container">
       <h2>Point of Sale</h2>
       
-      <div className="scanner-section">
-        <div className="scanner-input-group">
-          <input
-            ref={inputRef}
-            type="text"
-            value={barcode}
-            onChange={(e) => setBarcode(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Scan or enter UPC"
-            className="scanner-input"
-            disabled={loading}
-          />
-          <button 
-            onClick={handleScan}
-            className="scan-btn"
-            disabled={loading}
-          >
-            Add
-          </button>
-        </div>
-        
-        {error && (
-          <div className="error-message">
-            ⚠️ {error}
+      <div className="main-content">
+        {/* Left Section - Scanner and Cart */}
+        <div className="left-section">
+          <div className="scanner-section">
+            <div className="scanner-input-group">
+              <input
+                ref={inputRef}
+                type="text"
+                value={barcode}
+                onChange={(e) => setBarcode(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Scan or enter UPC"
+                className="scanner-input"
+                disabled={loading}
+              />
+              <button 
+                onClick={handleScan}
+                className="scan-btn"
+                disabled={loading}
+              >
+                Add
+              </button>
+            </div>
+            
+            {error && (
+              <div className="error-message">
+                ⚠️ {error}
+              </div>
+            )}
+            
+            {showSuccess && (
+              <div className="success-message">
+                ✅ Payment successful! Transaction completed.
+              </div>
+            )}
           </div>
-        )}
-        
-        {showSuccess && (
-          <div className="success-message">
-            ✅ Payment successful! Transaction completed.
-          </div>
-        )}
-      </div>
 
-      <div className="cart-section">
+          <div className="cart-section">
         <div className="cart-header">
           <h3>Cart ({cart.length} items)</h3>
           {cart.length > 0 && (
-            <button onClick={clearCart} className="clear-cart-btn">
-              Clear Cart
-            </button>
+            <div className="cart-actions">
+              <button onClick={clearCart} className="clear-cart-btn">
+                Clear Cart
+              </button>
+            </div>
           )}
         </div>
 
@@ -392,37 +459,72 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
                 </tbody>
               </table>
             </div>
-
-            <div className="cart-summary">
-              <div className="summary-totals">
-                <div className="summary-row">
-                  <span>Total Items:</span>
-                  <span>{totals.totalItems}</span>
-                </div>
-                <div className="summary-row">
-                  <span>Subtotal:</span>
-                  <span>{formatCurrency(totals.subtotal)}</span>
-                </div>
-                <div className="summary-row">
-                  <span>Tax (6%):</span>
-                  <span>{formatCurrency(totals.tax)}</span>
-                </div>
-                <div className="summary-row total">
-                  <span>Total:</span>
-                  <span>{formatCurrency(totals.total)}</span>
-                </div>
-              </div>
-              <div className="cart-action-buttons">
-                <button className="void-cart-btn" onClick={voidCart}>
-                  Void
-                </button>
-                <button className="checkout-btn" onClick={handleCheckout}>
-                  Checkout
-                </button>
-              </div>
-            </div>
           </>
         )}
+          </div>
+        </div>
+
+        {/* Right Section - Manual Entry Panel */}
+        <div className="manual-entry-panel">
+          <div className="amount-display">
+            {formatDisplayAmount(manualEntry)}
+          </div>
+          <div className="number-pad">
+            <div className="number-pad-row">
+              <button className="num-pad-btn" onClick={() => handleNumberPadClick('7')}>7</button>
+              <button className="num-pad-btn" onClick={() => handleNumberPadClick('8')}>8</button>
+              <button className="num-pad-btn" onClick={() => handleNumberPadClick('9')}>9</button>
+              <button className="num-pad-btn clear" onClick={() => handleNumberPadClick('C')}>C</button>
+            </div>
+            <div className="number-pad-row">
+              <button className="num-pad-btn" onClick={() => handleNumberPadClick('4')}>4</button>
+              <button className="num-pad-btn" onClick={() => handleNumberPadClick('5')}>5</button>
+              <button className="num-pad-btn" onClick={() => handleNumberPadClick('6')}>6</button>
+              <button className="num-pad-btn backspace" onClick={() => handleNumberPadClick('←')}>←</button>
+            </div>
+            <div className="number-pad-row">
+              <button className="num-pad-btn" onClick={() => handleNumberPadClick('1')}>1</button>
+              <button className="num-pad-btn" onClick={() => handleNumberPadClick('2')}>2</button>
+              <button className="num-pad-btn" onClick={() => handleNumberPadClick('3')}>3</button>
+              <button className="num-pad-btn" onClick={() => handleNumberPadClick('00')}>00</button>
+            </div>
+            <div className="number-pad-row">
+              <button className="num-pad-btn zero" onClick={() => handleNumberPadClick('0')}>0</button>
+              <button className="num-pad-btn" onClick={() => handleNumberPadClick('.')}>.</button>
+              <button className="num-pad-btn enter" onClick={() => handleNumberPadClick('Enter')}>Add</button>
+            </div>
+          </div>
+          
+          {/* Cart Summary moved here */}
+          <div className="cart-summary">
+            <div className="summary-totals">
+              <div className="summary-row">
+                <span>Total Items:</span>
+                <span>{totals.totalItems}</span>
+              </div>
+              <div className="summary-row">
+                <span>Subtotal:</span>
+                <span>{formatCurrency(totals.subtotal)}</span>
+              </div>
+              <div className="summary-row">
+                <span>Tax (6%):</span>
+                <span>{formatCurrency(totals.tax)}</span>
+              </div>
+              <div className="summary-row total">
+                <span>Total:</span>
+                <span>{formatCurrency(totals.total)}</span>
+              </div>
+            </div>
+            <div className="cart-action-buttons">
+              <button className="void-cart-btn" onClick={voidCart}>
+                Void
+              </button>
+              <button className="checkout-btn" onClick={handleCheckout}>
+                Checkout
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Payment Modal */}
