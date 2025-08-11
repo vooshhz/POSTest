@@ -164,7 +164,7 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
     setAmountTendered("");
   };
 
-  const processPayment = () => {
+  const processPayment = async () => {
     if (paymentMethod === 'cash') {
       const tendered = parseFloat(amountTendered);
       if (isNaN(tendered) || tendered < totals.total) {
@@ -173,21 +173,54 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
       }
     }
 
-    // Simulate payment processing
-    setTimeout(() => {
-      setShowPaymentModal(false);
-      setCart([]);
-      setBarcode("");
-      setPaymentMethod(null);
-      setAmountTendered("");
-      setShowSuccess(true);
+    // Save transaction to database
+    try {
+      const cashGiven = paymentMethod === 'cash' ? parseFloat(amountTendered) : undefined;
+      const changeGiven = paymentMethod === 'cash' ? cashGiven! - totals.total : undefined;
       
-      // Hide success message after 3 seconds
-      setTimeout(() => {
-        setShowSuccess(false);
-        inputRef.current?.focus();
-      }, 3000);
-    }, paymentMethod === 'cash' ? 100 : 1500);
+      // Prepare items data as JSON string
+      const itemsData = cart.map(item => ({
+        description: item.description || 'Unknown Item',
+        quantity: item.quantity,
+        price: item.price,
+        total: item.price * item.quantity
+      }));
+      
+      const transaction = {
+        items: JSON.stringify(itemsData),
+        subtotal: totals.subtotal,
+        tax: totals.tax,
+        total: totals.total,
+        payment_type: paymentMethod as 'cash' | 'debit' | 'credit',
+        cash_given: cashGiven,
+        change_given: changeGiven
+      };
+      
+      const result = await window.api.saveTransaction(transaction);
+      
+      if (result.success) {
+        // Simulate payment processing
+        setTimeout(() => {
+          setShowPaymentModal(false);
+          setCart([]);
+          setBarcode("");
+          setPaymentMethod(null);
+          setAmountTendered("");
+          setShowSuccess(true);
+          
+          // Hide success message after 3 seconds
+          setTimeout(() => {
+            setShowSuccess(false);
+            inputRef.current?.focus();
+          }, 3000);
+        }, paymentMethod === 'cash' ? 100 : 1500);
+      } else {
+        alert("Failed to save transaction: " + (result.error || "Unknown error"));
+      }
+    } catch (err) {
+      console.error("Transaction save error:", err);
+      alert("Failed to save transaction");
+    }
   };
 
   const formatCurrency = (amount: number) => {

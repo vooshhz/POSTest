@@ -40,6 +40,19 @@ function getInventoryDb() {
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
       CREATE INDEX IF NOT EXISTS idx_inventory_upc ON inventory(upc);
+      
+      CREATE TABLE IF NOT EXISTS transactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        items TEXT NOT NULL,
+        subtotal REAL NOT NULL,
+        tax REAL NOT NULL,
+        total REAL NOT NULL,
+        payment_type TEXT NOT NULL CHECK(payment_type IN ('cash', 'debit', 'credit')),
+        cash_given REAL,
+        change_given REAL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(created_at);
     `);
     console.log("✅ Inventory database initialized at:", inventoryDbPath);
   }
@@ -60,6 +73,18 @@ interface InventoryItem {
   cost: number;
   price: number;
   quantity: number;
+}
+
+interface Transaction {
+  id?: number;
+  items: string;
+  subtotal: number;
+  tax: number;
+  total: number;
+  payment_type: 'cash' | 'debit' | 'credit';
+  cash_given?: number;
+  change_given?: number;
+  created_at?: string;
 }
 
 export function registerInventoryIpc(ipcMain: IpcMain) {
@@ -160,7 +185,7 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
-      const insertMany = newDb.transaction((rows: any[]) => {
+      const insertMany = newDb.transaction((rows: Record<string, unknown>[]) => {
         for (const row of rows) {
           insert.run(
             row['Item Number'] || null,
@@ -186,7 +211,7 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
 
       insertMany(data);
       
-      const count = newDb.prepare('SELECT COUNT(*) as count FROM products').get() as any;
+      const count = newDb.prepare('SELECT COUNT(*) as count FROM products').get() as { count: number };
       
       newDb.close();
       productsDb = null; // Reset to force reconnection
@@ -274,7 +299,7 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
       `).all();
       
       // Enrich with product details
-      const enrichedItems = inventoryItems.map((item: any) => {
+      const enrichedItems = inventoryItems.map((item: Record<string, unknown>) => {
         const product = prodDb.prepare(`
           SELECT 
             "Item Description" as description,
@@ -282,7 +307,7 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
             "Bottle Volume (ml)" as volume
           FROM products 
           WHERE "UPC" = ?
-        `).get(item.upc) as any;
+        `).get(item.upc as string) as { description?: string; category?: string; volume?: string } | undefined;
         
         return {
           ...item,
@@ -313,7 +338,7 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
       // Check if item exists in inventory
       const inventoryItem = invDb.prepare(`
         SELECT * FROM inventory WHERE upc = ?
-      `).get(upc) as any;
+      `).get(upc) as InventoryItem | undefined;
       
       if (inventoryItem) {
         // Get product details from products database
@@ -325,7 +350,7 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
             "Bottle Volume (ml)" as volume
           FROM products 
           WHERE "UPC" = ?
-        `).get(upc) as any;
+        `).get(upc) as { description?: string; category?: string; volume?: string } | undefined;
         
         return {
           success: true,
@@ -400,6 +425,73 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
       return {
         success: false,
         error: error instanceof Error ? error.message : "Failed to add to inventory"
+      };
+    }
+  });
+
+  // Save transaction
+  ipcMain.handle("save-transaction", async (_, transaction: Transaction) => {
+    try {
+      const invDb = getInventoryDb();
+      
+      const stmt = invDb.prepare(`
+        INSERT INTO transactions (items, subtotal, tax, total, payment_type, cash_given, change_given)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `);
+      
+      const result = stmt.run(
+        transaction.items,
+        transaction.subtotal,
+        transaction.tax,
+        transaction.total,
+        transaction.payment_type,
+        transaction.cash_given || null,
+        transaction.change_given || null
+      );
+      
+      return {
+        success: true,
+        transactionId: result.lastInsertRowid,
+        message: "Transaction saved successfully"
+      };
+    } catch (error) {
+      console.error("Save transaction error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to save transaction"
+      };
+    }
+  });
+
+  // Get all transactions
+  ipcMain.handle("get-transactions", async () => {
+    try {
+      const invDb = getInventoryDb();
+      
+      const transactions = invDb.prepare(`
+        SELECT 
+          id,
+          items,
+          subtotal,
+          tax,
+          total,
+          payment_type,
+          cash_given,
+          change_given,
+          datetime(created_at, 'localtime') as created_at
+        FROM transactions
+        ORDER BY created_at DESC
+      `).all();
+      
+      return {
+        success: true,
+        data: transactions
+      };
+    } catch (error) {
+      console.error("Get transactions error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to load transactions"
       };
     }
   });

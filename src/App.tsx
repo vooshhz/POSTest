@@ -2,6 +2,7 @@
 
 import CartScanner from "./CartScanner";
 import InventoryList from "./InventoryList";
+import { TransactionHistory } from "./TransactionHistory";
 import "./App.css";
 import { useState } from "react";
 
@@ -14,13 +15,9 @@ interface CartItem {
   price: number;
 }
 
-interface InventoryState {
-  barcode: string;
-  searchFilter: string;
-}
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<"scanner" | "inventory">("scanner");
+  const [currentView, setCurrentView] = useState<"scanner" | "inventory" | "transactions">("scanner");
   
   // Cart Scanner state
   const [cartBarcode, setCartBarcode] = useState("");
@@ -69,6 +66,12 @@ export default function App() {
         >
           Inventory
         </button>
+        <button 
+          className={`nav-tab ${currentView === "transactions" ? "active" : ""}`}
+          onClick={() => setCurrentView("transactions")}
+        >
+          Transactions
+        </button>
       </div>
       
       <h1>Liquor Inventory System</h1>
@@ -82,13 +85,15 @@ export default function App() {
           error={cartError}
           setError={setCartError}
         />
-      ) : (
+      ) : currentView === "inventory" ? (
         <InventoryList 
           barcode={inventoryBarcode}
           setBarcode={setInventoryBarcode}
           searchFilter={searchFilter}
           setSearchFilter={setSearchFilter}
         />
+      ) : (
+        <TransactionHistory />
       )}
     </div>
   );

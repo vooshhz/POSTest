@@ -59,6 +59,35 @@ interface InventoryAPI {
     };
     error?: string;
   }>;
+  saveTransaction: (transaction: {
+    items: string;
+    subtotal: number;
+    tax: number;
+    total: number;
+    payment_type: 'cash' | 'debit' | 'credit';
+    cash_given?: number;
+    change_given?: number;
+  }) => Promise<{
+    success: boolean;
+    transactionId?: number;
+    message?: string;
+    error?: string;
+  }>;
+  getTransactions: () => Promise<{
+    success: boolean;
+    data?: Array<{
+      id: number;
+      items: string;
+      subtotal: number;
+      tax: number;
+      total: number;
+      payment_type: string;
+      cash_given: number | null;
+      change_given: number | null;
+      created_at: string;
+    }>;
+    error?: string;
+  }>;
 }
 
 // Expose protected methods to the renderer
@@ -67,7 +96,9 @@ const api: InventoryAPI = {
   importCsv: () => ipcRenderer.invoke("import-csv"),
   addToInventory: (item) => ipcRenderer.invoke("add-to-inventory", item),
   getInventory: () => ipcRenderer.invoke("get-inventory"),
-  checkInventory: (upc: string) => ipcRenderer.invoke("check-inventory", upc)
+  checkInventory: (upc: string) => ipcRenderer.invoke("check-inventory", upc),
+  saveTransaction: (transaction) => ipcRenderer.invoke("save-transaction", transaction),
+  getTransactions: () => ipcRenderer.invoke("get-transactions")
 };
 
 contextBridge.exposeInMainWorld("api", api);
