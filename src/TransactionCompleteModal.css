@@ -1,0 +1,143 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.transaction-complete-modal {
+  background: white;
+  border-radius: 12px;
+  padding: 32px;
+  min-width: 400px;
+  max-width: 500px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.transaction-status {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.status-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  font-weight: bold;
+}
+
+.transaction-status.success .status-icon {
+  color: #4CAF50;
+}
+
+.transaction-status.failed .status-icon {
+  color: #f44336;
+}
+
+.transaction-status h2 {
+  font-size: 24px;
+  margin: 0 0 8px 0;
+  color: #333;
+}
+
+.transaction-status p {
+  color: #666;
+  margin: 8px 0;
+  font-size: 16px;
+}
+
+.transaction-summary {
+  background: #f5f5f5;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 20px;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: 16px;
+}
+
+.summary-row span:first-child {
+  color: #666;
+}
+
+.summary-row span:last-child {
+  font-weight: 600;
+  color: #333;
+}
+
+.summary-row.change {
+  border-top: 1px solid #ddd;
+  padding-top: 12px;
+  margin-top: 8px;
+}
+
+.summary-row.change span:last-child {
+  color: #4CAF50;
+  font-size: 18px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.modal-actions button {
+  padding: 12px 24px;
+  font-size: 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: 500;
+}
+
+.receipt-btn {
+  background: #2196F3;
+  color: white;
+}
+
+.receipt-btn:hover {
+  background: #1976D2;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+}
+
+.close-btn {
+  background: #757575;
+  color: white;
+}
+
+.close-btn:hover {
+  background: #616161;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+@media print {
+  .modal-overlay {
+    display: none;
+  }
+}

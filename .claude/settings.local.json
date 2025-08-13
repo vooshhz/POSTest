@@ -7,7 +7,11 @@
       "Bash(pnpm dev:*)",
       "Bash(copy Products.xlsx Products_Copy.xlsx)",
       "Bash(cp:*)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(pnpm lint:*)",
+      "Bash(npx tsx:*)",
+      "Bash(pnpm rebuild:*)",
+      "Bash(pnpm install:*)"
     ],
     "deny": []
   }

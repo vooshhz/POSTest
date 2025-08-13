@@ -81,6 +81,25 @@ function getInventoryDb() {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
       CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(created_at);
+      
+      CREATE TABLE IF NOT EXISTS inventory_adjustments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        upc TEXT NOT NULL,
+        adjustment_type TEXT NOT NULL CHECK(adjustment_type IN ('purchase', 'sale', 'adjustment', 'initial', 'test_data', 'return', 'damage', 'theft')),
+        quantity_change INTEGER NOT NULL,
+        quantity_before INTEGER NOT NULL,
+        quantity_after INTEGER NOT NULL,
+        cost REAL,
+        price REAL,
+        reference_id INTEGER,
+        reference_type TEXT CHECK(reference_type IN ('transaction', 'manual', 'test')),
+        notes TEXT,
+        created_by TEXT DEFAULT 'system',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_adjustments_upc ON inventory_adjustments(upc);
+      CREATE INDEX IF NOT EXISTS idx_adjustments_date ON inventory_adjustments(created_at);
+      CREATE INDEX IF NOT EXISTS idx_adjustments_type ON inventory_adjustments(adjustment_type);
     `);
     console.log("✅ Inventory database initialized at:", inventoryDbPath);
   }
@@ -577,41 +596,68 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
     try {
       const invDb = getInventoryDb();
       
-      // Check if already exists in inventory
-      const existing = invDb.prepare(`
-        SELECT * FROM inventory WHERE upc = ?
-      `).get(item.upc);
+      // Start transaction for data consistency
+      invDb.prepare("BEGIN TRANSACTION").run();
       
-      if (existing) {
-        // Update existing record
-        const stmt = invDb.prepare(`
-          UPDATE inventory 
-          SET quantity = quantity + ?, 
-              cost = ?, 
-              price = ?,
-              updated_at = CURRENT_TIMESTAMP
-          WHERE upc = ?
+      try {
+        // Check if already exists in inventory
+        const existing = invDb.prepare(`
+          SELECT * FROM inventory WHERE upc = ?
+        `).get(item.upc) as InventoryItem & { quantity: number } | undefined;
+        
+        const quantityBefore = existing ? existing.quantity : 0;
+        const quantityAfter = quantityBefore + item.quantity;
+        
+        if (existing) {
+          // Update existing record
+          const stmt = invDb.prepare(`
+            UPDATE inventory 
+            SET quantity = quantity + ?, 
+                cost = ?, 
+                price = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE upc = ?
+          `);
+          stmt.run(item.quantity, item.cost, item.price, item.upc);
+        } else {
+          // Insert new record
+          const stmt = invDb.prepare(`
+            INSERT INTO inventory (upc, cost, price, quantity)
+            VALUES (?, ?, ?, ?)
+          `);
+          stmt.run(item.upc, item.cost, item.price, item.quantity);
+        }
+        
+        // Record the adjustment
+        const adjustmentStmt = invDb.prepare(`
+          INSERT INTO inventory_adjustments (
+            upc, adjustment_type, quantity_change, quantity_before, quantity_after,
+            cost, price, reference_type, notes
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
-        stmt.run(item.quantity, item.cost, item.price, item.upc);
+        
+        adjustmentStmt.run(
+          item.upc,
+          'purchase',  // Manual additions are considered purchases
+          item.quantity,
+          quantityBefore,
+          quantityAfter,
+          item.cost,
+          item.price,
+          'manual',
+          'Manual inventory addition'
+        );
+        
+        invDb.prepare("COMMIT").run();
         
         return {
           success: true,
           message: `Inventory updated! Added ${item.quantity} units.`,
-          updated: true
+          updated: !!existing
         };
-      } else {
-        // Insert new record
-        const stmt = invDb.prepare(`
-          INSERT INTO inventory (upc, cost, price, quantity)
-          VALUES (?, ?, ?, ?)
-        `);
-        stmt.run(item.upc, item.cost, item.price, item.quantity);
-        
-        return {
-          success: true,
-          message: `Added ${item.quantity} units to inventory!`,
-          updated: false
-        };
+      } catch (error) {
+        invDb.prepare("ROLLBACK").run();
+        throw error;
       }
     } catch (error) {
       console.error("Add to inventory error:", error);
@@ -634,12 +680,30 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
         // Parse the items to deduct from inventory
         const items = JSON.parse(transaction.items);
         
-        // Deduct each item from inventory
+        // Save the transaction first to get the ID
+        const stmt = invDb.prepare(`
+          INSERT INTO transactions (items, subtotal, tax, total, payment_type, cash_given, change_given)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `);
+        
+        const result = stmt.run(
+          transaction.items,
+          transaction.subtotal,
+          transaction.tax,
+          transaction.total,
+          transaction.payment_type,
+          transaction.cash_given || null,
+          transaction.change_given || null
+        );
+        
+        const transactionId = result.lastInsertRowid;
+        
+        // Deduct each item from inventory and record adjustments
         for (const item of items) {
-          // Check current quantity
+          // Check current quantity and get item details
           const currentItem = invDb.prepare(`
-            SELECT quantity FROM inventory WHERE upc = ?
-          `).get(item.upc) as { quantity: number } | undefined;
+            SELECT quantity, cost, price FROM inventory WHERE upc = ?
+          `).get(item.upc) as { quantity: number; cost: number; price: number } | undefined;
           
           if (!currentItem) {
             throw new Error(`Item with UPC ${item.upc} not found in inventory`);
@@ -659,23 +723,28 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
           `);
           
           updateStmt.run(newQuantity, item.upc);
+          
+          // Record the adjustment for this sale
+          const adjustmentStmt = invDb.prepare(`
+            INSERT INTO inventory_adjustments (
+              upc, adjustment_type, quantity_change, quantity_before, quantity_after,
+              cost, price, reference_id, reference_type, notes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `);
+          
+          adjustmentStmt.run(
+            item.upc,
+            'sale',
+            -item.quantity,  // Negative for sales
+            currentItem.quantity,
+            newQuantity,
+            currentItem.cost,
+            item.price || currentItem.price,
+            transactionId,
+            'transaction',
+            `Sale - Transaction #${transactionId}`
+          );
         }
-        
-        // Save the transaction
-        const stmt = invDb.prepare(`
-          INSERT INTO transactions (items, subtotal, tax, total, payment_type, cash_given, change_given)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
-        `);
-        
-        const result = stmt.run(
-          transaction.items,
-          transaction.subtotal,
-          transaction.tax,
-          transaction.total,
-          transaction.payment_type,
-          transaction.cash_given || null,
-          transaction.change_given || null
-        );
         
         // Commit the transaction
         invDb.prepare("COMMIT").run();
@@ -728,6 +797,72 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
       return {
         success: false,
         error: error instanceof Error ? error.message : "Failed to load transactions"
+      };
+    }
+  });
+
+  // Get inventory adjustments
+  ipcMain.handle("get-inventory-adjustments", async (_, filters?: { upc?: string; type?: string }) => {
+    try {
+      const invDb = getInventoryDb();
+      const prodDb = getProductsDb();
+      
+      let query = `
+        SELECT 
+          a.*,
+          datetime(a.created_at, 'localtime') as created_at_local
+        FROM inventory_adjustments a
+      `;
+      
+      const conditions = [];
+      const params = [];
+      
+      if (filters?.upc) {
+        conditions.push("a.upc = ?");
+        params.push(filters.upc);
+      }
+      
+      if (filters?.type) {
+        conditions.push("a.adjustment_type = ?");
+        params.push(filters.type);
+      }
+      
+      if (conditions.length > 0) {
+        query += " WHERE " + conditions.join(" AND ");
+      }
+      
+      query += " ORDER BY a.created_at DESC LIMIT 500";
+      
+      const adjustments = invDb.prepare(query).all(...params);
+      
+      // Enrich with product descriptions
+      const enrichedAdjustments = adjustments.map((adj: any) => {
+        let productInfo = null;
+        try {
+          productInfo = prodDb.prepare(`
+            SELECT "Item Description" as description, "Category Name" as category
+            FROM products WHERE "UPC" = ?
+          `).get(adj.upc) as any;
+        } catch (err) {
+          // Products database might not be available
+        }
+        
+        return {
+          ...adj,
+          description: productInfo?.description || 'Unknown Item',
+          category: productInfo?.category || null
+        };
+      });
+      
+      return {
+        success: true,
+        data: enrichedAdjustments
+      };
+    } catch (error) {
+      console.error("Get inventory adjustments error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to get adjustments"
       };
     }
   });
@@ -798,6 +933,908 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
       return {
         success: false,
         error: error instanceof Error ? error.message : "Failed to get inventory transactions"
+      };
+    }
+  });
+
+  // Get daily sales report
+  ipcMain.handle("get-daily-sales", async (_, date: string) => {
+    try {
+      const invDb = getInventoryDb();
+      const prodDb = getProductsDb();
+      
+      // Get all transactions for the specified date
+      const startDate = `${date} 00:00:00`;
+      const endDate = `${date} 23:59:59`;
+      
+      const transactions = invDb.prepare(`
+        SELECT * FROM transactions 
+        WHERE datetime(created_at) >= datetime(?) 
+        AND datetime(created_at) <= datetime(?)
+        ORDER BY created_at
+      `).all(startDate, endDate) as any[];
+      
+      if (transactions.length === 0) {
+        return {
+          success: true,
+          data: {
+            date,
+            totalSales: 0,
+            salesCount: 0,
+            itemsSold: 0,
+            avgSaleAmount: 0,
+            totalTax: 0,
+            paymentBreakdown: { cash: 0, debit: 0, credit: 0 },
+            hourlyBreakdown: [],
+            topProducts: []
+          }
+        };
+      }
+      
+      // Calculate metrics
+      let totalSales = 0;
+      let totalTax = 0;
+      let itemsSold = 0;
+      const paymentBreakdown = { cash: 0, debit: 0, credit: 0 };
+      const hourlyData: Record<number, { sales: number; amount: number }> = {};
+      const productSales: Record<string, { description: string; quantity: number; revenue: number }> = {};
+      
+      for (const transaction of transactions) {
+        totalSales += transaction.total;
+        totalTax += transaction.tax;
+        
+        // Payment breakdown
+        paymentBreakdown[transaction.payment_type as keyof typeof paymentBreakdown] += transaction.total;
+        
+        // Hourly breakdown
+        const hour = new Date(transaction.created_at).getHours();
+        if (!hourlyData[hour]) {
+          hourlyData[hour] = { sales: 0, amount: 0 };
+        }
+        hourlyData[hour].sales++;
+        hourlyData[hour].amount += transaction.total;
+        
+        // Parse items for product analysis
+        try {
+          const items = JSON.parse(transaction.items);
+          for (const item of items) {
+            itemsSold += item.quantity;
+            
+            if (!productSales[item.upc]) {
+              // Try to get product description from database
+              let description = item.description || 'Unknown Product';
+              try {
+                const product = prodDb.prepare(`
+                  SELECT "Item Description" as description 
+                  FROM products WHERE "UPC" = ?
+                `).get(item.upc) as any;
+                if (product?.description) {
+                  description = product.description;
+                }
+              } catch (err) {
+                // Use fallback description
+              }
+              
+              productSales[item.upc] = {
+                description,
+                quantity: 0,
+                revenue: 0
+              };
+            }
+            productSales[item.upc].quantity += item.quantity;
+            productSales[item.upc].revenue += item.total || (item.price * item.quantity);
+          }
+        } catch (err) {
+          console.error('Error parsing transaction items:', err);
+        }
+      }
+      
+      // Format hourly breakdown
+      const hourlyBreakdown = Object.entries(hourlyData).map(([hour, data]) => ({
+        hour: parseInt(hour),
+        sales: data.sales,
+        amount: data.amount
+      }));
+      
+      // Get top 10 products by revenue
+      const topProducts = Object.entries(productSales)
+        .map(([upc, data]) => ({ upc, ...data }))
+        .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, 10);
+      
+      const avgSaleAmount = totalSales / transactions.length;
+      
+      return {
+        success: true,
+        data: {
+          date,
+          totalSales,
+          salesCount: transactions.length,
+          itemsSold,
+          avgSaleAmount,
+          totalTax,
+          paymentBreakdown,
+          hourlyBreakdown,
+          topProducts
+        }
+      };
+    } catch (error) {
+      console.error("Get daily sales error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to get daily sales"
+      };
+    }
+  });
+
+  // Register test inventory handlers
+  registerGenerateTestInventory(ipcMain);
+  registerClearInventory(ipcMain);
+  registerGenerateTestSales(ipcMain);
+  registerClearTransactions(ipcMain);
+  registerWeeklySummary(ipcMain);
+  registerInventoryAnalysis(ipcMain);
+}
+
+// Generate test inventory for development
+function registerGenerateTestInventory(ipcMain: IpcMain) {
+  ipcMain.handle("generate-test-inventory", async (_, params: {
+    itemCount: number;
+    minCost: number;
+    maxCost: number;
+    markupPercentage: number;
+    minQuantity: number;
+    maxQuantity: number;
+  }) => {
+    try {
+      // Initialize databases if needed
+      const prodDb = getProductsDb();
+      const invDb = getInventoryDb();
+
+      // Get random products from the catalog
+      const randomProducts = prodDb.prepare(`
+        SELECT "UPC" as upc, "Item Description" as description, "Bottle Volume (ml)" as size
+        FROM products
+        WHERE "UPC" IS NOT NULL
+        ORDER BY RANDOM()
+        LIMIT ?
+      `).all(params.itemCount) as Array<{
+        upc: string;
+        description: string | null;
+        size: string | null;
+      }>;
+
+      if (randomProducts.length === 0) {
+        return {
+          success: false,
+          error: "No products found in catalog. Please import product data first."
+        };
+      }
+
+      // Begin transaction for bulk insert with adjustments
+      invDb.prepare("BEGIN TRANSACTION").run();
+      
+      try {
+        const insertStmt = invDb.prepare(`
+          INSERT OR REPLACE INTO inventory (upc, cost, price, quantity)
+          VALUES (?, ?, ?, ?)
+        `);
+        
+        const adjustmentStmt = invDb.prepare(`
+          INSERT INTO inventory_adjustments (
+            upc, adjustment_type, quantity_change, quantity_before, quantity_after,
+            cost, price, reference_type, notes
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        
+        // Generate random inventory data
+        let itemsAdded = 0;
+        
+        for (const product of randomProducts) {
+          // Check if item already exists
+          const existing = invDb.prepare(`
+            SELECT quantity FROM inventory WHERE upc = ?
+          `).get(product.upc) as { quantity: number } | undefined;
+          
+          const quantityBefore = existing ? existing.quantity : 0;
+          
+          // Generate random cost within range
+          const cost = params.minCost + Math.random() * (params.maxCost - params.minCost);
+          // Calculate price with markup
+          const price = cost * (1 + params.markupPercentage / 100);
+          // Generate random quantity within range
+          const quantity = Math.floor(params.minQuantity + Math.random() * (params.maxQuantity - params.minQuantity + 1));
+          
+          const finalCost = parseFloat(cost.toFixed(2));
+          const finalPrice = parseFloat(price.toFixed(2));
+          
+          // Insert or update inventory
+          if (existing) {
+            // Update existing - add to current quantity
+            invDb.prepare(`
+              UPDATE inventory 
+              SET quantity = quantity + ?, cost = ?, price = ?, updated_at = CURRENT_TIMESTAMP
+              WHERE upc = ?
+            `).run(quantity, finalCost, finalPrice, product.upc);
+          } else {
+            // Insert new
+            insertStmt.run(product.upc, finalCost, finalPrice, quantity);
+          }
+          
+          // Record adjustment
+          adjustmentStmt.run(
+            product.upc,
+            'test_data',
+            quantity,
+            quantityBefore,
+            quantityBefore + quantity,
+            finalCost,
+            finalPrice,
+            'test',
+            `Test data generation - ${product.description || 'Unknown'}`
+          );
+          
+          itemsAdded++;
+        }
+        
+        invDb.prepare("COMMIT").run();
+        
+        return {
+          success: true,
+          itemsAdded: itemsAdded
+        };
+      } catch (error) {
+        invDb.prepare("ROLLBACK").run();
+        throw error;
+      }
+    } catch (error) {
+      console.error("Error generating test inventory:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to generate test inventory"
+      };
+    }
+  });
+}
+
+// Clear all inventory for testing
+function registerClearInventory(ipcMain: IpcMain) {
+  ipcMain.handle("clear-inventory", async () => {
+    try {
+      // Initialize database if needed
+      const invDb = getInventoryDb();
+
+      // Delete all inventory records
+      invDb.prepare("DELETE FROM inventory").run();
+
+      return {
+        success: true
+      };
+    } catch (error) {
+      console.error("Error clearing inventory:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to clear inventory"
+      };
+    }
+  });
+}
+
+// Generate test sales for development
+function registerGenerateTestSales(ipcMain: IpcMain) {
+  ipcMain.handle("generate-test-sales", async (_, params: {
+    numberOfSales: number;
+    minItemsPerSale: number;
+    maxItemsPerSale: number;
+    startDate: string;
+    endDate: string;
+    paymentTypes: string[];
+  }) => {
+    try {
+      const invDb = getInventoryDb();
+      const storeDb = getStoreInfoDb();
+      
+      // Get store info for tax rate
+      const storeInfo = storeDb.prepare("SELECT tax_rate FROM store_info LIMIT 1").get() as { tax_rate: number } | undefined;
+      const taxRate = storeInfo?.tax_rate || 6.0;
+      
+      // Get available inventory items with quantity > 0
+      const availableItems = invDb.prepare(`
+        SELECT upc, price, quantity FROM inventory 
+        WHERE quantity > 0
+        ORDER BY RANDOM()
+      `).all() as Array<{ upc: string; price: number; quantity: number }>;
+      
+      if (availableItems.length === 0) {
+        return {
+          success: false,
+          error: "No inventory available to create sales. Please add inventory first."
+        };
+      }
+      
+      let salesCreated = 0;
+      let totalItemsSold = 0;
+      let totalValue = 0;
+      
+      // Calculate date range in milliseconds
+      const startTime = new Date(params.startDate).getTime();
+      const endTime = new Date(params.endDate + 'T23:59:59').getTime();
+      const dateRange = endTime - startTime;
+      
+      for (let saleNum = 0; saleNum < params.numberOfSales; saleNum++) {
+        // Generate random timestamp within the date range
+        const randomTime = startTime + Math.random() * dateRange;
+        const saleDate = new Date(randomTime);
+        // Random number of items for this sale
+        const itemCount = params.minItemsPerSale + 
+          Math.floor(Math.random() * (params.maxItemsPerSale - params.minItemsPerSale + 1));
+        
+        // Select random items for this sale
+        const saleItems = [];
+        const usedUPCs = new Set<string>();
+        
+        for (let i = 0; i < itemCount && i < availableItems.length; i++) {
+          // Find an item we haven't used in this sale yet
+          let item = null;
+          let attempts = 0;
+          
+          while (attempts < 50) {
+            const randomItem = availableItems[Math.floor(Math.random() * availableItems.length)];
+            if (!usedUPCs.has(randomItem.upc)) {
+              // Check if item still has quantity
+              const current = invDb.prepare(`
+                SELECT upc, price, quantity FROM inventory WHERE upc = ? AND quantity > 0
+              `).get(randomItem.upc) as typeof randomItem | undefined;
+              
+              if (current) {
+                item = current;
+                usedUPCs.add(current.upc);
+                break;
+              }
+            }
+            attempts++;
+          }
+          
+          if (!item) continue;
+          
+          // Random quantity (1-3 or available, whichever is less)
+          const maxQty = Math.min(3, item.quantity);
+          const quantity = Math.ceil(Math.random() * maxQty);
+          
+          saleItems.push({
+            upc: item.upc,
+            description: `Test Item ${item.upc}`,
+            price: item.price,
+            quantity: quantity,
+            total: item.price * quantity
+          });
+          
+          totalItemsSold += quantity;
+        }
+        
+        if (saleItems.length === 0) continue;
+        
+        // Calculate totals
+        const subtotal = saleItems.reduce((sum, item) => sum + item.total, 0);
+        const tax = subtotal * (taxRate / 100);
+        const total = subtotal + tax;
+        
+        // Random payment type
+        const paymentType = params.paymentTypes[Math.floor(Math.random() * params.paymentTypes.length)];
+        
+        // For cash payments, simulate cash given
+        let cashGiven = null;
+        let changeGiven = null;
+        if (paymentType === 'cash') {
+          // Round up to nearest $5 or $10
+          const roundTo = total > 50 ? 10 : 5;
+          cashGiven = Math.ceil(total / roundTo) * roundTo;
+          changeGiven = cashGiven - total;
+        }
+        
+        // Create the transaction
+        const transaction = {
+          items: JSON.stringify(saleItems),
+          subtotal,
+          tax,
+          total,
+          payment_type: paymentType,
+          cash_given: cashGiven,
+          change_given: changeGiven
+        };
+        
+        // Save transaction directly using the same logic as save-transaction handler
+        invDb.prepare("BEGIN TRANSACTION").run();
+        
+        try {
+          // Save the transaction with specific date
+          const stmt = invDb.prepare(`
+            INSERT INTO transactions (items, subtotal, tax, total, payment_type, cash_given, change_given, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          `);
+          
+          const result = stmt.run(
+            transaction.items,
+            transaction.subtotal,
+            transaction.tax,
+            transaction.total,
+            transaction.payment_type,
+            transaction.cash_given,
+            transaction.change_given,
+            saleDate.toISOString()
+          );
+          
+          const transactionId = result.lastInsertRowid;
+          
+          // Deduct items from inventory and record adjustments
+          for (const item of saleItems) {
+            const currentItem = invDb.prepare(`
+              SELECT quantity, cost, price FROM inventory WHERE upc = ?
+            `).get(item.upc) as { quantity: number; cost: number; price: number } | undefined;
+            
+            if (!currentItem || currentItem.quantity < item.quantity) {
+              throw new Error(`Insufficient inventory for item ${item.upc}`);
+            }
+            
+            const newQuantity = currentItem.quantity - item.quantity;
+            
+            // Update inventory
+            invDb.prepare(`
+              UPDATE inventory 
+              SET quantity = ?, updated_at = datetime('now')
+              WHERE upc = ?
+            `).run(newQuantity, item.upc);
+            
+            // Record adjustment with same date as transaction
+            invDb.prepare(`
+              INSERT INTO inventory_adjustments (
+                upc, adjustment_type, quantity_change, quantity_before, quantity_after,
+                cost, price, reference_id, reference_type, notes, created_at
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              item.upc,
+              'sale',
+              -item.quantity,
+              currentItem.quantity,
+              newQuantity,
+              currentItem.cost,
+              item.price,
+              transactionId,
+              'transaction',
+              `Test Sale - Transaction #${transactionId}`,
+              saleDate.toISOString()
+            );
+          }
+          
+          invDb.prepare("COMMIT").run();
+          var saveResult = { success: true };
+        } catch (error) {
+          invDb.prepare("ROLLBACK").run();
+          var saveResult = { success: false };
+        }
+        
+        if (saveResult.success) {
+          salesCreated++;
+          totalValue += total;
+        }
+      }
+      
+      return {
+        success: true,
+        salesCreated,
+        totalItems: totalItemsSold,
+        totalValue
+      };
+    } catch (error) {
+      console.error("Error generating test sales:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to generate test sales"
+      };
+    }
+  });
+}
+
+// Clear all transactions for testing
+function registerClearTransactions(ipcMain: IpcMain) {
+  ipcMain.handle("clear-transactions", async () => {
+    try {
+      const invDb = getInventoryDb();
+      
+      // Delete all transactions and related adjustments
+      invDb.prepare("BEGIN TRANSACTION").run();
+      
+      try {
+        // Delete all transactions
+        invDb.prepare("DELETE FROM transactions").run();
+        
+        // Delete sales-related adjustments
+        invDb.prepare("DELETE FROM inventory_adjustments WHERE adjustment_type = 'sale'").run();
+        
+        invDb.prepare("COMMIT").run();
+        
+        return {
+          success: true
+        };
+      } catch (error) {
+        invDb.prepare("ROLLBACK").run();
+        throw error;
+      }
+    } catch (error) {
+      console.error("Error clearing transactions:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to clear transactions"
+      };
+    }
+  });
+}
+
+// Get Inventory Analysis handler
+function registerInventoryAnalysis(ipcMain: IpcMain) {
+  ipcMain.handle("get-inventory-analysis", async () => {
+    try {
+      const invDb = getInventoryDb();
+      const productsDb = getProductsDb();
+      
+      // Get all inventory items
+      const items = invDb.prepare(`
+        SELECT 
+          upc,
+          description,
+          cost,
+          price,
+          quantity,
+          updated_at
+        FROM inventory
+        WHERE quantity >= 0
+      `).all() as Array<{
+        upc: string;
+        description: string;
+        cost: number;
+        price: number;
+        quantity: number;
+        updated_at: string;
+      }>;
+      
+      // Get sales data for turnover calculation (last 30 days)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const salesData = invDb.prepare(`
+        SELECT 
+          json_extract(item.value, '$.upc') as upc,
+          SUM(json_extract(item.value, '$.quantity')) as sold_quantity
+        FROM transactions t,
+             json_each(t.items) item
+        WHERE t.created_at >= ?
+        GROUP BY upc
+      `).all(thirtyDaysAgo.toISOString()) as Array<{
+        upc: string;
+        sold_quantity: number;
+      }>;
+      
+      // Create a map of sales data
+      const salesMap = new Map(salesData.map(s => [s.upc, s.sold_quantity]));
+      
+      // Get last sale date for each item
+      const lastSales = invDb.prepare(`
+        SELECT 
+          json_extract(item.value, '$.upc') as upc,
+          MAX(t.created_at) as last_sold
+        FROM transactions t,
+             json_each(t.items) item
+        GROUP BY upc
+      `).all() as Array<{
+        upc: string;
+        last_sold: string;
+      }>;
+      
+      const lastSaleMap = new Map(lastSales.map(s => [s.upc, s.last_sold]));
+      
+      // Get categories from products database
+      let categoryMap = new Map<string, string>();
+      if (productsDb) {
+        try {
+          const products = productsDb.prepare(`
+            SELECT upc, category FROM products
+          `).all() as Array<{ upc: string; category: string | null }>;
+          
+          products.forEach(p => {
+            if (p.category) categoryMap.set(p.upc, p.category);
+          });
+        } catch (err) {
+          console.log("Could not fetch product categories:", err);
+        }
+      }
+      
+      // Process inventory items
+      const processedItems = items.map(item => {
+        const value = item.quantity * item.price;
+        const margin = item.price > 0 ? ((item.price - item.cost) / item.price) * 100 : 0;
+        const soldQuantity = salesMap.get(item.upc) || 0;
+        const turnoverRate = item.quantity > 0 ? (soldQuantity / item.quantity) : 0;
+        const lastSold = lastSaleMap.get(item.upc) || null;
+        const category = categoryMap.get(item.upc) || null;
+        
+        const daysInStock = lastSold 
+          ? Math.floor((Date.now() - new Date(lastSold).getTime()) / (1000 * 60 * 60 * 24))
+          : 999;
+        
+        return {
+          upc: item.upc,
+          description: item.description,
+          category,
+          cost: item.cost,
+          price: item.price,
+          quantity: item.quantity,
+          value,
+          margin,
+          turnoverRate,
+          daysInStock,
+          lastSold
+        };
+      });
+      
+      // Calculate metrics
+      const totalItems = processedItems.length;
+      const totalQuantity = processedItems.reduce((sum, item) => sum + item.quantity, 0);
+      const totalValue = processedItems.reduce((sum, item) => sum + item.value, 0);
+      const totalCost = processedItems.reduce((sum, item) => sum + (item.quantity * item.cost), 0);
+      const avgMargin = totalValue > 0 ? ((totalValue - totalCost) / totalValue) * 100 : 0;
+      
+      // Stock level analysis
+      const lowStockItems = processedItems.filter(item => item.quantity > 0 && item.quantity <= 10).length;
+      const overstockItems = processedItems.filter(item => item.quantity >= 100).length;
+      const deadStock = processedItems.filter(item => item.daysInStock > 30 && item.quantity > 0).length;
+      const fastMovers = processedItems.filter(item => item.turnoverRate > 0.5).length;
+      
+      // Stock level distribution
+      const stockLevels = {
+        critical: processedItems.filter(item => item.quantity > 0 && item.quantity <= 5).length,
+        low: processedItems.filter(item => item.quantity > 5 && item.quantity <= 10).length,
+        normal: processedItems.filter(item => item.quantity > 10 && item.quantity < 50).length,
+        high: processedItems.filter(item => item.quantity >= 50 && item.quantity < 100).length,
+        excess: processedItems.filter(item => item.quantity >= 100).length
+      };
+      
+      // Category breakdown
+      const categoryStatsMap = new Map<string, { items: number; quantity: number; value: number }>();
+      
+      processedItems.forEach(item => {
+        const category = item.category || 'Uncategorized';
+        const existing = categoryStatsMap.get(category) || { items: 0, quantity: 0, value: 0 };
+        categoryStatsMap.set(category, {
+          items: existing.items + 1,
+          quantity: existing.quantity + item.quantity,
+          value: existing.value + item.value
+        });
+      });
+      
+      const categoryBreakdown = Array.from(categoryStatsMap.entries())
+        .map(([category, data]) => ({ category, ...data }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 10);
+      
+      return {
+        success: true,
+        data: {
+          metrics: {
+            totalItems,
+            totalQuantity,
+            totalValue,
+            totalCost,
+            avgMargin,
+            lowStockItems,
+            overstockItems,
+            deadStock,
+            fastMovers,
+            categoryBreakdown,
+            stockLevels
+          },
+          items: processedItems
+        }
+      };
+    } catch (error) {
+      console.error("Error getting inventory analysis:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to get inventory analysis"
+      };
+    }
+  });
+}
+
+// Get Weekly/Monthly Summary handler
+function registerWeeklySummary(ipcMain: IpcMain) {
+  ipcMain.handle("get-weekly-summary", async (_event, date: string, periodType: 'week' | 'month') => {
+    try {
+      const invDb = getInventoryDb();
+      const productsDb = getProductsDb();
+      
+      // Calculate date range based on period type
+      const selectedDate = new Date(date);
+      let startDate: Date;
+      let endDate: Date;
+      let previousStartDate: Date;
+      let previousEndDate: Date;
+      
+      if (periodType === 'week') {
+        // Calculate week (Sunday to Saturday)
+        const dayOfWeek = selectedDate.getDay();
+        startDate = new Date(selectedDate);
+        startDate.setDate(selectedDate.getDate() - dayOfWeek);
+        startDate.setHours(0, 0, 0, 0);
+        
+        endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + 6);
+        endDate.setHours(23, 59, 59, 999);
+        
+        // Previous week
+        previousStartDate = new Date(startDate);
+        previousStartDate.setDate(startDate.getDate() - 7);
+        previousEndDate = new Date(endDate);
+        previousEndDate.setDate(endDate.getDate() - 7);
+      } else {
+        // Calculate month
+        startDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+        endDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0, 23, 59, 59, 999);
+        
+        // Previous month
+        previousStartDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth() - 1, 1);
+        previousEndDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 0, 23, 59, 59, 999);
+      }
+      
+      // Get daily data for the period
+      const dailyData = invDb.prepare(`
+        SELECT 
+          DATE(created_at) as date,
+          SUM(total) as sales,
+          COUNT(*) as transactions,
+          SUM(
+            (SELECT SUM(json_extract(value, '$.quantity')) 
+             FROM json_each(items))
+          ) as items
+        FROM transactions
+        WHERE created_at >= ? AND created_at <= ?
+        GROUP BY DATE(created_at)
+        ORDER BY date
+      `).all(
+        startDate.toISOString(),
+        endDate.toISOString()
+      ) as Array<{
+        date: string;
+        sales: number;
+        transactions: number;
+        items: number;
+      }>;
+      
+      // Fill in missing days with zeros
+      const allDays = [];
+      const currentDate = new Date(startDate);
+      while (currentDate <= endDate) {
+        const dateStr = currentDate.toISOString().split('T')[0];
+        const dayData = dailyData.find(d => d.date === dateStr);
+        allDays.push({
+          date: dateStr,
+          sales: dayData?.sales || 0,
+          transactions: dayData?.transactions || 0,
+          items: dayData?.items || 0
+        });
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+      
+      // Calculate totals
+      const totalSales = allDays.reduce((sum, day) => sum + day.sales, 0);
+      const totalTransactions = allDays.reduce((sum, day) => sum + day.transactions, 0);
+      const totalItems = allDays.reduce((sum, day) => sum + day.items, 0);
+      const avgDailySales = totalSales / allDays.length;
+      const avgTransactionValue = totalTransactions > 0 ? totalSales / totalTransactions : 0;
+      
+      // Find best and worst days
+      const sortedDays = [...allDays].sort((a, b) => b.sales - a.sales);
+      const bestDay = sortedDays[0] || { date: startDate.toISOString().split('T')[0], sales: 0 };
+      const worstDay = sortedDays[sortedDays.length - 1] || { date: startDate.toISOString().split('T')[0], sales: 0 };
+      
+      // Calculate week/month over week/month change
+      const previousPeriodData = invDb.prepare(`
+        SELECT 
+          SUM(total) as sales,
+          COUNT(*) as transactions
+        FROM transactions
+        WHERE created_at >= ? AND created_at <= ?
+      `).get(
+        previousStartDate.toISOString(),
+        previousEndDate.toISOString()
+      ) as { sales: number | null; transactions: number | null };
+      
+      let weekOverWeek = undefined;
+      if (previousPeriodData.sales && previousPeriodData.sales > 0) {
+        weekOverWeek = {
+          sales: ((totalSales - previousPeriodData.sales) / previousPeriodData.sales) * 100,
+          transactions: previousPeriodData.transactions ? 
+            ((totalTransactions - previousPeriodData.transactions) / previousPeriodData.transactions) * 100 : 0
+        };
+      }
+      
+      // Get top categories using the products database
+      let topCategories = [];
+      
+      if (productsDb) {
+        try {
+          // Attach products database to inventory database for the query
+          invDb.exec(`ATTACH DATABASE '${path.join(__dirname, "..", "LiquorDatabase.db")}' AS products_db`);
+          
+          topCategories = invDb.prepare(`
+            SELECT 
+              COALESCE(p.category, 'Uncategorized') as category,
+              SUM(json_extract(item.value, '$.quantity') * json_extract(item.value, '$.price')) as sales,
+              SUM(json_extract(item.value, '$.quantity')) as items
+            FROM transactions t,
+                 json_each(t.items) item
+            LEFT JOIN products_db.products p ON json_extract(item.value, '$.upc') = p.upc
+            WHERE t.created_at >= ? AND t.created_at <= ?
+            GROUP BY category
+            ORDER BY sales DESC
+            LIMIT 5
+          `).all(
+            startDate.toISOString(),
+            endDate.toISOString()
+          ) as Array<{
+            category: string;
+            sales: number;
+            items: number;
+          }>;
+          
+          invDb.exec("DETACH DATABASE products_db");
+        } catch (err) {
+          console.error("Error getting categories:", err);
+          // Fallback to uncategorized
+          topCategories = invDb.prepare(`
+            SELECT 
+              'Uncategorized' as category,
+              SUM(json_extract(item.value, '$.quantity') * json_extract(item.value, '$.price')) as sales,
+              SUM(json_extract(item.value, '$.quantity')) as items
+            FROM transactions t,
+                 json_each(t.items) item
+            WHERE t.created_at >= ? AND t.created_at <= ?
+            GROUP BY category
+            ORDER BY sales DESC
+            LIMIT 1
+          `).all(
+            startDate.toISOString(),
+            endDate.toISOString()
+          ) as typeof topCategories;
+        }
+      }
+      
+      return {
+        success: true,
+        data: {
+          period: periodType === 'week' ? 'Week' : 'Month',
+          totalSales,
+          totalTransactions,
+          totalItems,
+          avgDailySales,
+          avgTransactionValue,
+          bestDay: {
+            date: bestDay.date,
+            sales: bestDay.sales
+          },
+          worstDay: {
+            date: worstDay.date,
+            sales: worstDay.sales
+          },
+          dailyData: allDays,
+          weekOverWeek,
+          topCategories
+        }
+      };
+    } catch (error) {
+      console.error("Error getting weekly summary:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to get weekly summary"
       };
     }
   });

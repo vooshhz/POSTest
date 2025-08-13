@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import "./CartScanner.css";
+import TransactionCompleteModal from "./TransactionCompleteModal";
 
 interface CartItem {
   upc: string;
@@ -31,7 +32,25 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'credit' | 'debit' | null>(null);
   const [amountTendered, setAmountTendered] = useState("");
-  const [showSuccess, setShowSuccess] = useState(false);
+  const [showTransactionComplete, setShowTransactionComplete] = useState(false);
+  const [transactionSuccess, setTransactionSuccess] = useState(false);
+  const [transactionData, setTransactionData] = useState<{
+    items: Array<{
+      upc: string;
+      description: string;
+      quantity: number;
+      price: number;
+      total: number;
+    }>;
+    subtotal: number;
+    tax: number;
+    total: number;
+    paymentType: 'cash' | 'debit' | 'credit';
+    cashGiven?: number;
+    changeGiven?: number;
+    timestamp: string;
+  } | null>(null);
+  const [transactionError, setTransactionError] = useState("");
   const [manualEntry, setManualEntry] = useState("");
   const [searchResults, setSearchResults] = useState<Array<{
     upc: string;
@@ -287,28 +306,35 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
       if (result.success) {
         // Simulate payment processing
         setTimeout(() => {
+          // Prepare transaction data for receipt
+          const transactionComplete = {
+            items: itemsData,
+            subtotal: totals.subtotal,
+            tax: totals.tax,
+            total: totals.total,
+            paymentType: paymentMethod as 'cash' | 'debit' | 'credit',
+            cashGiven: cashGiven,
+            changeGiven: changeGiven,
+            timestamp: new Date().toISOString()
+          };
+          
+          setTransactionData(transactionComplete);
+          setTransactionSuccess(true);
           setShowPaymentModal(false);
+          setShowTransactionComplete(true);
+          
+          // Reset cart and payment state
           setCart([]);
           setBarcode("");
           setPaymentMethod(null);
           setAmountTendered("");
-          setShowSuccess(true);
-          
-          // Hide success message after 3 seconds
-          setTimeout(() => {
-            setShowSuccess(false);
-            inputRef.current?.focus();
-          }, 3000);
         }, paymentMethod === 'cash' ? 100 : 1500);
       } else {
-        // Show detailed error message for inventory issues
-        if (result.error?.includes("Insufficient inventory")) {
-          alert("❌ " + result.error);
-        } else if (result.error?.includes("not found in inventory")) {
-          alert("❌ " + result.error);
-        } else {
-          alert("Failed to save transaction: " + (result.error || "Unknown error"));
-        }
+        // Show error in transaction complete modal
+        setTransactionSuccess(false);
+        setTransactionError(result.error || "Transaction failed");
+        setShowPaymentModal(false);
+        setShowTransactionComplete(true);
       }
     } catch (err) {
       console.error("Transaction save error:", err);
@@ -490,12 +516,6 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
             {error && (
               <div className="error-message">
                 ⚠️ {error}
-              </div>
-            )}
-            
-            {showSuccess && (
-              <div className="success-message">
-                ✅ Payment successful! Transaction completed.
               </div>
             )}
           </div>
@@ -791,6 +811,21 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
           </div>
         </div>
       )}
+
+      {/* Transaction Complete Modal */}
+      <TransactionCompleteModal
+        isOpen={showTransactionComplete}
+        onClose={() => {
+          setShowTransactionComplete(false);
+          setTransactionSuccess(false);
+          setTransactionData(null);
+          setTransactionError("");
+          inputRef.current?.focus();
+        }}
+        success={transactionSuccess}
+        transaction={transactionData}
+        error={transactionError}
+      />
     </div>
   );
 }

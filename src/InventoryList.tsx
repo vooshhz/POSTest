@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import InventoryTransactions from "./InventoryTransactions";
+import InventoryAdjustments from "./InventoryAdjustments";
 import "./InventoryList.css";
 
 interface InventoryItem {
@@ -33,7 +33,7 @@ interface InventoryListProps {
 }
 
 export default function InventoryList({ barcode, setBarcode, searchFilter, setSearchFilter }: InventoryListProps) {
-  const [activeTab, setActiveTab] = useState<'onhand' | 'transactions'>('onhand');
+  const [activeTab, setActiveTab] = useState<'onhand' | 'adjustments'>('onhand');
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -359,8 +359,8 @@ export default function InventoryList({ barcode, setBarcode, searchFilter, setSe
           On Hand
         </button>
         <button 
-          className={`inventory-tab ${activeTab === 'transactions' ? 'active' : ''}`}
-          onClick={() => setActiveTab('transactions')}
+          className={`inventory-tab ${activeTab === 'adjustments' ? 'active' : ''}`}
+          onClick={() => setActiveTab('adjustments')}
         >
           Adjustments
         </button>
@@ -554,8 +554,8 @@ export default function InventoryList({ barcode, setBarcode, searchFilter, setSe
       
         </>
       ) : (
-        /* Inventory Transactions Tab */
-        <InventoryTransactions searchFilter={searchFilter} />
+        /* Inventory Adjustments Tab */
+        <InventoryAdjustments />
       )}
       
       {/* Add to Inventory Modal - shown for both tabs */}

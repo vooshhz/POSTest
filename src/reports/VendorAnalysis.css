@@ -1,0 +1,123 @@
+.vendor-analysis-container {
+  padding: 20px;
+}
+
+.vendor-analysis-container h3 {
+  margin: 0 0 25px 0;
+  color: #333;
+}
+
+.vendor-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  margin-bottom: 30px;
+}
+
+.metric-card {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.metric-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #666;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.metric-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: #333;
+}
+
+.vendors-table {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.vendors-table h4 {
+  margin: 0 0 20px 0;
+  color: #333;
+}
+
+.vendors-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.vendors-table th {
+  background: #f5f5f5;
+  padding: 10px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 13px;
+  color: #666;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.vendors-table td {
+  padding: 10px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 14px;
+}
+
+.vendor-name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.vendor-rank {
+  background: #9C27B0;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.value-cell {
+  font-weight: 600;
+  color: #2196F3;
+}
+
+.margin-cell {
+  font-weight: 500;
+  color: #4CAF50;
+}
+
+.percentage-bar {
+  position: relative;
+  background: #f0f0f0;
+  height: 20px;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.percentage-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: linear-gradient(to right, #9C27B0, #BA68C8);
+  transition: width 0.3s ease;
+}
+
+.percentage-text {
+  position: relative;
+  z-index: 1;
+  display: block;
+  text-align: center;
+  line-height: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+}

@@ -4,6 +4,8 @@ import CartScanner from "./CartScanner";
 import InventoryList from "./InventoryList";
 import { TransactionHistory } from "./TransactionHistory";
 import { StoreSetup } from "./StoreSetup";
+import Developer from "./Developer";
+import Reports from "./Reports";
 import "./App.css";
 import { useState, useEffect } from "react";
 
@@ -18,9 +20,10 @@ interface CartItem {
 
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<"scanner" | "inventory" | "transactions">("scanner");
+  const [currentView, setCurrentView] = useState<"scanner" | "inventory" | "transactions" | "reports" | "developer">("scanner");
   const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
   const [storeName, setStoreName] = useState<string>("");
+  const [inventoryRefreshKey, setInventoryRefreshKey] = useState(0);
   
   // Cart Scanner state
   const [cartBarcode, setCartBarcode] = useState("");
@@ -113,6 +116,12 @@ export default function App() {
     <div className="app">
       <div className="nav-tabs">
         <button 
+          className={`nav-tab developer-tab ${currentView === "developer" ? "active" : ""}`}
+          onClick={() => setCurrentView("developer")}
+        >
+          Dev
+        </button>
+        <button 
           className={`nav-tab ${currentView === "scanner" ? "active" : ""}`}
           onClick={() => setCurrentView("scanner")}
         >
@@ -120,7 +129,11 @@ export default function App() {
         </button>
         <button 
           className={`nav-tab ${currentView === "inventory" ? "active" : ""}`}
-          onClick={() => setCurrentView("inventory")}
+          onClick={() => {
+            setCurrentView("inventory");
+            // Trigger refresh when switching to inventory tab
+            setInventoryRefreshKey(prev => prev + 1);
+          }}
         >
           Inventory
         </button>
@@ -129,6 +142,12 @@ export default function App() {
           onClick={() => setCurrentView("transactions")}
         >
           Transactions
+        </button>
+        <button 
+          className={`nav-tab ${currentView === "reports" ? "active" : ""}`}
+          onClick={() => setCurrentView("reports")}
+        >
+          Reports
         </button>
       </div>
       
@@ -145,13 +164,18 @@ export default function App() {
         />
       ) : currentView === "inventory" ? (
         <InventoryList 
+          key={inventoryRefreshKey}
           barcode={inventoryBarcode}
           setBarcode={setInventoryBarcode}
           searchFilter={searchFilter}
           setSearchFilter={setSearchFilter}
         />
-      ) : (
+      ) : currentView === "transactions" ? (
         <TransactionHistory />
+      ) : currentView === "reports" ? (
+        <Reports />
+      ) : (
+        <Developer />
       )}
     </div>
   );

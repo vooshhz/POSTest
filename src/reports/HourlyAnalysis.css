@@ -1,0 +1,145 @@
+.hourly-analysis-container {
+  padding: 20px;
+}
+
+.hourly-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.hourly-header h3 {
+  margin: 0;
+  color: #333;
+}
+
+.date-picker {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.hourly-chart {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 30px;
+}
+
+.hourly-chart h4 {
+  margin: 0 0 20px 0;
+  color: #333;
+}
+
+.chart-container {
+  display: flex;
+  align-items: flex-end;
+  height: 200px;
+  gap: 2px;
+  overflow-x: auto;
+  padding: 10px 0;
+}
+
+.hour-column {
+  flex: 1;
+  min-width: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+}
+
+.bar-wrapper {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.hour-bar {
+  width: 80%;
+  background: linear-gradient(to top, #2196F3, #64B5F6);
+  border-radius: 2px 2px 0 0;
+  transition: all 0.3s ease;
+  position: relative;
+  min-height: 2px;
+  cursor: pointer;
+}
+
+.hour-bar:hover {
+  background: linear-gradient(to top, #1976D2, #42A5F5);
+}
+
+.bar-value {
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: bold;
+  color: #333;
+}
+
+.hour-label {
+  font-size: 10px;
+  color: #666;
+  margin-top: 5px;
+  white-space: nowrap;
+}
+
+.peak-hours {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.peak-hours h4 {
+  margin: 0 0 20px 0;
+  color: #333;
+}
+
+.peak-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.peak-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+
+.peak-rank {
+  background: #2196F3;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.peak-time {
+  flex: 1;
+  font-weight: 500;
+  color: #333;
+}
+
+.peak-amount {
+  font-weight: bold;
+  color: #4CAF50;
+}
+
+.peak-sales {
+  color: #666;
+  font-size: 14px;
+}
