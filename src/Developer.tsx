@@ -1,10 +1,11 @@
 import { useState } from "react";
 import TestInventory from "./TestInventory";
 import TestSales from "./TestSales";
+import ClearData from "./ClearData";
 import "./Developer.css";
 
 export default function Developer() {
-  const [activeTab, setActiveTab] = useState<'test-inventory' | 'test-sales'>('test-inventory');
+  const [activeTab, setActiveTab] = useState<'test-inventory' | 'test-sales' | 'clear-data'>('test-inventory');
 
   return (
     <div className="developer-container">
@@ -26,11 +27,18 @@ export default function Developer() {
         >
           Test Sales
         </button>
+        <button 
+          className={`dev-tab ${activeTab === 'clear-data' ? 'active' : ''} danger-tab`}
+          onClick={() => setActiveTab('clear-data')}
+        >
+          Clear Data
+        </button>
       </div>
       
       <div className="dev-content">
         {activeTab === 'test-inventory' && <TestInventory />}
         {activeTab === 'test-sales' && <TestSales />}
+        {activeTab === 'clear-data' && <ClearData />}
       </div>
     </div>
   );

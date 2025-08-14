@@ -57,6 +57,21 @@
   font-weight: 600;
 }
 
+.dev-tab.danger-tab {
+  color: #ff4444;
+}
+
+.dev-tab.danger-tab:hover {
+  color: #ff4444;
+  background: #fff5f5;
+}
+
+.dev-tab.danger-tab.active {
+  color: #ff4444;
+  border-bottom-color: #ff4444;
+  background: #fff5f5;
+}
+
 .dev-content {
   background: white;
   border-radius: 8px;

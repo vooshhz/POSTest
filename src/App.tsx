@@ -24,6 +24,7 @@ export default function App() {
   const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
   const [storeName, setStoreName] = useState<string>("");
   const [inventoryRefreshKey, setInventoryRefreshKey] = useState(0);
+  const [currentDateTime, setCurrentDateTime] = useState(new Date());
   
   // Cart Scanner state
   const [cartBarcode, setCartBarcode] = useState("");
@@ -37,6 +38,15 @@ export default function App() {
   // Check for store info on component mount
   useEffect(() => {
     checkStoreInfo();
+  }, []);
+
+  // Update date and time every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentDateTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
   }, []);
 
   const checkStoreInfo = async () => {
@@ -114,13 +124,16 @@ export default function App() {
 
   return (
     <div className="app">
-      <div className="nav-tabs">
+      <div className="nav-tabs-left">
         <button 
           className={`nav-tab developer-tab ${currentView === "developer" ? "active" : ""}`}
           onClick={() => setCurrentView("developer")}
         >
           Dev
         </button>
+      </div>
+      
+      <div className="nav-tabs-right">
         <button 
           className={`nav-tab ${currentView === "scanner" ? "active" : ""}`}
           onClick={() => setCurrentView("scanner")}
@@ -151,9 +164,16 @@ export default function App() {
         </button>
       </div>
       
-      <h1>{storeName || 'Liquor Inventory System'}</h1>
+      <div className="header-info">
+        <h1 className="store-title">{storeName || 'Liquor Inventory System'}</h1>
+        <div className="date-time">
+          <span className="date">{currentDateTime.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}</span>
+          <span className="time">{currentDateTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+        </div>
+      </div>
       
-      {currentView === "scanner" ? (
+      <div className="content-container">
+        {currentView === "scanner" ? (
         <CartScanner 
           barcode={cartBarcode}
           setBarcode={setCartBarcode}
@@ -177,6 +197,7 @@ export default function App() {
       ) : (
         <Developer />
       )}
+      </div>
     </div>
   );
 }
