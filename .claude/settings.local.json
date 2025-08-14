@@ -11,7 +11,13 @@
       "Bash(pnpm lint:*)",
       "Bash(npx tsx:*)",
       "Bash(pnpm rebuild:*)",
-      "Bash(pnpm install:*)"
+      "Bash(pnpm install:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm rebuild:*)",
+      "Bash(npm install)",
+      "Bash(npm install:*)",
+      "Bash(npx:*)",
+      "Bash(sqlite3:*)"
     ],
     "deny": []
   }

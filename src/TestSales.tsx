@@ -24,6 +24,7 @@ export default function TestSales() {
     success: boolean;
     message: string;
     salesCreated?: number;
+    salesFailed?: number;
     totalItems?: number;
     totalValue?: number;
   } | null>(null);
@@ -115,25 +116,30 @@ export default function TestSales() {
       if (response.success) {
         setResult({
           success: true,
-          message: `Successfully created ${response.salesCreated} test sales!`,
+          message: response.message || `Successfully created ${response.salesCreated} test sales!`,
           salesCreated: response.salesCreated,
+          salesFailed: response.salesFailed,
           totalItems: response.totalItems,
           totalValue: response.totalValue
         });
         
-        // Reset form after successful generation
-        setTimeout(() => {
-          setFormData({
-            numberOfSales: "5",
-            minItemsPerSale: "1",
-            maxItemsPerSale: "5",
-            paymentTypes: {
-              cash: true,
-              debit: true,
-              credit: true
-            }
-          });
-        }, 2000);
+        // Only reset form if some sales were created
+        if (response.salesCreated > 0) {
+          setTimeout(() => {
+            setFormData({
+              numberOfSales: "5",
+              minItemsPerSale: "1",
+              maxItemsPerSale: "5",
+              startDate: formData.startDate,
+              endDate: formData.endDate,
+              paymentTypes: {
+                cash: true,
+                debit: true,
+                credit: true
+              }
+            });
+          }, 2000);
+        }
       } else {
         setResult({
           success: false,
@@ -324,10 +330,20 @@ export default function TestSales() {
         {result && (
           <div className={`result-message ${result.success ? 'success' : 'error'}`}>
             {result.success ? '✅' : '❌'} {result.message}
-            {result.success && result.totalItems && (
+            {result.success && (
               <div className="result-details">
-                <span>Items sold: {result.totalItems}</span>
-                {result.totalValue && <span>Total value: ${result.totalValue.toFixed(2)}</span>}
+                {result.salesCreated !== undefined && (
+                  <span>Sales created: {result.salesCreated}</span>
+                )}
+                {result.salesFailed !== undefined && result.salesFailed > 0 && (
+                  <span className="failed-sales">Failed: {result.salesFailed}</span>
+                )}
+                {result.totalItems !== undefined && result.totalItems > 0 && (
+                  <span>Items sold: {result.totalItems}</span>
+                )}
+                {result.totalValue !== undefined && result.totalValue > 0 && (
+                  <span>Total value: ${result.totalValue.toFixed(2)}</span>
+                )}
               </div>
             )}
           </div>

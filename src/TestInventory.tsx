@@ -139,6 +139,44 @@ export default function TestInventory() {
     }
   };
 
+  const handleClearAllData = async () => {
+    if (!confirm("⚠️ WARNING: This will DELETE ALL DATA including:\n\n• All inventory items\n• All transactions\n• All sales history\n• All reports data\n\nThis action CANNOT be undone!\n\nAre you absolutely sure?")) {
+      return;
+    }
+    
+    // Double confirmation for safety
+    if (!confirm("This is your FINAL WARNING!\n\nAll data will be permanently deleted.\n\nClick OK to proceed with complete data wipe.")) {
+      return;
+    }
+
+    setLoading(true);
+    setResult(null);
+
+    try {
+      const response = await window.api.clearAllData();
+
+      if (response.success) {
+        setResult({
+          success: true,
+          message: response.message || "All data has been cleared successfully!"
+        });
+      } else {
+        setResult({
+          success: false,
+          message: response.error || "Failed to clear all data"
+        });
+      }
+    } catch (error) {
+      console.error("Error clearing all data:", error);
+      setResult({
+        success: false,
+        message: "An error occurred while clearing all data"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="test-inventory-container">
       <div className="test-inventory-header">
@@ -269,6 +307,30 @@ export default function TestInventory() {
             disabled={loading}
           >
             Clear All Inventory
+          </button>
+        </div>
+        
+        <div style={{ marginTop: '40px', padding: '20px', border: '2px solid #d32f2f', borderRadius: '8px', background: '#ffebee' }}>
+          <h4 style={{ color: '#d32f2f', margin: '0 0 10px 0' }}>⚠️ Danger Zone</h4>
+          <p style={{ color: '#666', fontSize: '14px', margin: '0 0 15px 0' }}>
+            Complete database reset - removes ALL data permanently
+          </p>
+          <button
+            className="clear-all-btn"
+            onClick={handleClearAllData}
+            disabled={loading}
+            style={{ 
+              background: '#d32f2f', 
+              color: 'white',
+              padding: '10px 20px',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              fontSize: '14px',
+              fontWeight: 'bold'
+            }}
+          >
+            🗑️ WIPE ALL DATA (Inventory + Sales + Reports)
           </button>
         </div>
       </div>

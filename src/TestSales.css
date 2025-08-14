@@ -206,6 +206,11 @@
   opacity: 0.9;
 }
 
+.result-details .failed-sales {
+  color: #ff9800;
+  font-weight: 500;
+}
+
 .action-buttons {
   display: flex;
   gap: 15px;

@@ -190,6 +190,16 @@ interface InventoryAPI {
     success: boolean;
     error?: string;
   }>;
+  clearAllData: () => Promise<{
+    success: boolean;
+    message?: string;
+    deleted?: {
+      transactions: number;
+      inventory: number;
+      adjustments: number;
+    };
+    error?: string;
+  }>;
   getDailySales: (date: string) => Promise<{
     success: boolean;
     data?: {
@@ -339,6 +349,7 @@ const api: InventoryAPI = {
   getInventoryAdjustments: (filters) => ipcRenderer.invoke("get-inventory-adjustments", filters),
   generateTestSales: (params) => ipcRenderer.invoke("generate-test-sales", params),
   clearTransactions: () => ipcRenderer.invoke("clear-transactions"),
+  clearAllData: () => ipcRenderer.invoke("clear-all-data"),
   getDailySales: (date) => ipcRenderer.invoke("get-daily-sales", date),
   getWeeklySummary: (date, periodType) => ipcRenderer.invoke("get-weekly-summary", date, periodType),
   getInventoryAnalysis: () => ipcRenderer.invoke("get-inventory-analysis")

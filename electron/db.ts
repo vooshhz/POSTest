@@ -785,7 +785,7 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
           change_given,
           datetime(created_at, 'localtime') as created_at
         FROM transactions
-        ORDER BY created_at DESC
+        ORDER BY datetime(created_at) DESC, id DESC
       `).all();
       
       return {
@@ -1072,6 +1072,7 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
   registerClearInventory(ipcMain);
   registerGenerateTestSales(ipcMain);
   registerClearTransactions(ipcMain);
+  registerClearAllData(ipcMain);
   registerWeeklySummary(ipcMain);
   registerInventoryAnalysis(ipcMain);
 }
@@ -1233,10 +1234,14 @@ function registerGenerateTestSales(ipcMain: IpcMain) {
     try {
       const invDb = getInventoryDb();
       const storeDb = getStoreInfoDb();
+      const prodDb = getProductsDb();
       
       // Get store info for tax rate
       const storeInfo = storeDb.prepare("SELECT tax_rate FROM store_info LIMIT 1").get() as { tax_rate: number } | undefined;
       const taxRate = storeInfo?.tax_rate || 6.0;
+      
+      // Track current inventory levels in memory to avoid overselling
+      const inventoryTracker = new Map<string, { price: number; quantity: number; description?: string }>();
       
       // Get available inventory items with quantity > 0
       const availableItems = invDb.prepare(`
@@ -1252,9 +1257,34 @@ function registerGenerateTestSales(ipcMain: IpcMain) {
         };
       }
       
+      // Initialize the tracker with current inventory and get descriptions
+      for (const item of availableItems) {
+        // Try to get product description
+        let description = `Test Item ${item.upc}`;
+        try {
+          const product = prodDb.prepare(`
+            SELECT "Item Description" as description 
+            FROM products WHERE "UPC" = ?
+          `).get(item.upc) as { description?: string } | undefined;
+          if (product?.description) {
+            description = product.description;
+          }
+        } catch (err) {
+          // Use fallback description
+        }
+        
+        inventoryTracker.set(item.upc, {
+          price: item.price,
+          quantity: item.quantity,
+          description
+        });
+      }
+      
       let salesCreated = 0;
+      let salesFailed = 0;
       let totalItemsSold = 0;
       let totalValue = 0;
+      const failureReasons: string[] = [];
       
       // Calculate date range in milliseconds
       const startTime = new Date(params.startDate).getTime();
@@ -1269,26 +1299,33 @@ function registerGenerateTestSales(ipcMain: IpcMain) {
         const itemCount = params.minItemsPerSale + 
           Math.floor(Math.random() * (params.maxItemsPerSale - params.minItemsPerSale + 1));
         
+        // Get items that still have inventory
+        const availableUPCs = Array.from(inventoryTracker.entries())
+          .filter(([_, data]) => data.quantity > 0)
+          .map(([upc, _]) => upc);
+        
+        if (availableUPCs.length === 0) {
+          salesFailed++;
+          failureReasons.push(`Sale #${saleNum + 1}: No inventory available`);
+          continue;
+        }
+        
         // Select random items for this sale
         const saleItems = [];
         const usedUPCs = new Set<string>();
         
-        for (let i = 0; i < itemCount && i < availableItems.length; i++) {
+        for (let i = 0; i < itemCount && i < availableUPCs.length; i++) {
           // Find an item we haven't used in this sale yet
           let item = null;
           let attempts = 0;
           
-          while (attempts < 50) {
-            const randomItem = availableItems[Math.floor(Math.random() * availableItems.length)];
-            if (!usedUPCs.has(randomItem.upc)) {
-              // Check if item still has quantity
-              const current = invDb.prepare(`
-                SELECT upc, price, quantity FROM inventory WHERE upc = ? AND quantity > 0
-              `).get(randomItem.upc) as typeof randomItem | undefined;
-              
-              if (current) {
-                item = current;
-                usedUPCs.add(current.upc);
+          while (attempts < 50 && availableUPCs.length > usedUPCs.size) {
+            const randomUPC = availableUPCs[Math.floor(Math.random() * availableUPCs.length)];
+            if (!usedUPCs.has(randomUPC)) {
+              const trackedItem = inventoryTracker.get(randomUPC);
+              if (trackedItem && trackedItem.quantity > 0) {
+                item = { upc: randomUPC, ...trackedItem };
+                usedUPCs.add(randomUPC);
                 break;
               }
             }
@@ -1303,16 +1340,18 @@ function registerGenerateTestSales(ipcMain: IpcMain) {
           
           saleItems.push({
             upc: item.upc,
-            description: `Test Item ${item.upc}`,
+            description: item.description || `Test Item ${item.upc}`,
             price: item.price,
             quantity: quantity,
             total: item.price * quantity
           });
-          
-          totalItemsSold += quantity;
         }
         
-        if (saleItems.length === 0) continue;
+        if (saleItems.length === 0) {
+          salesFailed++;
+          failureReasons.push(`Sale #${saleNum + 1}: Could not find any items to add`);
+          continue;
+        }
         
         // Calculate totals
         const subtotal = saleItems.reduce((sum, item) => sum + item.total, 0);
@@ -1347,6 +1386,17 @@ function registerGenerateTestSales(ipcMain: IpcMain) {
         invDb.prepare("BEGIN TRANSACTION").run();
         
         try {
+          // Verify inventory availability one more time before committing
+          for (const item of saleItems) {
+            const currentItem = invDb.prepare(`
+              SELECT quantity, cost, price FROM inventory WHERE upc = ?
+            `).get(item.upc) as { quantity: number; cost: number; price: number } | undefined;
+            
+            if (!currentItem || currentItem.quantity < item.quantity) {
+              throw new Error(`Insufficient inventory for ${item.description} (UPC: ${item.upc}). Requested: ${item.quantity}, Available: ${currentItem?.quantity || 0}`);
+            }
+          }
+          
           // Save the transaction with specific date
           const stmt = invDb.prepare(`
             INSERT INTO transactions (items, subtotal, tax, total, payment_type, cash_given, change_given, created_at)
@@ -1370,11 +1420,7 @@ function registerGenerateTestSales(ipcMain: IpcMain) {
           for (const item of saleItems) {
             const currentItem = invDb.prepare(`
               SELECT quantity, cost, price FROM inventory WHERE upc = ?
-            `).get(item.upc) as { quantity: number; cost: number; price: number } | undefined;
-            
-            if (!currentItem || currentItem.quantity < item.quantity) {
-              throw new Error(`Insufficient inventory for item ${item.upc}`);
-            }
+            `).get(item.upc) as { quantity: number; cost: number; price: number };
             
             const newQuantity = currentItem.quantity - item.quantity;
             
@@ -1384,6 +1430,12 @@ function registerGenerateTestSales(ipcMain: IpcMain) {
               SET quantity = ?, updated_at = datetime('now')
               WHERE upc = ?
             `).run(newQuantity, item.upc);
+            
+            // Update our tracker
+            const trackedItem = inventoryTracker.get(item.upc);
+            if (trackedItem) {
+              trackedItem.quantity = newQuantity;
+            }
             
             // Record adjustment with same date as transaction
             invDb.prepare(`
@@ -1404,26 +1456,52 @@ function registerGenerateTestSales(ipcMain: IpcMain) {
               `Test Sale - Transaction #${transactionId}`,
               saleDate.toISOString()
             );
+            
+            totalItemsSold += item.quantity;
           }
           
           invDb.prepare("COMMIT").run();
-          var saveResult = { success: true };
-        } catch (error) {
-          invDb.prepare("ROLLBACK").run();
-          var saveResult = { success: false };
-        }
-        
-        if (saveResult.success) {
           salesCreated++;
           totalValue += total;
+        } catch (error) {
+          invDb.prepare("ROLLBACK").run();
+          salesFailed++;
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          failureReasons.push(`Sale #${saleNum + 1}: ${errorMessage}`);
+          
+          // If we got an insufficient inventory error, update our tracker
+          if (errorMessage.includes('Insufficient inventory')) {
+            // Re-sync tracker with actual database state
+            for (const [upc, data] of inventoryTracker.entries()) {
+              const current = invDb.prepare(`
+                SELECT quantity FROM inventory WHERE upc = ?
+              `).get(upc) as { quantity: number } | undefined;
+              if (current) {
+                data.quantity = current.quantity;
+              }
+            }
+          }
+        }
+      }
+      
+      // Prepare detailed result message
+      let message = `Created ${salesCreated} sales`;
+      if (salesFailed > 0) {
+        message += `, ${salesFailed} failed`;
+        if (failureReasons.length > 0 && failureReasons.length <= 5) {
+          message += `. Reasons: ${failureReasons.join('; ')}`;
+        } else if (failureReasons.length > 5) {
+          message += `. First 5 failures: ${failureReasons.slice(0, 5).join('; ')}`;
         }
       }
       
       return {
         success: true,
         salesCreated,
+        salesFailed,
         totalItems: totalItemsSold,
-        totalValue
+        totalValue,
+        message
       };
     } catch (error) {
       console.error("Error generating test sales:", error);
@@ -1465,6 +1543,54 @@ function registerClearTransactions(ipcMain: IpcMain) {
       return {
         success: false,
         error: error instanceof Error ? error.message : "Failed to clear transactions"
+      };
+    }
+  });
+}
+
+// Clear ALL data - complete database reset
+function registerClearAllData(ipcMain: IpcMain) {
+  ipcMain.handle("clear-all-data", async () => {
+    try {
+      const invDb = getInventoryDb();
+      
+      // Delete everything in a transaction
+      invDb.prepare("BEGIN TRANSACTION").run();
+      
+      try {
+        // Get counts before deletion for reporting
+        const transCount = invDb.prepare("SELECT COUNT(*) as count FROM transactions").get() as { count: number };
+        const invCount = invDb.prepare("SELECT COUNT(*) as count FROM inventory").get() as { count: number };
+        const adjCount = invDb.prepare("SELECT COUNT(*) as count FROM inventory_adjustments").get() as { count: number };
+        
+        // Delete all data
+        invDb.prepare("DELETE FROM transactions").run();
+        invDb.prepare("DELETE FROM inventory").run();
+        invDb.prepare("DELETE FROM inventory_adjustments").run();
+        
+        // Reset autoincrement counters
+        invDb.prepare("DELETE FROM sqlite_sequence WHERE name IN ('transactions', 'inventory', 'inventory_adjustments')").run();
+        
+        invDb.prepare("COMMIT").run();
+        
+        return {
+          success: true,
+          message: `Cleared ${transCount.count} transactions, ${invCount.count} inventory items, and ${adjCount.count} adjustments`,
+          deleted: {
+            transactions: transCount.count,
+            inventory: invCount.count,
+            adjustments: adjCount.count
+          }
+        };
+      } catch (error) {
+        invDb.prepare("ROLLBACK").run();
+        throw error;
+      }
+    } catch (error) {
+      console.error("Error clearing all data:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to clear all data"
       };
     }
   });

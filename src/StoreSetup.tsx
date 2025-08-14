@@ -21,15 +21,15 @@ interface StoreSetupProps {
 
 export function StoreSetup({ onComplete, onCancel }: StoreSetupProps) {
   const [formData, setFormData] = useState<StoreInfo>({
-    store_name: '',
-    address_line1: '',
+    store_name: 'Deerings Market',
+    address_line1: '1142 Barlow St',
     address_line2: '',
-    city: '',
+    city: 'Traverse City',
     state: 'MI',
-    zip_code: '',
-    phone_number: '',
+    zip_code: '12345',
+    phone_number: '(231) 555-0100',
     tax_rate: 6.0,
-    receipt_header: '',
+    receipt_header: 'Deerings Market',
     receipt_footer: 'Thank you for your business!'
   });
 
