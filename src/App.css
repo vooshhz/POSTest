@@ -148,6 +148,23 @@
   box-shadow: 0 4px 12px rgba(255, 152, 0, 0.4);
 }
 
+.nav-tab.settings-tab {
+  background: rgba(156, 39, 176, 0.9);
+  color: white;
+  font-weight: 600;
+  border: 1px solid rgba(156, 39, 176, 0.3);
+}
+
+.nav-tab.settings-tab:hover {
+  background: rgba(156, 39, 176, 1);
+  box-shadow: 0 6px 12px rgba(156, 39, 176, 0.3);
+}
+
+.nav-tab.settings-tab.active {
+  background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%);
+  box-shadow: 0 4px 12px rgba(156, 39, 176, 0.4);
+}
+
 @media (max-width: 1200px) {
   .header-info {
     flex-direction: column;

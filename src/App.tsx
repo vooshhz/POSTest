@@ -6,6 +6,7 @@ import { TransactionHistory } from "./TransactionHistory";
 import { StoreSetup } from "./StoreSetup";
 import Developer from "./Developer";
 import Reports from "./Reports";
+import Settings from "./Settings";
 import "./App.css";
 import { useState, useEffect } from "react";
 
@@ -20,7 +21,7 @@ interface CartItem {
 
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<"scanner" | "inventory" | "transactions" | "reports" | "developer">("scanner");
+  const [currentView, setCurrentView] = useState<"scanner" | "inventory" | "transactions" | "reports" | "developer" | "settings">("scanner");
   const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
   const [storeName, setStoreName] = useState<string>("");
   const [inventoryRefreshKey, setInventoryRefreshKey] = useState(0);
@@ -131,6 +132,12 @@ export default function App() {
         >
           Dev
         </button>
+        <button 
+          className={`nav-tab settings-tab ${currentView === "settings" ? "active" : ""}`}
+          onClick={() => setCurrentView("settings")}
+        >
+          Settings
+        </button>
       </div>
       
       <div className="nav-tabs-right">
@@ -194,8 +201,10 @@ export default function App() {
         <TransactionHistory />
       ) : currentView === "reports" ? (
         <Reports />
-      ) : (
+      ) : currentView === "developer" ? (
         <Developer />
+      ) : (
+        <Settings />
       )}
       </div>
     </div>

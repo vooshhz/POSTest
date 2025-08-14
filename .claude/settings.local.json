@@ -17,7 +17,9 @@
       "Bash(npm install)",
       "Bash(npm install:*)",
       "Bash(npx:*)",
-      "Bash(sqlite3:*)"
+      "Bash(sqlite3:*)",
+      "Bash(del StoreInformation.db)",
+      "Bash(pnpm build:*)"
     ],
     "deny": []
   }

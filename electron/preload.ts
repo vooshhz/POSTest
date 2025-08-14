@@ -284,6 +284,79 @@ interface InventoryAPI {
     };
     error?: string;
   }>;
+  // User Management
+  userLogin: (username: string, password: string) => Promise<{
+    success: boolean;
+    user?: {
+      id: number;
+      username: string;
+      role: string;
+      fullName: string;
+    };
+    error?: string;
+  }>;
+  userLogout: () => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+  getCurrentUser: () => Promise<{
+    success: boolean;
+    user?: {
+      id: number;
+      username: string;
+      role: string;
+    } | null;
+  }>;
+  getUsers: () => Promise<{
+    success: boolean;
+    users?: Array<{
+      id: number;
+      username: string;
+      role: string;
+      full_name: string;
+      active: number;
+      created_at: string;
+      last_login: string | null;
+    }>;
+    error?: string;
+  }>;
+  addUserDuringSetup: (userData: {
+    username: string;
+    password: string;
+    role: string;
+    fullName: string;
+  }) => Promise<{
+    success: boolean;
+    userId?: number;
+    error?: string;
+  }>;
+  addUser: (userData: {
+    username: string;
+    password: string;
+    role: string;
+    fullName: string;
+  }) => Promise<{
+    success: boolean;
+    userId?: number;
+    error?: string;
+  }>;
+  removeUser: (userId: number) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+  getUserActivity: (userId?: number) => Promise<{
+    success: boolean;
+    activities?: Array<{
+      id: number;
+      user_id: number;
+      username: string;
+      full_name: string;
+      action: string;
+      details: string | null;
+      timestamp: string;
+    }>;
+    error?: string;
+  }>;
   getInventoryAnalysis: () => Promise<{
     success: boolean;
     data?: {
@@ -352,7 +425,16 @@ const api: InventoryAPI = {
   clearAllData: () => ipcRenderer.invoke("clear-all-data"),
   getDailySales: (date) => ipcRenderer.invoke("get-daily-sales", date),
   getWeeklySummary: (date, periodType) => ipcRenderer.invoke("get-weekly-summary", date, periodType),
-  getInventoryAnalysis: () => ipcRenderer.invoke("get-inventory-analysis")
+  getInventoryAnalysis: () => ipcRenderer.invoke("get-inventory-analysis"),
+  // User Management
+  userLogin: (username, password) => ipcRenderer.invoke("user-login", username, password),
+  userLogout: () => ipcRenderer.invoke("user-logout"),
+  getCurrentUser: () => ipcRenderer.invoke("get-current-user"),
+  getUsers: () => ipcRenderer.invoke("get-users"),
+  addUserDuringSetup: (userData) => ipcRenderer.invoke("add-user-during-setup", userData),
+  addUser: (userData) => ipcRenderer.invoke("add-user", userData),
+  removeUser: (userId) => ipcRenderer.invoke("remove-user", userId),
+  getUserActivity: (userId) => ipcRenderer.invoke("get-user-activity", userId)
 };
 
 contextBridge.exposeInMainWorld("api", api);

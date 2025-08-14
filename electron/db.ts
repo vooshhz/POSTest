@@ -47,6 +47,31 @@ function getStoreInfoDb() {
         created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
         last_modified DATETIME DEFAULT CURRENT_TIMESTAMP
       );
+      
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL UNIQUE,
+        password TEXT NOT NULL,
+        role TEXT NOT NULL CHECK(role IN ('admin', 'manager', 'cashier')),
+        full_name TEXT NOT NULL,
+        active INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        last_login DATETIME,
+        created_by INTEGER,
+        FOREIGN KEY (created_by) REFERENCES users(id)
+      );
+      
+      CREATE TABLE IF NOT EXISTS user_activity (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        action TEXT NOT NULL,
+        details TEXT,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+      );
+      
+      CREATE INDEX IF NOT EXISTS idx_user_activity_user ON user_activity(user_id);
+      CREATE INDEX IF NOT EXISTS idx_user_activity_timestamp ON user_activity(timestamp);
     `);
   }
   return storeInfoDb;
@@ -133,6 +158,9 @@ interface Transaction {
   change_given?: number;
   created_at?: string;
 }
+
+// Track current logged in user
+let currentUser: { id: number; username: string; role: string } | null = null;
 
 export function registerInventoryIpc(ipcMain: IpcMain) {
   // Only register handlers once
@@ -1075,6 +1103,7 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
   registerClearAllData(ipcMain);
   registerWeeklySummary(ipcMain);
   registerInventoryAnalysis(ipcMain);
+  registerUserManagement(ipcMain);
 }
 
 // Generate test inventory for development
@@ -1291,22 +1320,50 @@ function registerGenerateTestSales(ipcMain: IpcMain) {
       const endTime = new Date(params.endDate + 'T23:59:59').getTime();
       const dateRange = endTime - startTime;
       
+      // First, generate all sales with their dates (but don't select items yet)
+      type PreparedSale = {
+        saleDate: Date;
+        saleNum: number;
+        itemCount: number;
+        paymentType: string;
+      };
+      
+      const preparedSales: PreparedSale[] = [];
+      
+      // Generate sales with dates and basic parameters
       for (let saleNum = 0; saleNum < params.numberOfSales; saleNum++) {
         // Generate random timestamp within the date range
         const randomTime = startTime + Math.random() * dateRange;
         const saleDate = new Date(randomTime);
+        
         // Random number of items for this sale
         const itemCount = params.minItemsPerSale + 
           Math.floor(Math.random() * (params.maxItemsPerSale - params.minItemsPerSale + 1));
         
-        // Get items that still have inventory
+        // Random payment type
+        const paymentType = params.paymentTypes[Math.floor(Math.random() * params.paymentTypes.length)];
+        
+        preparedSales.push({
+          saleDate,
+          saleNum,
+          itemCount,
+          paymentType
+        });
+      }
+      
+      // Sort all prepared sales by date (chronological order)
+      preparedSales.sort((a, b) => a.saleDate.getTime() - b.saleDate.getTime());
+      
+      // Now process the sorted sales so transaction IDs match chronological order
+      for (const sale of preparedSales) {
+        // Get items that still have inventory (check current state for each sale)
         const availableUPCs = Array.from(inventoryTracker.entries())
           .filter(([_, data]) => data.quantity > 0)
           .map(([upc, _]) => upc);
         
         if (availableUPCs.length === 0) {
           salesFailed++;
-          failureReasons.push(`Sale #${saleNum + 1}: No inventory available`);
+          failureReasons.push(`Sale #${sale.saleNum + 1}: No inventory available`);
           continue;
         }
         
@@ -1314,7 +1371,7 @@ function registerGenerateTestSales(ipcMain: IpcMain) {
         const saleItems = [];
         const usedUPCs = new Set<string>();
         
-        for (let i = 0; i < itemCount && i < availableUPCs.length; i++) {
+        for (let i = 0; i < sale.itemCount && i < availableUPCs.length; i++) {
           // Find an item we haven't used in this sale yet
           let item = null;
           let attempts = 0;
@@ -1349,7 +1406,7 @@ function registerGenerateTestSales(ipcMain: IpcMain) {
         
         if (saleItems.length === 0) {
           salesFailed++;
-          failureReasons.push(`Sale #${saleNum + 1}: Could not find any items to add`);
+          failureReasons.push(`Sale #${sale.saleNum + 1}: Could not find any items to add`);
           continue;
         }
         
@@ -1358,13 +1415,10 @@ function registerGenerateTestSales(ipcMain: IpcMain) {
         const tax = subtotal * (taxRate / 100);
         const total = subtotal + tax;
         
-        // Random payment type
-        const paymentType = params.paymentTypes[Math.floor(Math.random() * params.paymentTypes.length)];
-        
         // For cash payments, simulate cash given
         let cashGiven = null;
         let changeGiven = null;
-        if (paymentType === 'cash') {
+        if (sale.paymentType === 'cash') {
           // Round up to nearest $5 or $10
           const roundTo = total > 50 ? 10 : 5;
           cashGiven = Math.ceil(total / roundTo) * roundTo;
@@ -1377,7 +1431,7 @@ function registerGenerateTestSales(ipcMain: IpcMain) {
           subtotal,
           tax,
           total,
-          payment_type: paymentType,
+          payment_type: sale.paymentType,
           cash_given: cashGiven,
           change_given: changeGiven
         };
@@ -1411,7 +1465,7 @@ function registerGenerateTestSales(ipcMain: IpcMain) {
             transaction.payment_type,
             transaction.cash_given,
             transaction.change_given,
-            saleDate.toISOString()
+            sale.saleDate.toISOString()
           );
           
           const transactionId = result.lastInsertRowid;
@@ -1431,7 +1485,8 @@ function registerGenerateTestSales(ipcMain: IpcMain) {
               WHERE upc = ?
             `).run(newQuantity, item.upc);
             
-            // Update our tracker
+            
+            // Update our tracker to reflect the sale
             const trackedItem = inventoryTracker.get(item.upc);
             if (trackedItem) {
               trackedItem.quantity = newQuantity;
@@ -1454,7 +1509,7 @@ function registerGenerateTestSales(ipcMain: IpcMain) {
               transactionId,
               'transaction',
               `Test Sale - Transaction #${transactionId}`,
-              saleDate.toISOString()
+              sale.saleDate.toISOString()
             );
             
             totalItemsSold += item.quantity;
@@ -1467,7 +1522,7 @@ function registerGenerateTestSales(ipcMain: IpcMain) {
           invDb.prepare("ROLLBACK").run();
           salesFailed++;
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          failureReasons.push(`Sale #${saleNum + 1}: ${errorMessage}`);
+          failureReasons.push(`Sale #${sale.saleNum + 1}: ${errorMessage}`);
           
           // If we got an insufficient inventory error, update our tracker
           if (errorMessage.includes('Insufficient inventory')) {
@@ -1961,6 +2016,299 @@ function registerWeeklySummary(ipcMain: IpcMain) {
       return {
         success: false,
         error: error instanceof Error ? error.message : "Failed to get weekly summary"
+      };
+    }
+  });
+}
+
+// User Management Functions
+function registerUserManagement(ipcMain: IpcMain) {
+  // Login
+  ipcMain.handle("user-login", async (_, username: string, password: string) => {
+    try {
+      const storeDb = getStoreInfoDb();
+      const user = storeDb.prepare(`
+        SELECT id, username, role, full_name, active 
+        FROM users 
+        WHERE username = ? AND password = ? AND active = 1
+      `).get(username, password) as any;
+      
+      if (user) {
+        currentUser = { id: user.id, username: user.username, role: user.role };
+        
+        // Update last login
+        storeDb.prepare("UPDATE users SET last_login = datetime('now') WHERE id = ?").run(user.id);
+        
+        // Log activity
+        storeDb.prepare(`
+          INSERT INTO user_activity (user_id, action, details) 
+          VALUES (?, 'login', 'User logged in')
+        `).run(user.id);
+        
+        return {
+          success: true,
+          user: {
+            id: user.id,
+            username: user.username,
+            role: user.role,
+            fullName: user.full_name
+          }
+        };
+      } else {
+        return {
+          success: false,
+          error: "Invalid username or password"
+        };
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Login failed"
+      };
+    }
+  });
+  
+  // Logout
+  ipcMain.handle("user-logout", async () => {
+    try {
+      if (currentUser) {
+        const storeDb = getStoreInfoDb();
+        storeDb.prepare(`
+          INSERT INTO user_activity (user_id, action, details) 
+          VALUES (?, 'logout', 'User logged out')
+        `).run(currentUser.id);
+      }
+      
+      currentUser = null;
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: "Logout failed" };
+    }
+  });
+  
+  // Get current user
+  ipcMain.handle("get-current-user", async () => {
+    return {
+      success: true,
+      user: currentUser
+    };
+  });
+  
+  // Get all users (admin only)
+  ipcMain.handle("get-users", async () => {
+    try {
+      if (!currentUser || currentUser.role !== 'admin') {
+        return {
+          success: false,
+          error: "Unauthorized. Admin access required."
+        };
+      }
+      
+      const storeDb = getStoreInfoDb();
+      const users = storeDb.prepare(`
+        SELECT id, username, role, full_name, active, created_at, last_login 
+        FROM users 
+        ORDER BY created_at DESC
+      `).all();
+      
+      return {
+        success: true,
+        users
+      };
+    } catch (error) {
+      console.error("Get users error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to get users"
+      };
+    }
+  });
+  
+  // Add user during initial setup (no auth check)
+  ipcMain.handle("add-user-during-setup", async (_, userData: {
+    username: string;
+    password: string;
+    role: string;
+    fullName: string;
+  }) => {
+    try {
+      const storeDb = getStoreInfoDb();
+      
+      // Check if any users exist (should be empty during initial setup)
+      const userCount = storeDb.prepare("SELECT COUNT(*) as count FROM users").get() as any;
+      if (userCount.count > 0) {
+        return {
+          success: false,
+          error: "Users already exist. Use normal add-user for additional users."
+        };
+      }
+      
+      // Insert the first admin user
+      const result = storeDb.prepare(`
+        INSERT INTO users (username, password, role, full_name) 
+        VALUES (?, ?, ?, ?)
+      `).run(userData.username, userData.password, userData.role, userData.fullName);
+      
+      return {
+        success: true,
+        userId: result.lastInsertRowid
+      };
+    } catch (error) {
+      console.error("Add setup user error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to create admin user"
+      };
+    }
+  });
+  
+  // Add user (admin only)
+  ipcMain.handle("add-user", async (_, userData: {
+    username: string;
+    password: string;
+    role: string;
+    fullName: string;
+  }) => {
+    try {
+      if (!currentUser || currentUser.role !== 'admin') {
+        return {
+          success: false,
+          error: "Unauthorized. Admin access required."
+        };
+      }
+      
+      const storeDb = getStoreInfoDb();
+      
+      // Check if username already exists
+      const existing = storeDb.prepare("SELECT id FROM users WHERE username = ?").get(userData.username);
+      if (existing) {
+        return {
+          success: false,
+          error: "Username already exists"
+        };
+      }
+      
+      // Insert new user
+      const result = storeDb.prepare(`
+        INSERT INTO users (username, password, role, full_name, created_by) 
+        VALUES (?, ?, ?, ?, ?)
+      `).run(userData.username, userData.password, userData.role, userData.fullName, currentUser.id);
+      
+      // Log activity
+      storeDb.prepare(`
+        INSERT INTO user_activity (user_id, action, details) 
+        VALUES (?, 'create_user', ?)
+      `).run(currentUser.id, `Created user: ${userData.username}`);
+      
+      return {
+        success: true,
+        userId: result.lastInsertRowid
+      };
+    } catch (error) {
+      console.error("Add user error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to add user"
+      };
+    }
+  });
+  
+  // Remove user (admin only, cannot remove self or last admin)
+  ipcMain.handle("remove-user", async (_, userId: number) => {
+    try {
+      if (!currentUser || currentUser.role !== 'admin') {
+        return {
+          success: false,
+          error: "Unauthorized. Admin access required."
+        };
+      }
+      
+      if (userId === currentUser.id) {
+        return {
+          success: false,
+          error: "Cannot remove your own account"
+        };
+      }
+      
+      const storeDb = getStoreInfoDb();
+      
+      // Check if this is the last admin
+      const user = storeDb.prepare("SELECT username, role FROM users WHERE id = ?").get(userId) as any;
+      if (user && user.role === 'admin') {
+        const adminCount = storeDb.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'admin' AND active = 1").get() as any;
+        if (adminCount.count <= 1) {
+          return {
+            success: false,
+            error: "Cannot remove the last admin user"
+          };
+        }
+      }
+      
+      // Soft delete (deactivate) the user
+      storeDb.prepare("UPDATE users SET active = 0 WHERE id = ?").run(userId);
+      
+      // Log activity
+      storeDb.prepare(`
+        INSERT INTO user_activity (user_id, action, details) 
+        VALUES (?, 'remove_user', ?)
+      `).run(currentUser.id, `Removed user: ${user.username}`);
+      
+      return {
+        success: true
+      };
+    } catch (error) {
+      console.error("Remove user error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to remove user"
+      };
+    }
+  });
+  
+  // Get user activity
+  ipcMain.handle("get-user-activity", async (_, userId?: number) => {
+    try {
+      if (!currentUser) {
+        return {
+          success: false,
+          error: "Not logged in"
+        };
+      }
+      
+      const storeDb = getStoreInfoDb();
+      let query = `
+        SELECT 
+          ua.id,
+          ua.user_id,
+          u.username,
+          u.full_name,
+          ua.action,
+          ua.details,
+          ua.timestamp
+        FROM user_activity ua
+        JOIN users u ON ua.user_id = u.id
+      `;
+      
+      const params = [];
+      if (userId) {
+        query += " WHERE ua.user_id = ?";
+        params.push(userId);
+      }
+      
+      query += " ORDER BY ua.timestamp DESC LIMIT 100";
+      
+      const activities = storeDb.prepare(query).all(...params);
+      
+      return {
+        success: true,
+        activities
+      };
+    } catch (error) {
+      console.error("Get activity error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to get activity"
       };
     }
   });
