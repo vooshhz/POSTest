@@ -7,6 +7,7 @@ import { StoreSetup } from "./StoreSetup";
 import Developer from "./Developer";
 import Reports from "./Reports";
 import Settings from "./Settings";
+import Login from "./Login";
 import "./App.css";
 import { useState, useEffect } from "react";
 
@@ -26,6 +27,9 @@ export default function App() {
   const [storeName, setStoreName] = useState<string>("");
   const [inventoryRefreshKey, setInventoryRefreshKey] = useState(0);
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   
   // Cart Scanner state
   const [cartBarcode, setCartBarcode] = useState("");
@@ -36,8 +40,9 @@ export default function App() {
   const [inventoryBarcode, setInventoryBarcode] = useState("");
   const [searchFilter, setSearchFilter] = useState("");
 
-  // Check for store info on component mount
+  // Check for store info and authentication on component mount
   useEffect(() => {
+    checkAuthentication();
     checkStoreInfo();
   }, []);
 
@@ -85,8 +90,44 @@ export default function App() {
     }
   };
 
+  const checkAuthentication = async () => {
+    try {
+      console.log('Checking authentication...');
+      const result = await window.api.getCurrentUser();
+      console.log('Auth check result:', result);
+      if (result.success && result.user) {
+        setCurrentUser(result.user);
+        setIsAuthenticated(true);
+      }
+    } catch (error) {
+      console.error('Failed to check authentication:', error);
+    } finally {
+      setCheckingAuth(false);
+    }
+  };
+
+  const handleLoginSuccess = (user: any) => {
+    setCurrentUser(user);
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = async () => {
+    const confirmed = window.confirm('Are you sure you want to log out?');
+    if (!confirmed) return;
+
+    try {
+      await window.api.userLogout();
+      setCurrentUser(null);
+      setIsAuthenticated(false);
+      setCurrentView("scanner");
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
   // Show loading while checking
-  if (needsSetup === null) {
+  if (needsSetup === null || checkingAuth) {
+    console.log('Loading state - needsSetup:', needsSetup, 'checkingAuth:', checkingAuth);
     return (
       <div className="app-loading">
         <div className="loading-spinner"></div>
@@ -98,6 +139,11 @@ export default function App() {
   // Show setup if needed
   if (needsSetup) {
     return <StoreSetup onComplete={handleSetupComplete} onCancel={handleSetupCancel} />;
+  }
+
+  // Show login if not authenticated
+  if (!isAuthenticated) {
+    return <Login onLoginSuccess={handleLoginSuccess} storeName={storeName} />;
   }
 
   /* Commented out CSV import functionality - preserved for future use
@@ -138,6 +184,12 @@ export default function App() {
         >
           Settings
         </button>
+        <div className="user-info">
+          <span className="username">{currentUser?.username} ({currentUser?.role})</span>
+          <button onClick={handleLogout} className="logout-btn">
+            Logout
+          </button>
+        </div>
       </div>
       
       <div className="nav-tabs-right">

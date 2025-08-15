@@ -11,10 +11,17 @@
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
-.transaction-container h2 {
-  margin-bottom: 1.5rem;
+.transaction-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.transaction-header h2 {
+  margin: 0;
   color: #333;
-  flex-shrink: 0;
+  font-size: 1.5rem;
 }
 
 .transaction-summary {
@@ -250,6 +257,12 @@
   box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4);
 }
 
+/* User cell styling */
+.user-cell {
+  font-weight: 500;
+  color: #6b46c1;
+}
+
 /* Dark mode override - ensure text stays dark */
 @media (prefers-color-scheme: dark) {
   .transaction-table td,
@@ -257,7 +270,8 @@
   .date-cell .date,
   .date-cell .time,
   .items-cell,
-  .currency-cell {
+  .currency-cell,
+  .user-cell {
     color: #333 !important;
   }
   
@@ -269,7 +283,7 @@
     background: #f9f9ff;
   }
   
-  .transaction-container h2 {
+  .transaction-header h2 {
     color: #333;
   }
   

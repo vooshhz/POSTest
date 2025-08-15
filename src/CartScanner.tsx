@@ -9,6 +9,7 @@ interface CartItem {
   quantity: number;
   cost: number;
   price: number;
+  discount?: number;
 }
 
 interface CartScannerProps {
@@ -61,6 +62,9 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
   }>>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [showDiscountModal, setShowDiscountModal] = useState(false);
+  const [discountItemIndex, setDiscountItemIndex] = useState<number | null>(null);
+  const [discountAmount, setDiscountAmount] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -236,16 +240,22 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
   };
 
   const calculateTotals = () => {
-    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const subtotal = cart.reduce((sum, item) => {
+      const itemTotal = item.price * item.quantity;
+      const discount = (item.discount || 0) * item.quantity;
+      return sum + (itemTotal - discount);
+    }, 0);
     const tax = subtotal * 0.06; // Michigan 6% sales tax
     const total = subtotal + tax;
     const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+    const totalDiscount = cart.reduce((sum, item) => sum + ((item.discount || 0) * item.quantity), 0);
     
     return {
       totalItems,
       subtotal,
       tax,
-      total
+      total,
+      totalDiscount
     };
   };
 
@@ -455,9 +465,55 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
     return `$${num.toFixed(2)}`;
   };
 
+  const openDiscountModal = (index: number) => {
+    setDiscountItemIndex(index);
+    setDiscountAmount("");
+    setShowDiscountModal(true);
+  };
+
+  const applyPercentageDiscount = (percentage: number) => {
+    if (discountItemIndex === null) return;
+    const item = cart[discountItemIndex];
+    const discountValue = (item.price * percentage) / 100;
+    setDiscountAmount(discountValue.toFixed(2));
+  };
+
+  const applyDiscount = () => {
+    if (discountItemIndex === null) return;
+    const discount = parseFloat(discountAmount);
+    if (isNaN(discount) || discount < 0) {
+      alert("Please enter a valid discount amount");
+      return;
+    }
+    
+    const item = cart[discountItemIndex];
+    if (discount > item.price) {
+      alert("Discount cannot exceed item price");
+      return;
+    }
+
+    const updatedCart = [...cart];
+    updatedCart[discountItemIndex] = { ...item, discount };
+    setCart(updatedCart);
+    setShowDiscountModal(false);
+    setDiscountAmount("");
+    setDiscountItemIndex(null);
+  };
+
+  const removeDiscount = (index: number) => {
+    const updatedCart = [...cart];
+    updatedCart[index] = { ...cart[index], discount: undefined };
+    setCart(updatedCart);
+  };
+
   return (
     <div className="cart-scanner-container">
-      <h2>Point of Sale</h2>
+      <div className="pos-header">
+        <h2>Point of Sale</h2>
+        <button className="populate-btn">
+          Populate
+        </button>
+      </div>
       
       <div className="main-content">
         {/* Left Section - Scanner and Cart */}
@@ -578,15 +634,44 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
                           </button>
                         </div>
                       </td>
-                      <td>{formatCurrency(item.price)}</td>
-                      <td className="total-cell">{formatCurrency(item.price * item.quantity)}</td>
                       <td>
-                        <button 
-                          onClick={() => removeFromCart(index)}
-                          className="remove-btn"
-                        >
-                          Remove
-                        </button>
+                        {item.discount ? (
+                          <div className="price-with-discount">
+                            <span className="original-price">{formatCurrency(item.price)}</span>
+                            <span className="discounted-price">{formatCurrency(item.price - item.discount)}</span>
+                          </div>
+                        ) : (
+                          formatCurrency(item.price)
+                        )}
+                      </td>
+                      <td className="total-cell">
+                        {formatCurrency((item.price - (item.discount || 0)) * item.quantity)}
+                      </td>
+                      <td>
+                        <div className="item-actions">
+                          {item.discount ? (
+                            <button 
+                              onClick={() => removeDiscount(index)}
+                              className="discount-btn has-discount"
+                              title={`Remove $${item.discount.toFixed(2)} discount`}
+                            >
+                              -${item.discount.toFixed(2)}
+                            </button>
+                          ) : (
+                            <button 
+                              onClick={() => openDiscountModal(index)}
+                              className="discount-btn"
+                            >
+                              Discount
+                            </button>
+                          )}
+                          <button 
+                            onClick={() => removeFromCart(index)}
+                            className="remove-btn"
+                          >
+                            ×
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -806,6 +891,76 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
                   {loading ? "Adding..." : "Add"}
                 </button>
                 <button onClick={closeAddModal} className="cancel-btn">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Discount Modal */}
+      {showDiscountModal && discountItemIndex !== null && (
+        <div className="modal-overlay">
+          <div className="discount-modal">
+            <div className="modal-header">
+              <h3>Apply Discount</h3>
+              <button 
+                onClick={() => {
+                  setShowDiscountModal(false);
+                  setDiscountAmount("");
+                  setDiscountItemIndex(null);
+                }}
+                className="close-btn"
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-content">
+              <div className="discount-item-info">
+                <p>{cart[discountItemIndex].description}</p>
+                <p className="item-price">Price: {formatCurrency(cart[discountItemIndex].price)}</p>
+              </div>
+              
+              <div className="percentage-buttons">
+                <button onClick={() => applyPercentageDiscount(5)} className="percent-btn">5%</button>
+                <button onClick={() => applyPercentageDiscount(10)} className="percent-btn">10%</button>
+                <button onClick={() => applyPercentageDiscount(15)} className="percent-btn">15%</button>
+                <button onClick={() => applyPercentageDiscount(20)} className="percent-btn">20%</button>
+                <button onClick={() => applyPercentageDiscount(25)} className="percent-btn">25%</button>
+                <button onClick={() => applyPercentageDiscount(50)} className="percent-btn">50%</button>
+              </div>
+              
+              <div className="discount-input-group">
+                <label>Discount Amount ($)</label>
+                <input
+                  type="number"
+                  value={discountAmount}
+                  onChange={(e) => setDiscountAmount(e.target.value)}
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0"
+                  max={cart[discountItemIndex].price}
+                  className="discount-input"
+                />
+              </div>
+              
+              <div className="modal-buttons">
+                <button 
+                  onClick={applyDiscount} 
+                  className="apply-btn"
+                  disabled={!discountAmount || parseFloat(discountAmount) <= 0}
+                >
+                  Apply Discount
+                </button>
+                <button 
+                  onClick={() => {
+                    setShowDiscountModal(false);
+                    setDiscountAmount("");
+                    setDiscountItemIndex(null);
+                  }} 
+                  className="cancel-btn"
+                >
+                  Cancel
+                </button>
               </div>
             </div>
           </div>

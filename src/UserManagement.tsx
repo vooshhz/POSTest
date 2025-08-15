@@ -25,6 +25,8 @@ export default function UserManagement({ currentUser }: UserManagementProps) {
     username: "",
     password: "",
     confirmPassword: "",
+    pin: "",
+    confirmPin: "",
     fullName: "",
     role: "cashier"
   });
@@ -52,31 +54,58 @@ export default function UserManagement({ currentUser }: UserManagementProps) {
   };
 
   const handleAddUser = async () => {
-    if (!newUser.username || !newUser.password || !newUser.fullName) {
+    if (!newUser.username || !newUser.fullName) {
       setError("Please fill in all required fields");
       return;
     }
 
-    if (newUser.password !== newUser.confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
-
-    if (newUser.password.length < 4) {
-      setError("Password must be at least 4 characters");
-      return;
+    // Validate based on role
+    if (newUser.role === 'cashier') {
+      if (!newUser.pin) {
+        setError("Please enter a 4-digit PIN for cashier");
+        return;
+      }
+      if (newUser.pin !== newUser.confirmPin) {
+        setError("PINs do not match");
+        return;
+      }
+      if (newUser.pin.length !== 4 || !/^\d{4}$/.test(newUser.pin)) {
+        setError("PIN must be exactly 4 digits");
+        return;
+      }
+    } else {
+      // Admin or Manager
+      if (!newUser.password) {
+        setError("Please enter a password");
+        return;
+      }
+      if (newUser.password !== newUser.confirmPassword) {
+        setError("Passwords do not match");
+        return;
+      }
+      if (newUser.password.length < 4) {
+        setError("Password must be at least 4 characters");
+        return;
+      }
     }
 
     setLoading(true);
     setError("");
 
     try {
-      const result = await window.api.addUser({
+      const userData: any = {
         username: newUser.username,
-        password: newUser.password,
         role: newUser.role,
         fullName: newUser.fullName
-      });
+      };
+
+      if (newUser.role === 'cashier') {
+        userData.pin = newUser.pin;
+      } else {
+        userData.password = newUser.password;
+      }
+
+      const result = await window.api.addUser(userData);
 
       if (result.success) {
         setShowAddUser(false);
@@ -84,6 +113,8 @@ export default function UserManagement({ currentUser }: UserManagementProps) {
           username: "",
           password: "",
           confirmPassword: "",
+          pin: "",
+          confirmPin: "",
           fullName: "",
           role: "cashier"
         });
@@ -188,30 +219,10 @@ export default function UserManagement({ currentUser }: UserManagementProps) {
               />
             </div>
             <div className="form-group">
-              <label>Password *</label>
-              <input
-                type="password"
-                value={newUser.password}
-                onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-                placeholder="Enter password"
-                disabled={loading}
-              />
-            </div>
-            <div className="form-group">
-              <label>Confirm Password *</label>
-              <input
-                type="password"
-                value={newUser.confirmPassword}
-                onChange={(e) => setNewUser({...newUser, confirmPassword: e.target.value})}
-                placeholder="Confirm password"
-                disabled={loading}
-              />
-            </div>
-            <div className="form-group">
               <label>Role *</label>
               <select
                 value={newUser.role}
-                onChange={(e) => setNewUser({...newUser, role: e.target.value})}
+                onChange={(e) => setNewUser({...newUser, role: e.target.value, password: "", confirmPassword: "", pin: "", confirmPin: ""})}
                 disabled={loading}
               >
                 <option value="cashier">Cashier</option>
@@ -219,6 +230,68 @@ export default function UserManagement({ currentUser }: UserManagementProps) {
                 <option value="admin">Administrator</option>
               </select>
             </div>
+            
+            {/* Password fields for Admin/Manager */}
+            {(newUser.role === 'admin' || newUser.role === 'manager') && (
+              <>
+                <div className="form-group">
+                  <label>Password *</label>
+                  <input
+                    type="password"
+                    value={newUser.password}
+                    onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                    placeholder="Enter password"
+                    disabled={loading}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Confirm Password *</label>
+                  <input
+                    type="password"
+                    value={newUser.confirmPassword}
+                    onChange={(e) => setNewUser({...newUser, confirmPassword: e.target.value})}
+                    placeholder="Confirm password"
+                    disabled={loading}
+                  />
+                </div>
+              </>
+            )}
+            
+            {/* PIN fields for Cashier */}
+            {newUser.role === 'cashier' && (
+              <>
+                <div className="form-group">
+                  <label>4-Digit PIN *</label>
+                  <input
+                    type="text"
+                    value={newUser.pin}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                      setNewUser({...newUser, pin: value});
+                    }}
+                    placeholder="Enter 4-digit PIN"
+                    maxLength={4}
+                    pattern="\d{4}"
+                    disabled={loading}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Confirm PIN *</label>
+                  <input
+                    type="text"
+                    value={newUser.confirmPin}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                      setNewUser({...newUser, confirmPin: value});
+                    }}
+                    placeholder="Confirm 4-digit PIN"
+                    maxLength={4}
+                    pattern="\d{4}"
+                    disabled={loading}
+                  />
+                </div>
+              </>
+            )}
           </div>
           <div className="form-actions">
             <button 

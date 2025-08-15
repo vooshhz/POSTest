@@ -25,6 +25,7 @@
       "Bash(pnpm electron-builder:*)",
       "Bash(del nul)"
     ],
-    "deny": []
+    "deny": [],
+    "defaultMode": "acceptEdits"
   }
 }

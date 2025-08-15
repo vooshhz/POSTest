@@ -29,7 +29,9 @@ export default function Reports() {
 
   return (
     <div className="reports-container">
-      <h2>Reports & Analytics</h2>
+      <div className="reports-header">
+        <h2>Reports & Analytics</h2>
+      </div>
       
       <div className="reports-tabs">
         {tabs.map(tab => (

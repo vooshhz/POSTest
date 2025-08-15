@@ -218,6 +218,12 @@
   color: #666;
 }
 
+.user-cell {
+  font-weight: 500;
+  color: #6b46c1;
+  font-size: 12px;
+}
+
 .adjustment-type {
   display: inline-block;
   padding: 3px 6px;

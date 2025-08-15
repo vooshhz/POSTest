@@ -348,7 +348,9 @@ export default function InventoryList({ barcode, setBarcode, searchFilter, setSe
 
   return (
     <div className="inventory-container">
-      <h2>Inventory Management</h2>
+      <div className="inventory-header">
+        <h2>Inventory Management</h2>
+      </div>
       
       {/* Sub-tabs */}
       <div className="inventory-tabs">

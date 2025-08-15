@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import UserManagement from "./UserManagement";
+import StoreInfo from "./StoreInfo";
+import ReceiptSettings from "./ReceiptSettings";
 import "./Settings.css";
 
 export default function Settings() {
@@ -57,18 +59,8 @@ export default function Settings() {
       
       <div className="settings-content">
         {activeTab === 'users' && <UserManagement currentUser={currentUser} onUserUpdate={checkCurrentUser} />}
-        {activeTab === 'store' && (
-          <div className="settings-panel">
-            <h3>Store Information</h3>
-            <p>Store configuration settings will go here...</p>
-          </div>
-        )}
-        {activeTab === 'receipts' && (
-          <div className="settings-panel">
-            <h3>Receipt Settings</h3>
-            <p>Receipt header and footer customization will go here...</p>
-          </div>
-        )}
+        {activeTab === 'store' && <StoreInfo />}
+        {activeTab === 'receipts' && <ReceiptSettings />}
         {activeTab === 'system' && (
           <div className="settings-panel">
             <h3>System Settings</h3>

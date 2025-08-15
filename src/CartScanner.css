@@ -12,10 +12,33 @@
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
-.cart-scanner-container h2 {
+.pos-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 1rem;
+}
+
+.pos-header h2 {
+  margin: 0;
   color: #333;
   font-size: 1.5rem;
+}
+
+.populate-btn {
+  background: #646cff;
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.populate-btn:hover {
+  background: #535bf2;
 }
 
 .main-content {
@@ -443,6 +466,41 @@
   font-size: 11px;
 }
 
+.cart-table th:nth-child(1) { /* # */
+  text-align: center;
+  width: 30px;
+}
+
+.cart-table th:nth-child(2) { /* Description */
+  text-align: left;
+  min-width: 200px;
+}
+
+.cart-table th:nth-child(3) { /* Volume */
+  text-align: center;
+  width: 80px;
+}
+
+.cart-table th:nth-child(4) { /* Qty */
+  text-align: center;
+  width: 100px;
+}
+
+.cart-table th:nth-child(5) { /* Unit Price */
+  text-align: right;
+  width: 80px;
+}
+
+.cart-table th:nth-child(6) { /* Total */
+  text-align: right;
+  width: 80px;
+}
+
+.cart-table th:nth-child(7) { /* Actions */
+  text-align: center;
+  width: 120px;
+}
+
 .cart-table td {
   padding: 0.3rem 0.4rem;
   border-bottom: 1px solid #eee;
@@ -450,15 +508,41 @@
   font-size: 11px;
 }
 
+.cart-table td:nth-child(1) { /* # */
+  text-align: center;
+}
+
+.cart-table td:nth-child(2) { /* Description */
+  text-align: left;
+}
+
+.cart-table td:nth-child(3) { /* Volume */
+  text-align: center;
+}
+
+.cart-table td:nth-child(4) { /* Qty */
+  text-align: center;
+}
+
+.cart-table td:nth-child(5) { /* Unit Price */
+  text-align: right;
+}
+
+.cart-table td:nth-child(6) { /* Total */
+  text-align: right;
+}
+
+.cart-table td:nth-child(7) { /* Actions */
+  text-align: center;
+}
+
 .cart-table tbody tr:hover {
   background: #f9f9ff;
 }
 
 .item-number {
-  text-align: center;
   font-weight: 600;
   color: #666;
-  width: 25px;
 }
 
 .description-cell {
@@ -466,12 +550,12 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  text-align: left;
 }
 
 .quantity-controls {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.3rem;
 }
 
@@ -509,18 +593,251 @@
 }
 
 .remove-btn {
-  padding: 0.15rem 0.4rem;
-  background: #ff6b6b;
+  background: #ff4444;
   color: white;
   border: none;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background 0.3s;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.remove-btn:hover {
+  background: #cc0000;
+}
+
+/* Item Actions */
+.item-actions {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Discount Button */
+.discount-btn {
+  background: #4CAF50;
+  color: white;
+  border: none;
+  padding: 0.2rem 0.5rem;
   border-radius: 4px;
   cursor: pointer;
   font-size: 10px;
   transition: background 0.3s;
+  white-space: nowrap;
 }
 
-.remove-btn:hover {
-  background: #ff5252;
+.discount-btn:hover {
+  background: #45a049;
+}
+
+.discount-btn.has-discount {
+  background: #ff9800;
+}
+
+.discount-btn.has-discount:hover {
+  background: #f57c00;
+}
+
+/* Price with Discount */
+.price-with-discount {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.original-price {
+  text-decoration: line-through;
+  color: #999;
+  font-size: 10px;
+}
+
+.discounted-price {
+  color: #4CAF50;
+  font-weight: 600;
+}
+
+/* Discount Modal */
+.discount-modal {
+  background: white;
+  border-radius: 8px;
+  padding: 0;
+  width: 450px;
+  max-width: 90%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
+
+.discount-modal .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.discount-modal .modal-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 18px;
+}
+
+.discount-modal .close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #999;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.discount-modal .close-btn:hover {
+  color: #333;
+}
+
+.discount-item-info {
+  padding: 20px;
+  background: #f5f5f5;
+  border-bottom: 1px solid #e0e0e0;
+  min-height: 80px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.discount-item-info p {
+  margin: 0;
+  color: #333;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.discount-item-info .item-price {
+  margin-top: 6px;
+  color: #666;
+  font-size: 14px;
+}
+
+.percentage-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  padding: 20px;
+  min-height: 100px;
+}
+
+.percent-btn {
+  background: #f0f0f0;
+  border: 1px solid #ddd;
+  padding: 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.percent-btn:hover {
+  background: #646cff;
+  color: white;
+  border-color: #646cff;
+}
+
+.discount-input-group {
+  padding: 20px;
+  padding-top: 0;
+  min-height: 80px;
+}
+
+.discount-input-group label {
+  display: block;
+  margin-bottom: 10px;
+  color: #555;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.discount-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+  height: 44px;
+}
+
+.discount-input:focus {
+  outline: none;
+  border-color: #646cff;
+  box-shadow: 0 0 0 3px rgba(100, 108, 255, 0.1);
+}
+
+.discount-modal .modal-content {
+  min-height: 350px;
+  display: flex;
+  flex-direction: column;
+}
+
+.discount-modal .modal-buttons {
+  display: flex;
+  gap: 10px;
+  padding: 20px;
+  border-top: 1px solid #e0e0e0;
+  justify-content: flex-end;
+  margin-top: auto;
+}
+
+.discount-modal .apply-btn {
+  background: #4CAF50;
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.discount-modal .apply-btn:hover:not(:disabled) {
+  background: #45a049;
+}
+
+.discount-modal .apply-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.discount-modal .cancel-btn {
+  background: #f0f0f0;
+  color: #333;
+  border: 1px solid #ddd;
+  padding: 8px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.discount-modal .cancel-btn:hover {
+  background: #e0e0e0;
 }
 
 .cart-summary {

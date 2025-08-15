@@ -17,6 +17,8 @@ interface InventoryAdjustment {
   notes: string | null;
   created_by: string;
   created_at_local: string;
+  created_by_user_id?: number | null;
+  created_by_username?: string | null;
 }
 
 export default function InventoryAdjustments() {
@@ -181,6 +183,7 @@ export default function InventoryAdjustments() {
           <thead>
             <tr>
               <th>Date/Time</th>
+              <th>User</th>
               <th>Type</th>
               <th>UPC</th>
               <th>Description</th>
@@ -194,7 +197,7 @@ export default function InventoryAdjustments() {
           <tbody>
             {adjustments.length === 0 ? (
               <tr>
-                <td colSpan={9} className="no-data">No adjustments found</td>
+                <td colSpan={10} className="no-data">No adjustments found</td>
               </tr>
             ) : (
               adjustments.map((adj) => (
@@ -202,6 +205,7 @@ export default function InventoryAdjustments() {
                   <td className="date-cell">
                     {new Date(adj.created_at_local).toLocaleString()}
                   </td>
+                  <td className="user-cell">{adj.created_by_username || adj.created_by || 'system'}</td>
                   <td>
                     <span className={`adjustment-type ${getAdjustmentTypeClass(adj.adjustment_type)}`}>
                       {getAdjustmentTypeLabel(adj.adjustment_type)}

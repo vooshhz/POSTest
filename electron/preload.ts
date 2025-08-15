@@ -285,7 +285,24 @@ interface InventoryAPI {
     error?: string;
   }>;
   // User Management
+  checkUserType: (username: string) => Promise<{
+    success: boolean;
+    role?: string;
+    requiresPin?: boolean;
+    requiresPassword?: boolean;
+    error?: string;
+  }>;
   userLogin: (username: string, password: string) => Promise<{
+    success: boolean;
+    user?: {
+      id: number;
+      username: string;
+      role: string;
+      fullName: string;
+    };
+    error?: string;
+  }>;
+  userLoginPin: (username: string, pin: string) => Promise<{
     success: boolean;
     user?: {
       id: number;
@@ -332,7 +349,8 @@ interface InventoryAPI {
   }>;
   addUser: (userData: {
     username: string;
-    password: string;
+    password?: string;
+    pin?: string;
     role: string;
     fullName: string;
   }) => Promise<{
@@ -427,7 +445,9 @@ const api: InventoryAPI = {
   getWeeklySummary: (date, periodType) => ipcRenderer.invoke("get-weekly-summary", date, periodType),
   getInventoryAnalysis: () => ipcRenderer.invoke("get-inventory-analysis"),
   // User Management
+  checkUserType: (username) => ipcRenderer.invoke("check-user-type", username),
   userLogin: (username, password) => ipcRenderer.invoke("user-login", username, password),
+  userLoginPin: (username, pin) => ipcRenderer.invoke("user-login-pin", username, pin),
   userLogout: () => ipcRenderer.invoke("user-logout"),
   getCurrentUser: () => ipcRenderer.invoke("get-current-user"),
   getUsers: () => ipcRenderer.invoke("get-users"),

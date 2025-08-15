@@ -11,11 +11,17 @@
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
-.reports-container h2 {
-  margin: 0 0 20px 0;
+.reports-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.reports-header h2 {
+  margin: 0;
   color: #333;
   font-size: 1.5rem;
-  font-weight: 600;
 }
 
 .reports-tabs {

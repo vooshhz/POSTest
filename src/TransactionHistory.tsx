@@ -11,6 +11,8 @@ interface Transaction {
   cash_given: number | null;
   change_given: number | null;
   created_at: string;
+  created_by_user_id?: number | null;
+  created_by_username?: string | null;
 }
 
 interface ParsedItem {
@@ -179,7 +181,9 @@ export function TransactionHistory() {
 
   return (
     <div className="transaction-container">
-      <h2>Transaction History</h2>
+      <div className="transaction-header">
+        <h2>Transaction History</h2>
+      </div>
 
       {/* Transaction Summary */}
       <div className="transaction-summary">
@@ -227,6 +231,7 @@ export function TransactionHistory() {
                 <th onClick={() => handleSort('created_at')} className="sortable">
                   Date & Time{getSortIndicator('created_at')}
                 </th>
+                <th>User</th>
                 <th onClick={() => handleSort('item_count')} className="sortable">
                   Items{getSortIndicator('item_count')}
                 </th>
@@ -259,6 +264,7 @@ export function TransactionHistory() {
                         <span className="time">{formatTime(transaction.created_at)}</span>
                       </div>
                     </td>
+                    <td className="user-cell">{transaction.created_by_username || 'system'}</td>
                     <td className="items-cell">{itemCount}</td>
                     <td className="payment-cell">
                       {getPaymentTypeBadge(transaction.payment_type)}

@@ -51,7 +51,8 @@ function getStoreInfoDb() {
       CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT NOT NULL UNIQUE,
-        password TEXT NOT NULL,
+        password TEXT,
+        pin TEXT,
         role TEXT NOT NULL CHECK(role IN ('admin', 'manager', 'cashier')),
         full_name TEXT NOT NULL,
         active INTEGER DEFAULT 1,
@@ -73,6 +74,25 @@ function getStoreInfoDb() {
       CREATE INDEX IF NOT EXISTS idx_user_activity_user ON user_activity(user_id);
       CREATE INDEX IF NOT EXISTS idx_user_activity_timestamp ON user_activity(timestamp);
     `);
+    
+    // Check if PIN column exists, add if it doesn't
+    const userTableInfo = storeInfoDb.pragma("table_info(users)");
+    const hasPinColumn = (userTableInfo as any[]).some((col: any) => col.name === 'pin');
+    
+    if (!hasPinColumn) {
+      storeInfoDb.exec(`ALTER TABLE users ADD COLUMN pin TEXT`);
+      console.log("✅ Added PIN column to users table");
+    }
+    
+    // Create default admin user if no users exist
+    const userCount = storeInfoDb.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number };
+    if (userCount.count === 0) {
+      storeInfoDb.prepare(`
+        INSERT INTO users (username, password, role, full_name) 
+        VALUES ('admin', 'admin', 'admin', 'Administrator')
+      `).run();
+      console.log("✅ Default admin user created (username: admin, password: admin)");
+    }
   }
   return storeInfoDb;
 }
@@ -103,9 +123,13 @@ function getInventoryDb() {
         payment_type TEXT NOT NULL CHECK(payment_type IN ('cash', 'debit', 'credit')),
         cash_given REAL,
         change_given REAL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_by_user_id INTEGER,
+        created_by_username TEXT,
+        FOREIGN KEY (created_by_user_id) REFERENCES users(id)
       );
       CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(created_at);
+      CREATE INDEX IF NOT EXISTS idx_transactions_user ON transactions(created_by_user_id);
       
       CREATE TABLE IF NOT EXISTS inventory_adjustments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -120,12 +144,45 @@ function getInventoryDb() {
         reference_type TEXT CHECK(reference_type IN ('transaction', 'manual', 'test')),
         notes TEXT,
         created_by TEXT DEFAULT 'system',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        created_by_user_id INTEGER,
+        created_by_username TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (created_by_user_id) REFERENCES users(id)
       );
       CREATE INDEX IF NOT EXISTS idx_adjustments_upc ON inventory_adjustments(upc);
       CREATE INDEX IF NOT EXISTS idx_adjustments_date ON inventory_adjustments(created_at);
       CREATE INDEX IF NOT EXISTS idx_adjustments_type ON inventory_adjustments(adjustment_type);
+      CREATE INDEX IF NOT EXISTS idx_adjustments_user ON inventory_adjustments(created_by_user_id);
     `);
+    
+    // Add migration for existing databases
+    try {
+      // Check if columns exist and add them if they don't
+      const transactionsInfo = inventoryDb.pragma("table_info(transactions)");
+      const hasUserTracking = (transactionsInfo as any[]).some((col: any) => col.name === 'created_by_user_id');
+      
+      if (!hasUserTracking) {
+        inventoryDb.exec(`
+          ALTER TABLE transactions ADD COLUMN created_by_user_id INTEGER;
+          ALTER TABLE transactions ADD COLUMN created_by_username TEXT;
+        `);
+        console.log("✅ Added user tracking to transactions table");
+      }
+      
+      const adjustmentsInfo = inventoryDb.pragma("table_info(inventory_adjustments)");
+      const adjustmentsHasUserTracking = (adjustmentsInfo as any[]).some((col: any) => col.name === 'created_by_user_id');
+      
+      if (!adjustmentsHasUserTracking) {
+        inventoryDb.exec(`
+          ALTER TABLE inventory_adjustments ADD COLUMN created_by_user_id INTEGER;
+          ALTER TABLE inventory_adjustments ADD COLUMN created_by_username TEXT;
+        `);
+        console.log("✅ Added user tracking to inventory_adjustments table");
+      }
+    } catch (err) {
+      console.log("Migration check completed");
+    }
+    
     console.log("✅ Inventory database initialized at:", inventoryDbPath);
   }
   return inventoryDb;
@@ -656,12 +713,12 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
           stmt.run(item.upc, item.cost, item.price, item.quantity);
         }
         
-        // Record the adjustment
+        // Record the adjustment with user info
         const adjustmentStmt = invDb.prepare(`
           INSERT INTO inventory_adjustments (
             upc, adjustment_type, quantity_change, quantity_before, quantity_after,
-            cost, price, reference_type, notes
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            cost, price, reference_type, notes, created_by_user_id, created_by_username
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
         
         adjustmentStmt.run(
@@ -673,7 +730,9 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
           item.cost,
           item.price,
           'manual',
-          'Manual inventory addition'
+          'Manual inventory addition',
+          currentUser?.id || null,
+          currentUser?.username || 'system'
         );
         
         invDb.prepare("COMMIT").run();
@@ -708,10 +767,10 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
         // Parse the items to deduct from inventory
         const items = JSON.parse(transaction.items);
         
-        // Save the transaction first to get the ID
+        // Save the transaction first to get the ID (with user info)
         const stmt = invDb.prepare(`
-          INSERT INTO transactions (items, subtotal, tax, total, payment_type, cash_given, change_given)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO transactions (items, subtotal, tax, total, payment_type, cash_given, change_given, created_by_user_id, created_by_username)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
         
         const result = stmt.run(
@@ -721,7 +780,9 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
           transaction.total,
           transaction.payment_type,
           transaction.cash_given || null,
-          transaction.change_given || null
+          transaction.change_given || null,
+          currentUser?.id || null,
+          currentUser?.username || 'system'
         );
         
         const transactionId = result.lastInsertRowid;
@@ -752,12 +813,12 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
           
           updateStmt.run(newQuantity, item.upc);
           
-          // Record the adjustment for this sale
+          // Record the adjustment for this sale with user info
           const adjustmentStmt = invDb.prepare(`
             INSERT INTO inventory_adjustments (
               upc, adjustment_type, quantity_change, quantity_before, quantity_after,
-              cost, price, reference_id, reference_type, notes
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              cost, price, reference_id, reference_type, notes, created_by_user_id, created_by_username
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `);
           
           adjustmentStmt.run(
@@ -770,7 +831,9 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
             item.price || currentItem.price,
             transactionId,
             'transaction',
-            `Sale - Transaction #${transactionId}`
+            `Sale - Transaction #${transactionId}`,
+            currentUser?.id || null,
+            currentUser?.username || 'system'
           );
         }
         
@@ -811,6 +874,8 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
           payment_type,
           cash_given,
           change_given,
+          created_by_user_id,
+          created_by_username,
           datetime(created_at, 'localtime') as created_at
         FROM transactions
         ORDER BY datetime(created_at) DESC, id DESC
@@ -1153,8 +1218,8 @@ function registerGenerateTestInventory(ipcMain: IpcMain) {
         const adjustmentStmt = invDb.prepare(`
           INSERT INTO inventory_adjustments (
             upc, adjustment_type, quantity_change, quantity_before, quantity_after,
-            cost, price, reference_type, notes
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            cost, price, reference_type, notes, created_by_user_id, created_by_username
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
         
         // Generate random inventory data
@@ -1191,7 +1256,7 @@ function registerGenerateTestInventory(ipcMain: IpcMain) {
             insertStmt.run(product.upc, finalCost, finalPrice, quantity);
           }
           
-          // Record adjustment
+          // Record adjustment with user info
           adjustmentStmt.run(
             product.upc,
             'test_data',
@@ -1201,7 +1266,9 @@ function registerGenerateTestInventory(ipcMain: IpcMain) {
             finalCost,
             finalPrice,
             'test',
-            `Test data generation - ${product.description || 'Unknown'}`
+            `Test data generation - ${product.description || 'Unknown'}`,
+            currentUser?.id || null,
+            currentUser?.username || 'system'
           );
           
           itemsAdded++;
@@ -1492,12 +1559,12 @@ function registerGenerateTestSales(ipcMain: IpcMain) {
               trackedItem.quantity = newQuantity;
             }
             
-            // Record adjustment with same date as transaction
+            // Record adjustment with same date as transaction and user info
             invDb.prepare(`
               INSERT INTO inventory_adjustments (
                 upc, adjustment_type, quantity_change, quantity_before, quantity_after,
-                cost, price, reference_id, reference_type, notes, created_at
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                cost, price, reference_id, reference_type, notes, created_at, created_by_user_id, created_by_username
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `).run(
               item.upc,
               'sale',
@@ -1509,7 +1576,9 @@ function registerGenerateTestSales(ipcMain: IpcMain) {
               transactionId,
               'transaction',
               `Test Sale - Transaction #${transactionId}`,
-              sale.saleDate.toISOString()
+              sale.saleDate.toISOString(),
+              currentUser?.id || null,
+              currentUser?.username || 'system'
             );
             
             totalItemsSold += item.quantity;
@@ -2023,7 +2092,85 @@ function registerWeeklySummary(ipcMain: IpcMain) {
 
 // User Management Functions
 function registerUserManagement(ipcMain: IpcMain) {
-  // Login
+  // Check user type for login
+  ipcMain.handle("check-user-type", async (_, username: string) => {
+    try {
+      const storeDb = getStoreInfoDb();
+      const user = storeDb.prepare(`
+        SELECT role, active 
+        FROM users 
+        WHERE username = ? AND active = 1
+      `).get(username) as any;
+      
+      if (user) {
+        return {
+          success: true,
+          role: user.role,
+          requiresPin: user.role === 'cashier',
+          requiresPassword: user.role === 'admin' || user.role === 'manager'
+        };
+      } else {
+        return {
+          success: false,
+          error: "User not found"
+        };
+      }
+    } catch (error) {
+      console.error("Check user type error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to check user"
+      };
+    }
+  });
+
+  // User authentication with PIN
+  ipcMain.handle("user-login-pin", async (_, username: string, pin: string) => {
+    try {
+      const storeDb = getStoreInfoDb();
+      const user = storeDb.prepare(`
+        SELECT id, username, role, full_name, active 
+        FROM users 
+        WHERE username = ? AND pin = ? AND active = 1
+      `).get(username, pin) as any;
+      
+      if (user) {
+        currentUser = { id: user.id, username: user.username, role: user.role };
+        
+        // Update last login
+        storeDb.prepare("UPDATE users SET last_login = datetime('now') WHERE id = ?").run(user.id);
+        
+        // Log activity
+        storeDb.prepare(`
+          INSERT INTO user_activity (user_id, action, details) 
+          VALUES (?, 'login', 'User logged in with PIN')
+        `).run(user.id);
+        
+        return {
+          success: true,
+          user: {
+            id: user.id,
+            username: user.username,
+            role: user.role,
+            fullName: user.full_name
+          }
+        };
+      } else {
+        return {
+          success: false,
+          error: "Invalid PIN"
+        };
+      }
+    } catch (error) {
+      console.error("PIN login error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Login failed"
+      };
+    }
+  });
+
+  // Login with password
   ipcMain.handle("user-login", async (_, username: string, password: string) => {
     try {
       const storeDb = getStoreInfoDb();
@@ -2166,7 +2313,8 @@ function registerUserManagement(ipcMain: IpcMain) {
   // Add user (admin only)
   ipcMain.handle("add-user", async (_, userData: {
     username: string;
-    password: string;
+    password?: string;
+    pin?: string;
     role: string;
     fullName: string;
   }) => {
@@ -2189,11 +2337,36 @@ function registerUserManagement(ipcMain: IpcMain) {
         };
       }
       
+      // Validate PIN for cashiers
+      if (userData.role === 'cashier') {
+        if (!userData.pin || userData.pin.length !== 4 || !/^\d{4}$/.test(userData.pin)) {
+          return {
+            success: false,
+            error: "Cashiers must have a 4-digit PIN"
+          };
+        }
+      }
+      
+      // Validate password for admin/manager
+      if ((userData.role === 'admin' || userData.role === 'manager') && !userData.password) {
+        return {
+          success: false,
+          error: "Admin and manager accounts require a password"
+        };
+      }
+      
       // Insert new user
       const result = storeDb.prepare(`
-        INSERT INTO users (username, password, role, full_name, created_by) 
-        VALUES (?, ?, ?, ?, ?)
-      `).run(userData.username, userData.password, userData.role, userData.fullName, currentUser.id);
+        INSERT INTO users (username, password, pin, role, full_name, created_by) 
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(
+        userData.username, 
+        userData.password || null, 
+        userData.pin || null, 
+        userData.role, 
+        userData.fullName, 
+        currentUser.id
+      );
       
       // Log activity
       storeDb.prepare(`
