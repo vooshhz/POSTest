@@ -19,7 +19,11 @@
       "Bash(npx:*)",
       "Bash(sqlite3:*)",
       "Bash(del StoreInformation.db)",
-      "Bash(pnpm build:*)"
+      "Bash(pnpm build:*)",
+      "Bash(grep:*)",
+      "Bash(sed:*)",
+      "Bash(pnpm electron-builder:*)",
+      "Bash(del nul)"
     ],
     "deny": []
   }

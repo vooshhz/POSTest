@@ -16,7 +16,7 @@ interface UserManagementProps {
   onUserUpdate: () => void;
 }
 
-export default function UserManagement({ currentUser, onUserUpdate }: UserManagementProps) {
+export default function UserManagement({ currentUser }: UserManagementProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");

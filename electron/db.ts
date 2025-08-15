@@ -384,22 +384,22 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
             row['Vendor'] || null,
             row['Vendor Name'] || null,
             row['Bottle Volume (ml)'] || null,
-            parseInt(row['Pack']) || null,
-            parseInt(row['Inner Pack']) || null,
+            parseInt(String(row['Pack'])) || null,
+            parseInt(String(row['Inner Pack'])) || null,
             row['Age'] || null,
             row['Proof'] || null,
             row['List Date'] || null,
             row['UPC'] || null,
             row['SCC'] || null,
-            parseFloat(row['State Bottle Cost']) || null,
-            parseFloat(row['State Case Cost']) || null,
-            parseFloat(row['State Bottle Retail']) || null,
+            parseFloat(String(row['State Bottle Cost'])) || null,
+            parseFloat(String(row['State Case Cost'])) || null,
+            parseFloat(String(row['State Bottle Retail'])) || null,
             row['Report Date'] || null
           );
         }
       });
 
-      insertMany(data);
+      insertMany(data as Record<string, unknown>[]);
       
       const count = newDb.prepare('SELECT COUNT(*) as count FROM products').get() as { count: number };
       
@@ -489,7 +489,7 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
       `).all();
       
       // Enrich with product details
-      const enrichedItems = inventoryItems.map((item: Record<string, unknown>) => {
+      const enrichedItems = (inventoryItems as Record<string, unknown>[]).map((item: Record<string, unknown>) => {
         const product = prodDb.prepare(`
           SELECT 
             "Item Description" as description,
@@ -917,7 +917,7 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
       
       for (const transaction of transactions) {
         try {
-          const items = JSON.parse(transaction.items as string);
+          const items = JSON.parse((transaction as any).items as string);
           for (const item of items) {
             // Get product details from the products database if available
             let product = null;
@@ -934,7 +934,7 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
             }
             
             inventoryTransactions.push({
-              transaction_id: transaction.transaction_id,
+              transaction_id: (transaction as any).transaction_id,
               upc: item.upc,
               description: item.description || product?.description || 'Unknown Item',
               category: product?.category || null,
@@ -942,9 +942,9 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
               quantity: item.quantity,
               unit_price: item.price,
               total: item.total,
-              payment_type: transaction.payment_type,
-              transaction_total: transaction.total,
-              created_at: transaction.created_at
+              payment_type: (transaction as any).payment_type,
+              transaction_total: (transaction as any).total,
+              created_at: (transaction as any).created_at
             });
           }
         } catch (err) {
@@ -1939,7 +1939,7 @@ function registerWeeklySummary(ipcMain: IpcMain) {
       }
       
       // Get top categories using the products database
-      let topCategories = [];
+      let topCategories: Array<{ category: string; sales: number; items: number; }> = [];
       
       if (productsDb) {
         try {

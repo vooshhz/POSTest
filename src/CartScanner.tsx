@@ -49,7 +49,7 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
     cashGiven?: number;
     changeGiven?: number;
     timestamp: string;
-  } | null>(null);
+  } | undefined>(undefined);
   const [transactionError, setTransactionError] = useState("");
   const [manualEntry, setManualEntry] = useState("");
   const [searchResults, setSearchResults] = useState<Array<{
@@ -818,12 +818,20 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
         onClose={() => {
           setShowTransactionComplete(false);
           setTransactionSuccess(false);
-          setTransactionData(null);
+          setTransactionData(undefined);
           setTransactionError("");
           inputRef.current?.focus();
         }}
         success={transactionSuccess}
-        transaction={transactionData}
+        transaction={transactionData ? {
+          ...transactionData,
+          items: transactionData.items.map(({ description, quantity, price, total }) => ({
+            description,
+            quantity,
+            price,
+            total
+          }))
+        } : undefined}
         error={transactionError}
       />
     </div>

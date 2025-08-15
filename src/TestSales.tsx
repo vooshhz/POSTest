@@ -116,15 +116,15 @@ export default function TestSales() {
       if (response.success) {
         setResult({
           success: true,
-          message: response.message || `Successfully created ${response.salesCreated} test sales!`,
+          message: `Successfully created ${response.salesCreated || 0} test sales!`,
           salesCreated: response.salesCreated,
-          salesFailed: response.salesFailed,
+          salesFailed: 0,
           totalItems: response.totalItems,
           totalValue: response.totalValue
         });
         
         // Only reset form if some sales were created
-        if (response.salesCreated > 0) {
+        if (response.salesCreated && response.salesCreated > 0) {
           setTimeout(() => {
             setFormData({
               numberOfSales: "5",

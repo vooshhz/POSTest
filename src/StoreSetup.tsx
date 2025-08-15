@@ -48,11 +48,11 @@ export function StoreSetup({ onComplete, onCancel }: StoreSetupProps) {
     fullName: 'Store Administrator'
   });
   
-  const [errors, setErrors] = useState<Partial<StoreInfo> & Partial<AdminUser>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof (StoreInfo & AdminUser), string>>>({});
   const [saving, setSaving] = useState(false);
 
   const validateStoreForm = (): boolean => {
-    const newErrors: Partial<StoreInfo> = {};
+    const newErrors: Partial<Record<keyof StoreInfo, string>> = {};
 
     if (!formData.store_name.trim()) {
       newErrors.store_name = 'Store name is required';
@@ -76,7 +76,8 @@ export function StoreSetup({ onComplete, onCancel }: StoreSetupProps) {
     } else if (!/^[\d\s\-\(\)]+$/.test(formData.phone_number)) {
       newErrors.phone_number = 'Invalid phone number format';
     }
-    if (formData.tax_rate < 0 || formData.tax_rate > 100) {
+    const taxRate = typeof formData.tax_rate === 'string' ? parseFloat(formData.tax_rate) : formData.tax_rate;
+    if (taxRate < 0 || taxRate > 100 || isNaN(taxRate)) {
       newErrors.tax_rate = 'Tax rate must be between 0 and 100';
     }
 
@@ -85,7 +86,7 @@ export function StoreSetup({ onComplete, onCancel }: StoreSetupProps) {
   };
 
   const validateAdminForm = (): boolean => {
-    const newErrors: Partial<AdminUser> = {};
+    const newErrors: Partial<Record<keyof AdminUser, string>> = {};
 
     if (!adminData.username.trim()) {
       newErrors.username = 'Username is required';

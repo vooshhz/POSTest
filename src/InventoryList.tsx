@@ -368,11 +368,11 @@ export default function InventoryList({ barcode, setBarcode, searchFilter, setSe
       
       {activeTab === 'onhand' ? (
         <>
-      {/* Scanner Section */}
-      <div className="scanner-section">
-        <h3>Add New Items</h3>
-        <div className="scanner-input-group">
-          <input
+          {/* Scanner Section */}
+          <div className="scanner-section">
+            <h3>Add New Items</h3>
+            <div className="scanner-input-group">
+              <input
             ref={inputRef}
             type="text"
             value={barcode}
@@ -381,66 +381,66 @@ export default function InventoryList({ barcode, setBarcode, searchFilter, setSe
             placeholder="Scan or paste barcode and press Enter"
             className="scanner-input"
             disabled={scanning}
-          />
-          <button 
+              />
+              <button 
             onClick={clearSearch}
             className="clear-btn"
             title="Clear"
           >
-            ✕
-          </button>
-        </div>
+                ✕
+              </button>
+            </div>
 
-        {scanning && <div className="loading">Searching...</div>}
+            {scanning && <div className="loading">Searching...</div>}
 
-        {scanError && (
-          <div className="error-message">
-            ⚠️ {scanError}
+            {scanError && (
+              <div className="error-message">
+                ⚠️ {scanError}
+              </div>
+            )}
+
+            {product && inInventory && (
+              <div className="in-inventory-notice">
+                ✓ Item found in inventory - showing filtered results below
+              </div>
+            )}
           </div>
-        )}
 
-        {product && inInventory && (
-          <div className="in-inventory-notice">
-            ✓ Item found in inventory - showing filtered results below
+          {/* Inventory Summary */}
+          <div className="inventory-summary">
+            <div className="summary-card">
+              <span className="summary-label">Total Items</span>
+              <span className="summary-value">{totals.totalItems}</span>
+            </div>
+            <div className="summary-card">
+              <span className="summary-label">Total Quantity</span>
+              <span className="summary-value">{totals.totalQuantity}</span>
+            </div>
+            <div className="summary-card">
+              <span className="summary-label">Total Cost</span>
+              <span className="summary-value">{formatCurrency(totals.totalCost)}</span>
+            </div>
+            <div className="summary-card">
+              <span className="summary-label">Total Value</span>
+              <span className="summary-value">{formatCurrency(totals.totalValue)}</span>
+            </div>
           </div>
-        )}
-      </div>
 
-      {/* Inventory Summary */}
-      <div className="inventory-summary">
-        <div className="summary-card">
-          <span className="summary-label">Total Items</span>
-          <span className="summary-value">{totals.totalItems}</span>
-        </div>
-        <div className="summary-card">
-          <span className="summary-label">Total Quantity</span>
-          <span className="summary-value">{totals.totalQuantity}</span>
-        </div>
-        <div className="summary-card">
-          <span className="summary-label">Total Cost</span>
-          <span className="summary-value">{formatCurrency(totals.totalCost)}</span>
-        </div>
-        <div className="summary-card">
-          <span className="summary-label">Total Value</span>
-          <span className="summary-value">{formatCurrency(totals.totalValue)}</span>
-        </div>
-      </div>
-
-      {/* Inventory Table */}
-      {error && <div className="inventory-error">Error: {error}</div>}
-      
-      {searchFilter && (
+          {/* Inventory Table */}
+          {error && <div className="inventory-error">Error: {error}</div>}
+          
+          {searchFilter && (
         <div className="filter-notice">
           Showing results for UPC: {searchFilter} 
           <button onClick={() => setSearchFilter("")} className="clear-filter-btn">Show All</button>
         </div>
-      )}
-      
-      {filteredInventory.length === 0 ? (
-        <div className="no-inventory">
-          {searchFilter ? `No items found for UPC: ${searchFilter}` : "No items in inventory"}
-        </div>
-      ) : (
+          )}
+          
+          {filteredInventory.length === 0 ? (
+            <div className="no-inventory">
+              {searchFilter ? `No items found for UPC: ${searchFilter}` : "No items in inventory"}
+            </div>
+          ) : (
         <div className="inventory-table-wrapper">
           <table className="inventory-table">
             <thead>
@@ -550,8 +550,7 @@ export default function InventoryList({ barcode, setBarcode, searchFilter, setSe
             </div>
           </div>
         </div>
-      )}
-      
+          )}
         </>
       ) : (
         /* Inventory Adjustments Tab */
@@ -559,7 +558,6 @@ export default function InventoryList({ barcode, setBarcode, searchFilter, setSe
       )}
       
       {/* Add to Inventory Modal - shown for both tabs */}
-      {console.log("Modal state:", { showAddModal, product })}
       {showAddModal && product && (
         <div className="modal-overlay" onClick={closeAddModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>

@@ -1,10 +1,7 @@
 import { app, BrowserWindow, ipcMain, screen } from 'electron'
-import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { registerInventoryIpc } from './db'
-
-const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 process.env.APP_ROOT = path.join(__dirname, '..')
@@ -39,7 +36,7 @@ function createWindow() {
     titleBarStyle: 'default',
     resizable: true,
     maximizable: true,
-    fullScreenable: true,
+    fullscreenable: true,
     fullscreen: true  // Start in fullscreen
   })
   
@@ -52,7 +49,7 @@ function createWindow() {
   }
 
   // Prevent any window state changes
-  win.on('minimize', (event) => {
+  win.on('minimize', (event: Electron.Event) => {
     event.preventDefault()
   })
 
@@ -81,7 +78,7 @@ app.on('activate', () => {
 })
 
 // Handle opening transaction details window
-ipcMain.handle('open-transaction-details', async (event, transactionData) => {
+ipcMain.handle('open-transaction-details', async (_event, transactionData) => {
   const transactionId = `transaction-${transactionData.id}`
   
   // Check if window already exists
