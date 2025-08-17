@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import DatePicker from "./components/DatePicker";
+import DateRangePicker from "./components/DateRangePicker";
 import "./DailySales.css";
 
 interface DailySalesData {
@@ -28,13 +30,21 @@ interface DailySalesData {
 
 export default function DailySales() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [isRangeMode, setIsRangeMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [salesData, setSalesData] = useState<DailySalesData | null>(null);
+  const [multiDaySalesData, setMultiDaySalesData] = useState<DailySalesData[]>([]);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    loadDailySales();
-  }, [selectedDate]);
+    if (isRangeMode) {
+      loadDateRangeSales();
+    } else {
+      loadDailySales();
+    }
+  }, [selectedDate, startDate, endDate, isRangeMode]);
 
   const loadDailySales = async () => {
     setLoading(true);
@@ -45,6 +55,7 @@ export default function DailySales() {
       
       if (result.success && result.data) {
         setSalesData(result.data);
+        setMultiDaySalesData([]);
       } else {
         setError(result.error || "Failed to load sales data");
         setSalesData(null);
@@ -56,6 +67,41 @@ export default function DailySales() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadDateRangeSales = async () => {
+    setLoading(true);
+    setError("");
+    setSalesData(null);
+    
+    try {
+      const allData: DailySalesData[] = [];
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      
+      // Load data for each day in the range
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const dateStr = d.toISOString().split('T')[0];
+        const result = await window.api.getDailySales(dateStr);
+        
+        if (result.success && result.data) {
+          allData.push(result.data);
+        }
+      }
+      
+      setMultiDaySalesData(allData);
+    } catch (err) {
+      setError("Failed to load sales data for date range");
+      console.error(err);
+      setMultiDaySalesData([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDateRangeChange = (start: string, end: string) => {
+    setStartDate(start);
+    setEndDate(end);
   };
 
   const formatCurrency = (amount: number) => {
@@ -89,15 +135,41 @@ export default function DailySales() {
     <div className="daily-sales-container">
       <div className="daily-sales-header">
         <h3>Daily Sales Report</h3>
-        <div className="date-selector">
-          <label>Select Date:</label>
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            max={new Date().toISOString().split('T')[0]}
-            className="date-picker"
-          />
+        <div className="date-controls">
+          <div className="date-mode-toggle">
+            <button 
+              className={`mode-btn ${!isRangeMode ? 'active' : ''}`}
+              onClick={() => setIsRangeMode(false)}
+            >
+              Single Day
+            </button>
+            <button 
+              className={`mode-btn ${isRangeMode ? 'active' : ''}`}
+              onClick={() => setIsRangeMode(true)}
+            >
+              Date Range
+            </button>
+          </div>
+          <div className="date-selector">
+            <label>{isRangeMode ? 'Select Date Range:' : 'Select Date:'}</label>
+            {isRangeMode ? (
+              <DateRangePicker
+                startDate={startDate}
+                endDate={endDate}
+                onChange={handleDateRangeChange}
+                max={new Date().toISOString().split('T')[0]}
+                className="date-picker"
+                presetRanges={false}
+              />
+            ) : (
+              <DatePicker
+                value={selectedDate}
+                onChange={setSelectedDate}
+                max={new Date().toISOString().split('T')[0]}
+                className="date-picker"
+              />
+            )}
+          </div>
         </div>
       </div>
 
@@ -115,7 +187,7 @@ export default function DailySales() {
         <>
           {/* Key Metrics Cards */}
           <div className="metrics-grid">
-            <div className="metric-card primary">
+            <div className="metric-card">
               <div className="metric-label">Total Revenue</div>
               <div className="metric-value">{formatCurrency(salesData.totalSales)}</div>
               <div className="metric-detail">Including tax</div>
@@ -136,7 +208,7 @@ export default function DailySales() {
             <div className="metric-card">
               <div className="metric-label">Tax Collected</div>
               <div className="metric-value">{formatCurrency(salesData.totalTax)}</div>
-              <div className="metric-detail">{((salesData.totalTax / salesData.totalSales) * 100).toFixed(1)}% of total</div>
+              <div className="metric-detail"></div>
             </div>
           </div>
 

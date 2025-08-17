@@ -1,0 +1,90 @@
+.sales-reports-container {
+  padding: 20px;
+}
+
+.sales-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.sales-header h3 {
+  margin: 0;
+  font-size: 20px;
+  color: #333;
+}
+
+.sales-period-selector {
+  display: flex;
+  gap: 8px;
+  background: #f5f5f5;
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.period-btn {
+  padding: 8px 20px;
+  border: none;
+  background: transparent;
+  color: #666;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.period-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.period-btn.active {
+  background: white;
+  color: #4CAF50;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.sales-content {
+  min-height: 400px;
+}
+
+.ytd-sales {
+  padding: 20px 0;
+}
+
+.date-selector {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  width: fit-content;
+}
+
+.date-selector label {
+  font-weight: 500;
+  color: #555;
+}
+
+.year-input {
+  padding: 6px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  width: 100px;
+}
+
+.year-input:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
+}
+
+.ytd-content {
+  margin-top: 20px;
+}

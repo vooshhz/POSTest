@@ -676,6 +676,56 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
     }
   });
 
+  // Search products directly from products database (for test data generation)
+  ipcMain.handle("search-products-by-category", async (_, category: string) => {
+    try {
+      const prodDb = getProductsDb();
+      
+      // Search products by category or description
+      const products = prodDb.prepare(`
+        SELECT 
+          "UPC" as upc,
+          "Item Description" as description,
+          "Category Name" as category,
+          "Bottle Volume (ml)" as volume,
+          "Pack" as pack,
+          "State Bottle Retail" as price
+        FROM products 
+        WHERE "Category Name" LIKE ? OR "Item Description" LIKE ?
+        LIMIT 100
+      `).all(`%${category}%`, `%${category}%`) as Array<{
+        upc: string;
+        description: string;
+        category: string | null;
+        volume: string | null;
+        pack: number | null;
+        price: number | null;
+      }>;
+      
+      // Convert to proper format with cost calculation
+      const formattedProducts = products.map(p => ({
+        upc: p.upc,
+        description: p.description,
+        category: p.category,
+        volume: p.volume,
+        pack: p.pack,
+        cost: p.price ? p.price * 0.7 : 10, // Assume 30% markup, or default $10
+        price: p.price || 15 // Default $15 if no price
+      }));
+      
+      return {
+        success: true,
+        data: formattedProducts
+      };
+    } catch (error) {
+      console.error("Search products error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to search products"
+      };
+    }
+  });
+
   // Add to inventory
   ipcMain.handle("add-to-inventory", async (_, item: InventoryItem) => {
     try {
@@ -1129,10 +1179,17 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
         amount: data.amount
       }));
       
-      // Get top 10 products by revenue
+      // Get top 10 products by quantity sold, then by revenue if quantities are equal
       const topProducts = Object.entries(productSales)
         .map(([upc, data]) => ({ upc, ...data }))
-        .sort((a, b) => b.revenue - a.revenue)
+        .sort((a, b) => {
+          // First sort by quantity (descending)
+          if (b.quantity !== a.quantity) {
+            return b.quantity - a.quantity;
+          }
+          // If quantities are equal, sort by revenue (descending)
+          return b.revenue - a.revenue;
+        })
         .slice(0, 10);
       
       const avgSaleAmount = totalSales / transactions.length;
@@ -2484,6 +2541,178 @@ function registerUserManagement(ipcMain: IpcMain) {
         error: error instanceof Error ? error.message : "Failed to get activity"
       };
     }
+  });
+
+  // Save transaction with custom date (for YTD test data)
+  ipcMain.handle("save-transaction-with-date", async (_, transaction: Transaction & { customDate: string }) => {
+  try {
+    const invDb = getInventoryDb();
+    
+    // Start a transaction for data consistency
+    invDb.prepare("BEGIN TRANSACTION").run();
+    
+    try {
+      // Parse the items to deduct from inventory
+      const items = JSON.parse(transaction.items);
+      
+      // Save the transaction with custom date
+      const stmt = invDb.prepare(`
+        INSERT INTO transactions (items, subtotal, tax, total, payment_type, cash_given, change_given, created_at, created_by_user_id, created_by_username)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      
+      const result = stmt.run(
+        transaction.items,
+        transaction.subtotal,
+        transaction.tax,
+        transaction.total,
+        transaction.payment_type,
+        transaction.cash_given || null,
+        transaction.change_given || null,
+        transaction.customDate,
+        currentUser?.id || null,
+        currentUser?.username || 'ytd-test'
+      );
+      
+      const transactionId = result.lastInsertRowid;
+      
+      // Deduct items from inventory and record adjustments
+      for (const item of items) {
+        // Update inventory quantity
+        const updateStmt = invDb.prepare(`
+          UPDATE inventory 
+          SET quantity = quantity - ?,
+              updated_at = ?
+          WHERE upc = ?
+        `);
+        updateStmt.run(item.quantity, transaction.customDate, item.upc);
+        
+        // Get updated quantity for adjustment record
+        const currentInv = invDb.prepare("SELECT quantity FROM inventory WHERE upc = ?").get(item.upc) as { quantity: number };
+        
+        // Record inventory adjustment
+        const adjustmentStmt = invDb.prepare(`
+          INSERT INTO inventory_adjustments (
+            upc, adjustment_type, quantity_change, quantity_before, quantity_after,
+            cost, price, reference_id, reference_type, notes, created_at, created_by_user_id, created_by_username
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        
+        adjustmentStmt.run(
+          item.upc,
+          'sale',
+          -item.quantity,
+          currentInv.quantity + item.quantity,
+          currentInv.quantity,
+          item.cost || 0,
+          item.price || 0,
+          transactionId,
+          'transaction',
+          `Sale transaction #${transactionId}`,
+          transaction.customDate,
+          currentUser?.id || null,
+          currentUser?.username || 'ytd-test'
+        );
+      }
+      
+      invDb.prepare("COMMIT").run();
+      
+      return {
+        success: true,
+        transactionId: Number(transactionId),
+        message: "Transaction saved successfully"
+      };
+    } catch (error) {
+      invDb.prepare("ROLLBACK").run();
+      throw error;
+    }
+  } catch (error) {
+    console.error("Save transaction with date error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to save transaction"
+    };
+  }
+});
+
+// Add to inventory with custom date (for YTD test data)
+ipcMain.handle("add-to-inventory-with-date", async (_, item: InventoryItem & { customDate: string }) => {
+  try {
+    const invDb = getInventoryDb();
+    
+    // Start transaction for data consistency
+    invDb.prepare("BEGIN TRANSACTION").run();
+    
+    try {
+      // Check if already exists in inventory
+      const existing = invDb.prepare(`
+        SELECT * FROM inventory WHERE upc = ?
+      `).get(item.upc) as InventoryItem & { quantity: number } | undefined;
+      
+      const quantityBefore = existing ? existing.quantity : 0;
+      const quantityAfter = quantityBefore + item.quantity;
+      
+      if (existing) {
+        // Update existing record
+        const stmt = invDb.prepare(`
+          UPDATE inventory 
+          SET quantity = quantity + ?, 
+              cost = ?, 
+              price = ?,
+              updated_at = ?
+          WHERE upc = ?
+        `);
+        stmt.run(item.quantity, item.cost, item.price, item.customDate, item.upc);
+      } else {
+        // Insert new record with custom date
+        const stmt = invDb.prepare(`
+          INSERT INTO inventory (upc, cost, price, quantity, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `);
+        stmt.run(item.upc, item.cost, item.price, item.quantity, item.customDate, item.customDate);
+      }
+      
+      // Record the adjustment with custom date
+      const adjustmentStmt = invDb.prepare(`
+        INSERT INTO inventory_adjustments (
+          upc, adjustment_type, quantity_change, quantity_before, quantity_after,
+          cost, price, reference_type, notes, created_at, created_by_user_id, created_by_username
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      
+      adjustmentStmt.run(
+        item.upc,
+        'purchase',
+        item.quantity,
+        quantityBefore,
+        quantityAfter,
+        item.cost,
+        item.price,
+        'test_data',
+        'YTD test inventory restock',
+        item.customDate,
+        currentUser?.id || null,
+        currentUser?.username || 'ytd-test'
+      );
+      
+      invDb.prepare("COMMIT").run();
+      
+      return {
+        success: true,
+        message: `Inventory updated! Added ${item.quantity} units.`,
+        updated: !!existing
+      };
+    } catch (error) {
+      invDb.prepare("ROLLBACK").run();
+      throw error;
+    }
+  } catch (error) {
+    console.error("Add to inventory with date error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to add to inventory"
+    };
+  }
   });
 }
 

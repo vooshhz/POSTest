@@ -1,0 +1,388 @@
+.date-range-picker-container {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+.date-range-picker-input {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 42px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.date-range-picker-input:hover {
+  border-color: #9c27b0;
+  box-shadow: 0 0 0 2px rgba(156, 39, 176, 0.1);
+}
+
+.date-range-picker-input:focus {
+  outline: none;
+  border-color: #9c27b0;
+  box-shadow: 0 0 0 3px rgba(156, 39, 176, 0.2);
+}
+
+.date-range-display {
+  flex: 1;
+  text-align: left;
+  color: #333;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.date-range-picker-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: auto;
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 1000;
+  padding: 16px;
+  width: 380px;
+  max-width: calc(100vw - 40px);
+  animation: slideDown 0.2s ease;
+}
+
+.date-range-picker-dropdown.align-right {
+  left: auto;
+  right: 0;
+}
+
+/* Preset ranges */
+.preset-ranges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.preset-ranges button {
+  padding: 6px 12px;
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.preset-ranges button:hover {
+  background: #9c27b0;
+  border-color: #9c27b0;
+  color: white;
+}
+
+/* Date range status */
+.date-range-status {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  padding: 8px;
+  background: #f9f9f9;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+/* Calendar styles (reuse from DatePicker) */
+.date-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.month-nav-btn {
+  background: #f8f8f8;
+  border: 1px solid #e0e0e0;
+  font-size: 24px;
+  color: #666;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  line-height: 1;
+}
+
+.month-nav-btn:hover {
+  background: #9c27b0;
+  border-color: #9c27b0;
+  color: white;
+}
+
+.month-year-display {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  text-align: center;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.month-year-display.clickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.month-year-display.clickable:hover {
+  background: #f5f5f5;
+  color: #9c27b0;
+}
+
+.custom-date-input-wrapper {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.custom-date-range-input {
+  padding: 6px 10px;
+  border: 2px solid #9c27b0;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+  background: white;
+  outline: none;
+  width: 200px;
+  text-align: center;
+}
+
+.custom-date-range-input:focus {
+  box-shadow: 0 0 0 3px rgba(156, 39, 176, 0.2);
+}
+
+.date-picker-days-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.day-name {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #9c27b0;
+  padding: 4px 0;
+  text-transform: uppercase;
+}
+
+.date-picker-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.day-cell {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fafafa;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  min-height: 40px;
+  min-width: 40px;
+  position: relative;
+}
+
+.day-cell:hover:not(.disabled) {
+  background: white;
+  border-color: #9c27b0;
+  transform: scale(1.05);
+}
+
+/* Range selection styles */
+.day-cell.in-range {
+  background: rgba(156, 39, 176, 0.15);
+  border-color: transparent;
+}
+
+.day-cell.range-start,
+.day-cell.range-end {
+  background: #9c27b0;
+  color: white;
+  font-weight: 600;
+  border-color: #9c27b0;
+}
+
+.day-cell.range-start {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.day-cell.range-end {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.day-cell.range-start.range-end {
+  border-radius: 6px;
+}
+
+.day-cell.in-range:not(.range-start):not(.range-end) {
+  border-radius: 0;
+}
+
+/* Today's date - distinctive dotted border */
+.day-cell.today {
+  position: relative;
+  font-weight: 700;
+}
+
+/* Show dotted border only when today is not in the selected range */
+.day-cell.today:not(.in-range):not(.range-start):not(.range-end)::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border: 2px dotted #9c27b0;
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.day-cell.today:not(.in-range):not(.range-start):not(.range-end) {
+  background: rgba(156, 39, 176, 0.05);
+  color: #9c27b0;
+}
+
+/* When today is part of the range, show only range style */
+.day-cell.today.in-range:not(.range-start):not(.range-end) {
+  background: rgba(156, 39, 176, 0.15);
+  color: #333;
+}
+
+.day-cell.today.range-start,
+.day-cell.today.range-end {
+  background: #9c27b0;
+  color: white;
+}
+
+.day-cell.other-month {
+  color: #ccc;
+  background: transparent;
+}
+
+.day-cell.disabled {
+  color: #ddd;
+  cursor: not-allowed;
+  background: #f5f5f5;
+  opacity: 0.5;
+}
+
+.date-picker-footer {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.date-picker-btn {
+  flex: 1;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.date-picker-btn span {
+  font-size: 16px;
+}
+
+.cancel-btn {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.cancel-btn:hover {
+  background: #e0e0e0;
+  color: #333;
+}
+
+.confirm-btn {
+  background: #9c27b0;
+  color: white;
+}
+
+.confirm-btn:hover:not(:disabled) {
+  background: #7b1fa2;
+}
+
+.confirm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 450px) {
+  .date-range-picker-dropdown {
+    width: calc(100vw - 40px);
+    padding: 12px;
+  }
+  
+  .preset-ranges {
+    gap: 4px;
+  }
+  
+  .preset-ranges button {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+  
+  .day-cell {
+    min-height: 35px;
+    min-width: 35px;
+    font-size: 13px;
+  }
+  
+  .month-year-display {
+    font-size: 16px;
+  }
+}

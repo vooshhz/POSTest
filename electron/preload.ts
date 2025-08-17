@@ -72,6 +72,19 @@ interface InventoryAPI {
     }>;
     error?: string;
   }>;
+  searchProductsByCategory: (category: string) => Promise<{
+    success: boolean;
+    data?: Array<{
+      upc: string;
+      description: string;
+      category: string | null;
+      volume: string | null;
+      pack: number | null;
+      cost: number;
+      price: number;
+    }>;
+    error?: string;
+  }>;
   saveTransaction: (transaction: {
     items: string;
     subtotal: number;
@@ -375,6 +388,7 @@ interface InventoryAPI {
     }>;
     error?: string;
   }>;
+  focusWindow: () => Promise<void>;
   getInventoryAnalysis: () => Promise<{
     success: boolean;
     data?: {
@@ -418,6 +432,33 @@ interface InventoryAPI {
     };
     error?: string;
   }>;
+  saveTransactionWithDate: (transaction: {
+    items: string;
+    subtotal: number;
+    tax: number;
+    total: number;
+    payment_type: 'cash' | 'debit' | 'credit';
+    cash_given?: number;
+    change_given?: number;
+    customDate: string;
+  }) => Promise<{
+    success: boolean;
+    transactionId?: number;
+    message?: string;
+    error?: string;
+  }>;
+  addToInventoryWithDate: (item: {
+    upc: string;
+    cost: number;
+    price: number;
+    quantity: number;
+    customDate: string;
+  }) => Promise<{
+    success: boolean;
+    message?: string;
+    updated?: boolean;
+    error?: string;
+  }>;
 }
 
 // Expose protected methods to the renderer
@@ -428,6 +469,7 @@ const api: InventoryAPI = {
   getInventory: () => ipcRenderer.invoke("get-inventory"),
   checkInventory: (upc: string) => ipcRenderer.invoke("check-inventory", upc),
   searchInventoryByDescription: (searchTerm: string) => ipcRenderer.invoke("search-inventory-by-description", searchTerm),
+  searchProductsByCategory: (category: string) => ipcRenderer.invoke("search-products-by-category", category),
   saveTransaction: (transaction) => ipcRenderer.invoke("save-transaction", transaction),
   getTransactions: () => ipcRenderer.invoke("get-transactions"),
   openTransactionDetails: (transaction) => ipcRenderer.invoke("open-transaction-details", transaction),
@@ -454,7 +496,10 @@ const api: InventoryAPI = {
   addUserDuringSetup: (userData) => ipcRenderer.invoke("add-user-during-setup", userData),
   addUser: (userData) => ipcRenderer.invoke("add-user", userData),
   removeUser: (userId) => ipcRenderer.invoke("remove-user", userId),
-  getUserActivity: (userId) => ipcRenderer.invoke("get-user-activity", userId)
+  getUserActivity: (userId) => ipcRenderer.invoke("get-user-activity", userId),
+  focusWindow: () => ipcRenderer.invoke("focus-window"),
+  saveTransactionWithDate: (transaction) => ipcRenderer.invoke("save-transaction-with-date", transaction),
+  addToInventoryWithDate: (item) => ipcRenderer.invoke("add-to-inventory-with-date", item)
 };
 
 contextBridge.exposeInMainWorld("api", api);

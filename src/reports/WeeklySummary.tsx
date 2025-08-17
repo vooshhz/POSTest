@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
+import DatePicker from "../components/DatePicker";
 import "./WeeklySummary.css";
 
-type PeriodType = 'week' | 'month';
+type PeriodType = 'week' | 'month' | 'ytd';
 
 interface SalesData {
   date: string;
@@ -37,15 +38,33 @@ interface WeeklySummaryData {
   }>;
 }
 
-export default function WeeklySummary() {
-  const [periodType, setPeriodType] = useState<PeriodType>('week');
+interface WeeklySummaryProps {
+  periodType?: PeriodType;
+  customDate?: string;
+}
+
+export default function WeeklySummary({ periodType: propPeriodType, customDate }: WeeklySummaryProps) {
+  const [periodType, setPeriodType] = useState<PeriodType>(propPeriodType || 'week');
   const [selectedDate, setSelectedDate] = useState(() => {
+    if (customDate) return customDate;
     const today = new Date();
     return today.toISOString().split('T')[0];
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<WeeklySummaryData | null>(null);
+
+  useEffect(() => {
+    if (propPeriodType) {
+      setPeriodType(propPeriodType);
+    }
+  }, [propPeriodType]);
+
+  useEffect(() => {
+    if (customDate) {
+      setSelectedDate(customDate);
+    }
+  }, [customDate]);
 
   useEffect(() => {
     fetchSummaryData();
@@ -56,7 +75,9 @@ export default function WeeklySummary() {
     setError(null);
     
     try {
-      const result = await window.api.getWeeklySummary(selectedDate, periodType);
+      // For YTD, we'll use month type and handle the display differently
+      const apiPeriodType = periodType === 'ytd' ? 'month' : periodType;
+      const result = await window.api.getWeeklySummary(selectedDate, apiPeriodType);
       
       if (result.success && result.data) {
         setData(result.data);
@@ -82,8 +103,11 @@ export default function WeeklySummary() {
       weekEnd.setDate(weekStart.getDate() + 6);
       
       return `${weekStart.toLocaleDateString()} - ${weekEnd.toLocaleDateString()}`;
-    } else {
+    } else if (periodType === 'month') {
       return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    } else if (periodType === 'ytd') {
+      const year = date.getFullYear();
+      return `Year to Date - ${year}`;
     }
   };
 
@@ -129,13 +153,14 @@ export default function WeeklySummary() {
   return (
     <div className="weekly-summary-container">
       <div className="weekly-summary-header">
-        <h3>{periodType === 'week' ? 'Weekly' : 'Monthly'} Summary</h3>
+        <h3>{periodType === 'week' ? 'Weekly' : periodType === 'month' ? 'Monthly' : 'Year to Date'} Summary</h3>
         
-        <div className="period-controls">
-          <div className="period-type-selector">
-            <button
-              className={`period-btn ${periodType === 'week' ? 'active' : ''}`}
-              onClick={() => setPeriodType('week')}
+        {!propPeriodType && (
+          <div className="period-controls">
+            <div className="period-type-selector">
+              <button
+                className={`period-btn ${periodType === 'week' ? 'active' : ''}`}
+                onClick={() => setPeriodType('week')}
             >
               Weekly
             </button>
@@ -149,14 +174,14 @@ export default function WeeklySummary() {
           
           <div className="date-selector">
             <label>Select Date:</label>
-            <input
-              type="date"
+            <DatePicker
               value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
+              onChange={setSelectedDate}
               className="date-picker"
             />
           </div>
         </div>
+        )}
       </div>
 
       <div className="period-label">{getDateRangeLabel()}</div>

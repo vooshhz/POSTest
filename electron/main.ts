@@ -71,6 +71,18 @@ app.on('activate', () => {
   }
 })
 
+// Handle window focus
+ipcMain.handle('focus-window', async () => {
+  if (win) {
+    win.focus();
+    // Also try to bring the window to front
+    win.setAlwaysOnTop(true);
+    setTimeout(() => {
+      win?.setAlwaysOnTop(false);
+    }, 100);
+  }
+});
+
 // Handle opening transaction details window
 ipcMain.handle('open-transaction-details', async (_event, transactionData) => {
   const transactionId = `transaction-${transactionData.id}`

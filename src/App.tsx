@@ -30,6 +30,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   
   // Cart Scanner state
   const [cartBarcode, setCartBarcode] = useState("");
@@ -111,27 +112,33 @@ export default function App() {
     setIsAuthenticated(true);
   };
 
-  const handleLogout = async () => {
-    const confirmed = window.confirm('Are you sure you want to log out?');
-    if (!confirmed) return;
-
+  const handleLogout = () => {
+    // DO NOT use window.confirm() - it causes Electron focus bugs!
+    // Show custom confirmation instead
+    setShowLogoutConfirm(true);
+  };
+  
+  const confirmLogout = async () => {
     try {
       await window.api.userLogout();
       setCurrentUser(null);
       setIsAuthenticated(false);
       setCurrentView("scanner");
+      setShowLogoutConfirm(false);
       
-      // Dispatch custom event to force complete app remount
-      setTimeout(() => {
-        window.dispatchEvent(new Event('app-remount'));
-      }, 100);
+      // Force a page reload to completely reset the app state
+      window.location.reload();
     } catch (error) {
       console.error('Logout failed:', error);
     }
   };
+  
+  const cancelLogout = () => {
+    setShowLogoutConfirm(false);
+  };
 
   // Show loading while checking
-  if (needsSetup === null || checkingAuth) {
+  if (needsSetup === null || checkingAuth || isAuthenticated === null) {
     console.log('Loading state - needsSetup:', needsSetup, 'checkingAuth:', checkingAuth);
     return (
       <div className="app-loading">
@@ -176,6 +183,60 @@ export default function App() {
 
   return (
     <div className="app">
+      {/* Custom Logout Confirmation Dialog */}
+      {showLogoutConfirm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999
+        }}>
+          <div style={{
+            background: 'white',
+            padding: '30px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            maxWidth: '400px',
+            width: '90%'
+          }}>
+            <h2 style={{ margin: '0 0 20px', fontSize: '20px' }}>Confirm Logout</h2>
+            <p style={{ margin: '0 0 24px', color: '#666' }}>Are you sure you want to log out?</p>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={cancelLogout}
+                style={{
+                  padding: '8px 20px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  background: 'white',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmLogout}
+                style={{
+                  padding: '8px 20px',
+                  border: 'none',
+                  borderRadius: '4px',
+                  background: '#dc3545',
+                  color: 'white',
+                  cursor: 'pointer'
+                }}
+              >
+                Log Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="nav-tabs-left">
         <button 
           className={`nav-tab developer-tab ${currentView === "developer" ? "active" : ""}`}

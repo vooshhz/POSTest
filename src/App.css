@@ -200,6 +200,36 @@
   box-shadow: 0 4px 12px rgba(156, 39, 176, 0.4);
 }
 
+/* Global styles for date inputs - make entire field clickable */
+input[type="date"] {
+  position: relative;
+  cursor: pointer;
+  padding-right: 30px; /* Make room for the calendar icon */
+}
+
+/* Make the calendar icon part of the clickable area */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* Show calendar icon on hover anywhere on the input */
+input[type="date"]:hover::-webkit-calendar-picker-indicator {
+  opacity: 0.1;
+}
+
+/* For Firefox */
+input[type="date"] {
+  -moz-appearance: textfield;
+}
+
 @media (max-width: 1200px) {
   .header-info {
     flex-direction: column;

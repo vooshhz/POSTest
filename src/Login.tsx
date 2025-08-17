@@ -21,19 +21,14 @@ export default function Login({ onLoginSuccess, storeName }: LoginProps) {
   const passwordRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Focus username field with multiple attempts to ensure it works
-    const focusInput = () => {
-      if (usernameRef.current && !showPasswordField && !showPinPad) {
-        usernameRef.current.focus();
-        usernameRef.current.click();
-      }
-    };
-    
-    // Try multiple times to ensure focus works
-    focusInput();
-    const timer1 = setTimeout(focusInput, 100);
-    const timer2 = setTimeout(focusInput, 300);
-    const timer3 = setTimeout(focusInput, 500);
+    // Focus username field when showing username input
+    if (!showPasswordField && !showPinPad) {
+      setTimeout(() => {
+        if (usernameRef.current) {
+          usernameRef.current.focus();
+        }
+      }, 100);
+    }
     
     // Update clock every second
     const clockTimer = setInterval(() => {
@@ -47,9 +42,6 @@ export default function Login({ onLoginSuccess, storeName }: LoginProps) {
 
     return () => {
       clearInterval(clockTimer);
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      clearTimeout(timer3);
     };
   }, [storeName, showPasswordField, showPinPad]);
 
@@ -292,7 +284,6 @@ export default function Login({ onLoginSuccess, storeName }: LoginProps) {
                       e.currentTarget.select();
                     }}
                     placeholder="Enter your username"
-                    disabled={false}
                     autoComplete="username"
                     className="login-input"
                     autoFocus
