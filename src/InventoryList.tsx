@@ -12,6 +12,8 @@ interface InventoryItem {
   price: number;
   quantity: number;
   updated_at: string;
+  created_by_user_id?: number | null;
+  created_by_username?: string | null;
 }
 
 interface Product {
@@ -35,7 +37,7 @@ interface InventoryListProps {
 export default function InventoryList({ barcode, setBarcode, searchFilter, setSearchFilter }: InventoryListProps) {
   const [activeTab, setActiveTab] = useState<'onhand' | 'adjustments'>('onhand');
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -67,6 +69,13 @@ export default function InventoryList({ barcode, setBarcode, searchFilter, setSe
 
   useEffect(() => {
     loadInventory();
+    // Focus the input field after component mounts
+    const timer = setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    }, 100);
+    return () => clearTimeout(timer);
   }, []);
 
   const loadInventory = async () => {
@@ -382,7 +391,7 @@ export default function InventoryList({ barcode, setBarcode, searchFilter, setSe
             onKeyPress={handleKeyPress}
             placeholder="Scan or paste barcode and press Enter"
             className="scanner-input"
-            disabled={scanning}
+            disabled={false}
               />
               <button 
             onClick={clearSearch}
@@ -477,6 +486,7 @@ export default function InventoryList({ barcode, setBarcode, searchFilter, setSe
                 <th onClick={() => handleSort('updated_at')} className="sortable">
                   Updated{getSortIndicator('updated_at')}
                 </th>
+                <th>Added By</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -493,6 +503,7 @@ export default function InventoryList({ barcode, setBarcode, searchFilter, setSe
                   <td className="total-cell">{formatCurrency(item.cost * item.quantity)}</td>
                   <td className="total-cell">{formatCurrency(item.price * item.quantity)}</td>
                   <td>{formatDate(item.updated_at)}</td>
+                  <td className="user-cell">{item.created_by_username || 'system'}</td>
                   <td>
                     <button onClick={() => openEditModal(item)} className="modify-btn">Modify</button>
                   </td>

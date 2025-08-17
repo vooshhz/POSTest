@@ -69,7 +69,14 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    inputRef.current?.focus();
+    // Add a slight delay to ensure the component is fully mounted
+    const timer = setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+        inputRef.current.click(); // Try clicking too
+      }
+    }, 100);
+    return () => clearTimeout(timer);
   }, []);
 
   // Search inventory when input changes
@@ -529,12 +536,12 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
                   onKeyDown={handleKeyPress}
                   placeholder="Scan or enter UPC / Search by name"
                   className="scanner-input"
-                  disabled={loading}
+                  disabled={false}
                 />
                 <button 
                   onClick={handleScan}
                   className="scan-btn"
-                  disabled={loading}
+                  disabled={false}
                 >
                   Add
                 </button>

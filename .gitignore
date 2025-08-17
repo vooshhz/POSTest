@@ -36,6 +36,16 @@ dist-ssr/
 dist-electron/
 out/
 build/
+release/
+*.asar
+*.exe
+*.msi
+*.deb
+*.rpm
+*.AppImage
+*.dmg
+*.snap
+*.pacman
 
 # Logs
 *.log

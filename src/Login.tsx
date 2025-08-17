@@ -21,10 +21,22 @@ export default function Login({ onLoginSuccess, storeName }: LoginProps) {
   const passwordRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    usernameRef.current?.focus();
+    // Focus username field with multiple attempts to ensure it works
+    const focusInput = () => {
+      if (usernameRef.current && !showPasswordField && !showPinPad) {
+        usernameRef.current.focus();
+        usernameRef.current.click();
+      }
+    };
+    
+    // Try multiple times to ensure focus works
+    focusInput();
+    const timer1 = setTimeout(focusInput, 100);
+    const timer2 = setTimeout(focusInput, 300);
+    const timer3 = setTimeout(focusInput, 500);
     
     // Update clock every second
-    const timer = setInterval(() => {
+    const clockTimer = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
 
@@ -33,8 +45,13 @@ export default function Login({ onLoginSuccess, storeName }: LoginProps) {
       document.title = `${storeName} - POS Login`;
     }
 
-    return () => clearInterval(timer);
-  }, [storeName]);
+    return () => {
+      clearInterval(clockTimer);
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearTimeout(timer3);
+    };
+  }, [storeName, showPasswordField, showPinPad]);
 
   const handleUsernameSubmit = async () => {
     if (!username) {
@@ -189,7 +206,14 @@ export default function Login({ onLoginSuccess, storeName }: LoginProps) {
     setShowPinPad(false);
     setShowPasswordField(false);
     setError("");
-    setTimeout(() => usernameRef.current?.focus(), 100);
+    setLoading(false);
+    
+    // Simple focus after reset
+    setTimeout(() => {
+      if (usernameRef.current) {
+        usernameRef.current.focus();
+      }
+    }, 50);
   };
 
   const handleUsernameKeyPress = (e: React.KeyboardEvent) => {
@@ -260,17 +284,25 @@ export default function Login({ onLoginSuccess, storeName }: LoginProps) {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     onKeyPress={handleUsernameKeyPress}
+                    onClick={(e) => {
+                      e.currentTarget.focus();
+                      e.currentTarget.select();
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.select();
+                    }}
                     placeholder="Enter your username"
-                    disabled={loading}
+                    disabled={false}
                     autoComplete="username"
                     className="login-input"
+                    autoFocus
                   />
                 </div>
 
                 <button
                   type="button"
                   onClick={handleUsernameSubmit}
-                  disabled={loading || !username}
+                  disabled={!username}
                   className="login-button"
                 >
                   {loading ? (
@@ -304,7 +336,7 @@ export default function Login({ onLoginSuccess, storeName }: LoginProps) {
                       onChange={(e) => setPassword(e.target.value)}
                       onKeyPress={handlePasswordKeyPress}
                       placeholder="Enter your password"
-                      disabled={loading}
+                      disabled={false}
                       autoComplete="current-password"
                       className="login-input"
                     />
@@ -322,7 +354,7 @@ export default function Login({ onLoginSuccess, storeName }: LoginProps) {
                 <button
                   type="button"
                   onClick={handlePasswordSubmit}
-                  disabled={loading || !password}
+                  disabled={!password}
                   className="login-button"
                 >
                   {loading ? (
@@ -339,7 +371,7 @@ export default function Login({ onLoginSuccess, storeName }: LoginProps) {
                   type="button"
                   onClick={handleReset}
                   className="back-button"
-                  disabled={loading}
+                  disabled={false}
                 >
                   Back
                 </button>
@@ -374,7 +406,7 @@ export default function Login({ onLoginSuccess, storeName }: LoginProps) {
                       type="button"
                       onClick={() => handlePinPadClick(digit)}
                       className={`pin-button ${digit === 'C' ? 'clear' : digit === '⌫' ? 'backspace' : ''}`}
-                      disabled={loading}
+                      disabled={false}
                     >
                       {digit}
                     </button>
@@ -385,7 +417,7 @@ export default function Login({ onLoginSuccess, storeName }: LoginProps) {
                   type="button"
                   onClick={handleReset}
                   className="back-button"
-                  disabled={loading}
+                  disabled={false}
                 >
                   Back
                 </button>

@@ -120,6 +120,11 @@ export default function App() {
       setCurrentUser(null);
       setIsAuthenticated(false);
       setCurrentView("scanner");
+      
+      // Dispatch custom event to force complete app remount
+      setTimeout(() => {
+        window.dispatchEvent(new Event('app-remount'));
+      }, 100);
     } catch (error) {
       console.error('Logout failed:', error);
     }

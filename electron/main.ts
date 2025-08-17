@@ -36,22 +36,16 @@ function createWindow() {
     titleBarStyle: 'default',
     resizable: true,
     maximizable: true,
+    minimizable: true,  // Allow minimizing
     fullscreenable: true,
-    fullscreen: true  // Start in fullscreen
+    fullscreen: false  // Don't start in fullscreen
   })
   
   // Show window after all settings are applied
   win.show()
   
-  // Ensure window starts maximized if not in fullscreen
-  if (!win.isFullScreen()) {
-    win.maximize()
-  }
-
-  // Prevent any window state changes
-  win.on('minimize', (event: Electron.Event) => {
-    event.preventDefault()
-  })
+  // Start maximized instead of fullscreen for easier multitasking
+  win.maximize()
 
   win.webContents.on('did-finish-load', () => {
     win?.webContents.send('main-process-message', (new Date).toLocaleString())
