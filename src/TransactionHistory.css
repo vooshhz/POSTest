@@ -25,48 +25,158 @@
 }
 
 .transaction-summary {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 2rem;
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 0.5rem; /* Reduced gap */
+  margin-bottom: 0.75rem; /* Reduced from 2rem */
   flex-shrink: 0;
-  flex-wrap: nowrap;
+  flex-wrap: nowrap !important;
   overflow-x: auto;
+  justify-content: stretch; /* Stretch cards to fill width */
+  width: 100%;
+  padding: 0;
 }
 
 .summary-card {
   background: white;
   color: #333;
-  padding: 1.5rem;
-  border-radius: 10px;
+  padding: 1rem 1rem; /* Reduced from 1.5rem to ~1.3rem (15% less) */
+  border-radius: 12px;
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e0e0e0;
-  flex: 1;
-  min-width: 200px;
-  transition: transform 0.2s, box-shadow 0.2s;
+  flex-direction: column; /* Keep vertical for label/value pairs */
+  align-items: center; /* Center content */
+  gap: 0.3rem; /* Reduced gap */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border: 2px solid;
+  flex: 1 1 0; /* Equal width for all cards */
+  min-width: 0; /* Allow cards to shrink */
+  max-width: none; /* Remove max width limit */
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Individual card styling */
+.summary-card:nth-child(1) {
+  background: linear-gradient(135deg, #5a67d8 0%, #4c51bf 100%);
+  border-color: #5a67d8;
+  color: white;
+}
+
+.summary-card:nth-child(1) .summary-label {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.summary-card:nth-child(1) .summary-value {
+  color: white;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.summary-card:nth-child(2) {
+  background: linear-gradient(135deg, #9f7aea 0%, #805ad5 100%);
+  border-color: #9f7aea;
+  color: white;
+}
+
+.summary-card:nth-child(2) .summary-label {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.summary-card:nth-child(2) .summary-value {
+  color: white;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.summary-card:nth-child(3) {
+  background: linear-gradient(135deg, #3182ce 0%, #2c5282 100%);
+  border-color: #3182ce;
+  color: white;
+}
+
+.summary-card:nth-child(3) .summary-label {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.summary-card:nth-child(3) .summary-value {
+  color: white;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.summary-card:nth-child(4) {
+  background: linear-gradient(135deg, #38a169 0%, #2f855a 100%);
+  border-color: #38a169;
+  color: white;
+}
+
+.summary-card:nth-child(4) .summary-label {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.summary-card:nth-child(4) .summary-value {
+  color: white;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .summary-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  /* Removed transform effect - no enlargement */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); /* Subtle shadow change only */
 }
 
-.summary-label {
-  font-size: 0.9rem;
-  color: #666;
-  font-weight: 500;
+/* Add icon backgrounds */
+.summary-card::before {
+  content: '';
+  position: absolute;
+  top: -20px;
+  right: -20px;
+  width: 80px;
+  height: 80px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
 }
 
-.summary-value {
-  font-size: 1.5rem;
+.summary-card::after {
+  position: absolute;
+  font-size: 3rem;
+  opacity: 0.2;
+  top: 10px;
+  right: 10px;
   font-weight: bold;
-  color: #2196F3;
+}
+
+.summary-card:nth-child(1)::after {
+  content: '📊';
+}
+
+.summary-card:nth-child(2)::after {
+  content: '📦';
+}
+
+.summary-card:nth-child(3)::after {
+  content: '💰';
+}
+
+.summary-card:nth-child(4)::after {
+  content: '🧾';
+}
+
+.transaction-summary .summary-card .summary-label {
+  font-size: 1rem !important; /* Reduced from 1.1rem (10% less) */
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  margin-bottom: 0.3rem;
+}
+
+.transaction-summary .summary-card .summary-value {
+  font-size: 2rem !important; /* Reduced from 2.2rem (10% less) */
+  font-weight: 800;
+  z-index: 1;
+  position: relative;
+  line-height: 1;
 }
 
 .transaction-actions {
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.5rem; /* Reduced from 1.5rem */
   display: flex;
   justify-content: flex-end;
   flex-shrink: 0;
@@ -171,8 +281,8 @@
   background-color: #f9f9ff !important;
 }
 
-.transaction-table tbody tr:hover .date-cell .date,
-.transaction-table tbody tr:hover .date-cell .time {
+.transaction-table tbody tr:hover .date-cell,
+.transaction-table tbody tr:hover .time-cell {
   color: #333 !important;
 }
 
@@ -184,23 +294,17 @@
   background-color: white !important;
 }
 
-.date-cell .date-time {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  align-items: center;
-  background-color: transparent !important;
-}
-
-.date-cell .date {
+.date-cell {
   font-weight: 500;
   color: #333 !important;
+  text-align: center;
 }
 
-.date-cell .time {
-  font-size: 0.85rem;
+.time-cell {
+  font-size: 0.9rem;
   color: #495057 !important;
   font-weight: 500;
+  text-align: center;
 }
 
 .items-cell {
@@ -309,30 +413,17 @@
 .transaction-table td,
 .transaction-table td *,
 .transaction-table .date-cell,
-.transaction-table .date-cell *,
-.transaction-table .date-cell .date,
-.transaction-table .date-cell .time,
-.transaction-table .date-cell .date-time,
-.transaction-table .date-cell .date-time * {
+.transaction-table .time-cell {
   color: #333 !important;
   background-color: transparent !important;
-}
-
-/* Specific overrides for date and time */
-.date-time span,
-.date-time .date,
-.date-time .time,
-span.date,
-span.time {
-  color: #333 !important;
 }
 
 /* Dark mode override - ensure text stays dark */
 @media (prefers-color-scheme: dark) {
   .transaction-table td,
   .id-cell,
-  .date-cell .date,
-  .date-cell .time,
+  .date-cell,
+  .time-cell,
   .items-cell,
   .currency-cell,
   .user-cell {
@@ -404,8 +495,9 @@ span.time {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem;
+  padding: 0.6rem 1rem; /* Reduced vertical padding */
   background: #f8f9fa;
+  margin-bottom: 0.75rem; /* Reduced margin */
   border-radius: 8px;
   margin-bottom: 1rem;
 }

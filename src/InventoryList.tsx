@@ -361,47 +361,53 @@ export default function InventoryList({ barcode, setBarcode, searchFilter, setSe
         <h2>Inventory Management</h2>
       </div>
       
-      {/* Sub-tabs */}
-      <div className="inventory-tabs">
-        <button 
-          className={`inventory-tab ${activeTab === 'onhand' ? 'active' : ''}`}
-          onClick={() => setActiveTab('onhand')}
-        >
-          On Hand
-        </button>
-        <button 
-          className={`inventory-tab ${activeTab === 'adjustments' ? 'active' : ''}`}
-          onClick={() => setActiveTab('adjustments')}
-        >
-          Adjustments
-        </button>
+      {/* Sub-tabs with scanner */}
+      <div className="inventory-tabs-container">
+        <div className="inventory-tabs">
+          <button 
+            className={`inventory-tab ${activeTab === 'onhand' ? 'active' : ''}`}
+            onClick={() => setActiveTab('onhand')}
+          >
+            On Hand
+          </button>
+          <button 
+            className={`inventory-tab ${activeTab === 'adjustments' ? 'active' : ''}`}
+            onClick={() => setActiveTab('adjustments')}
+          >
+            Adjustments
+          </button>
+        </div>
+        
+        {/* Scanner Section - moved to right side */}
+        {activeTab === 'onhand' && (
+          <div className="scanner-section-inline">
+            <div className="scanner-input-group">
+              <input
+                ref={inputRef}
+                type="text"
+                value={barcode}
+                onChange={(e) => setBarcode(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Scan UPC to add/search"
+                className="scanner-input"
+                disabled={false}
+              />
+              <button 
+                onClick={clearSearch}
+                className="clear-btn"
+                title="Clear"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       
       {activeTab === 'onhand' ? (
         <>
-          {/* Scanner Section */}
-          <div className="scanner-section">
-            <h3>Add New Items</h3>
-            <div className="scanner-input-group">
-              <input
-            ref={inputRef}
-            type="text"
-            value={barcode}
-            onChange={(e) => setBarcode(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Scan or paste barcode and press Enter"
-            className="scanner-input"
-            disabled={false}
-              />
-              <button 
-            onClick={clearSearch}
-            className="clear-btn"
-            title="Clear"
-          >
-                ✕
-              </button>
-            </div>
-
+          {/* Scanner feedback messages */}
+          <div className="scanner-feedback">
             {scanning && <div className="loading">Searching...</div>}
 
             {scanError && (

@@ -694,7 +694,6 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
                   <tr>
                     <th>#</th>
                     <th>Description</th>
-                    <th>Volume</th>
                     <th>Qty</th>
                     <th>Unit Price</th>
                     <th>Total</th>
@@ -706,7 +705,6 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
                     <tr key={index}>
                       <td className="item-number">{index + 1}</td>
                       <td className="description-cell">{item.description || "N/A"}</td>
-                      <td>{item.volume ? `${item.volume} mL` : "N/A"}</td>
                       <td>
                         <div className="quantity-controls">
                           <button 

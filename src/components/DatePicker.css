@@ -8,13 +8,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
+  padding: 4px 8px; /* Reduced padding */
+  border: 1px solid #ddd;
+  border-radius: 4px;
   background: white;
   cursor: pointer;
   transition: all 0.2s ease;
-  min-height: 42px;
+  min-height: 28px; /* Reduced height */
   width: 100%;
   box-sizing: border-box;
 }
@@ -34,13 +34,14 @@
   flex: 1;
   text-align: left;
   color: #333;
-  font-size: 15px;
+  font-size: 13px; /* Smaller font */
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .calendar-icon {
-  width: 20px;
-  height: 20px;
+  width: 16px; /* Smaller icon */
+  height: 16px;
   color: #9c27b0;
   stroke-width: 2;
   flex-shrink: 0;

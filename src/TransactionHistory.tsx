@@ -414,24 +414,19 @@ export function TransactionHistory() {
                   ID{getSortIndicator('id')}
                 </th>
                 <th onClick={() => handleSort('created_at')} className="sortable">
-                  Date & Time{getSortIndicator('created_at')}
+                  Date{getSortIndicator('created_at')}
                 </th>
-                <th>User</th>
+                <th>Time</th>
                 <th onClick={() => handleSort('item_count')} className="sortable">
                   Items{getSortIndicator('item_count')}
-                </th>
-                <th onClick={() => handleSort('payment_type')} className="sortable">
-                  Payment{getSortIndicator('payment_type')}
-                </th>
-                <th onClick={() => handleSort('subtotal')} className="sortable">
-                  Subtotal{getSortIndicator('subtotal')}
-                </th>
-                <th onClick={() => handleSort('tax')} className="sortable">
-                  Tax{getSortIndicator('tax')}
                 </th>
                 <th onClick={() => handleSort('total')} className="sortable">
                   Total{getSortIndicator('total')}
                 </th>
+                <th onClick={() => handleSort('payment_type')} className="sortable">
+                  Payment{getSortIndicator('payment_type')}
+                </th>
+                <th>User</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -443,20 +438,14 @@ export function TransactionHistory() {
                 return (
                   <tr key={transaction.id}>
                     <td className="id-cell">#{transaction.id}</td>
-                    <td className="date-cell">
-                      <div className="date-time">
-                        <span className="date" style={{ color: '#333' }}>{formatDate(transaction.created_at)}</span>
-                        <span className="time" style={{ color: '#666' }}>{formatTime(transaction.created_at)}</span>
-                      </div>
-                    </td>
-                    <td className="user-cell">{transaction.created_by_username || 'system'}</td>
+                    <td className="date-cell">{formatDate(transaction.created_at)}</td>
+                    <td className="time-cell">{formatTime(transaction.created_at)}</td>
                     <td className="items-cell">{itemCount}</td>
+                    <td className="total-cell">{formatCurrency(transaction.total)}</td>
                     <td className="payment-cell">
                       {getPaymentTypeBadge(transaction.payment_type)}
                     </td>
-                    <td className="currency-cell">{formatCurrency(transaction.subtotal)}</td>
-                    <td className="currency-cell">{formatCurrency(transaction.tax)}</td>
-                    <td className="total-cell">{formatCurrency(transaction.total)}</td>
+                    <td className="user-cell">{transaction.created_by_username || 'system'}</td>
                     <td>
                       <div className="action-buttons">
                         <button 

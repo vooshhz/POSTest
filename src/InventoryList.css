@@ -24,13 +24,19 @@
   font-size: 1.5rem;
 }
 
+.inventory-tabs-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 1rem;
+  border-bottom: 2px solid #e0e0e0;
+  padding-bottom: 0;
+}
+
 .inventory-tabs {
   display: flex;
   gap: 1rem;
-  margin-bottom: 1rem;
   flex-shrink: 0;
-  border-bottom: 2px solid #e0e0e0;
-  padding-bottom: 0;
 }
 
 .inventory-tab {
@@ -59,41 +65,79 @@
 }
 
 .inventory-summary {
-  display: flex;
-  gap: 0.75rem;
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 0.5rem; /* Reduced gap */
   margin-bottom: 1rem;
   flex-shrink: 0; /* Prevents shrinking */
-  flex-wrap: nowrap; /* Never wrap to next line */
+  flex-wrap: nowrap !important; /* Never wrap to next line */
   overflow-x: auto; /* Allow horizontal scroll if needed */
+  justify-content: stretch; /* Stretch cards to fill width */
+  align-items: stretch; /* Make all cards same height */
+  width: 100%;
+  padding: 0;
 }
 
-.summary-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+.inventory-summary .summary-card {
+  background: white;
   color: white;
-  padding: 1rem;
-  border-radius: 10px;
+  padding: 1rem 1rem; /* Reduced from 1.5rem to ~1.3rem (15% less) */
+  border-radius: 12px;
+  border: 2px solid;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-  flex: 1;
-  min-width: 180px; /* Minimum width for each card */
-  transition: transform 0.2s, box-shadow 0.2s;
+  align-items: center; /* Center content */
+  justify-content: center;
+  gap: 0.3rem; /* Reduced gap */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  flex: 1 1 0; /* Equal width for all cards */
+  min-width: 0; /* Allow cards to shrink */
+  max-width: none; /* Remove max width limit */
+  transition: transform 0.3s, box-shadow 0.3s;
+  position: relative;
+  overflow: hidden;
 }
 
-.summary-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+/* Individual card colors matching transaction summary */
+.inventory-summary .summary-card:nth-child(1) {
+  background: linear-gradient(135deg, #5a67d8 0%, #4c51bf 100%);
+  border-color: #5a67d8;
 }
 
-.summary-label {
-  font-size: 0.9rem;
-  opacity: 0.9;
+.inventory-summary .summary-card:nth-child(2) {
+  background: linear-gradient(135deg, #9f7aea 0%, #805ad5 100%);
+  border-color: #9f7aea;
 }
 
-.summary-value {
-  font-size: 1.5rem;
-  font-weight: bold;
+.inventory-summary .summary-card:nth-child(3) {
+  background: linear-gradient(135deg, #3182ce 0%, #2c5282 100%);
+  border-color: #3182ce;
+}
+
+.inventory-summary .summary-card:nth-child(4) {
+  background: linear-gradient(135deg, #38a169 0%, #2f855a 100%);
+  border-color: #38a169;
+}
+
+.inventory-summary .summary-card:hover {
+  /* Removed transform effect - no enlargement */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); /* Subtle shadow change only */
+}
+
+.inventory-summary .summary-label {
+  font-size: 1rem !important; /* Reduced from 1.1rem (10% less) */
+  opacity: 0.95;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.inventory-summary .summary-value {
+  font-size: 2rem !important; /* Reduced from 2.2rem (10% less) */
+  font-weight: 800;
+  text-align: center;
+  line-height: 1;
 }
 
 .inventory-loading,
@@ -192,6 +236,50 @@
 }
 
 /* Scanner Section */
+.scanner-section-inline {
+  display: flex;
+  align-items: center;
+  margin-bottom: -2px; /* Align with tabs bottom border */
+}
+
+.scanner-section-inline .scanner-input-group {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.scanner-section-inline .scanner-input {
+  width: 280px;
+  padding: 0.6rem 1rem;
+  font-size: 0.95rem;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  transition: all 0.3s;
+}
+
+.scanner-section-inline .scanner-input:focus {
+  width: 320px;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  outline: none;
+}
+
+.scanner-feedback {
+  min-height: 25px;
+  margin-bottom: 0.5rem;
+}
+
+.scanner-feedback .loading,
+.scanner-feedback .error-message,
+.scanner-feedback .in-inventory-notice {
+  padding: 0.5rem;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+/* Legacy scanner styles for other uses */
 .scanner-section {
   margin-bottom: 1rem;
   flex-shrink: 0;
@@ -216,6 +304,22 @@
   font-size: 0.9rem;
   border: 2px solid #ddd;
   border-radius: 6px;
+}
+
+.scanner-section-inline .clear-btn {
+  padding: 0.6rem 0.8rem;
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: background 0.3s;
+}
+
+.scanner-section-inline .clear-btn:hover {
+  background: #d32f2f;
 }
 
 .clear-btn {
