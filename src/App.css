@@ -4,10 +4,15 @@
   text-align: center;
   padding: 0;
   height: 100vh;
+  width: 100vw;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  position: relative;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: transparent;
 }
 
@@ -54,8 +59,9 @@
 .content-container {
   margin-top: 140px;
   height: calc(100vh - 140px);
-  overflow: auto;
+  overflow: hidden;
   padding: 0 20px 20px;
+  position: relative;
 }
 
 .nav-tabs-left {

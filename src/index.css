@@ -12,6 +12,30 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Prevent scrolling on the main app */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #888 #f1f1f1;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
 a {
   font-weight: 500;
   color: #646cff;
@@ -25,7 +49,10 @@ html, body {
   margin: 0;
   padding: 0;
   height: 100vh;
+  width: 100vw;
   overflow: hidden;
+  position: fixed;
+  overscroll-behavior: none;
 }
 
 body {
@@ -34,6 +61,8 @@ body {
   min-width: 320px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   background-attachment: fixed;
+  -webkit-overflow-scrolling: touch;
+  touch-action: none;
 }
 
 #root {

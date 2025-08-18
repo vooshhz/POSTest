@@ -60,14 +60,14 @@ export default function TransactionCompleteModal({
                 <p>The transaction has been processed successfully.</p>
                 {transaction && (
                   <div className="transaction-summary">
-                    <div className="summary-row">
-                      <span>Total Amount:</span>
-                      <span>${transaction.total.toFixed(2)}</span>
+                    <div className="summary-item total-item">
+                      <span className="label">Total Amount</span>
+                      <span className="value">${transaction.total.toFixed(2)}</span>
                     </div>
                     {transaction.paymentType === 'cash' && transaction.changeGiven !== undefined && (
-                      <div className="summary-row change">
-                        <span>Change Given:</span>
-                        <span>${transaction.changeGiven.toFixed(2)}</span>
+                      <div className="summary-item change-item">
+                        <span className="label">Change Given</span>
+                        <span className="value">${transaction.changeGiven.toFixed(2)}</span>
                       </div>
                     )}
                   </div>

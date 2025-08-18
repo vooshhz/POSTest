@@ -25,6 +25,42 @@
   font-size: 1.5rem;
 }
 
+.pos-tabs {
+  display: flex;
+  gap: 10px;
+}
+
+.tab-btn {
+  background: transparent;
+  border: 2px solid #e0e0e0;
+  color: #666;
+  padding: 8px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.tab-btn:hover {
+  background: #f5f5f5;
+  border-color: #646cff;
+}
+
+.tab-btn.active {
+  background: #646cff;
+  color: white;
+  border-color: #646cff;
+}
+
+.till-tab-content {
+  padding: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 500px;
+}
+
 .pos-header-controls {
   display: flex;
   align-items: center;
@@ -396,7 +432,7 @@
 .cart-header h3 {
   margin: 0;
   color: #333;
-  font-size: 1.2rem;
+  font-size: 1.3rem;
 }
 
 .cart-actions {
@@ -453,7 +489,7 @@
 .cart-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .cart-table thead {
@@ -464,12 +500,12 @@
 }
 
 .cart-table th {
-  padding: 0.4rem;
+  padding: 0.6rem;
   text-align: left;
   font-weight: 600;
   color: #666;
   border-bottom: 2px solid #ddd;
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .cart-table th:nth-child(1) { /* # */
@@ -508,10 +544,10 @@
 }
 
 .cart-table td {
-  padding: 0.3rem 0.4rem;
+  padding: 0.6rem 0.5rem;
   border-bottom: 1px solid #eee;
   color: #333;
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .cart-table td:nth-child(1) { /* # */
@@ -566,14 +602,14 @@
 }
 
 .qty-btn {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   background: #646cff;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 14px;
   transition: background 0.3s;
   display: flex;
   align-items: center;
@@ -585,12 +621,12 @@
 }
 
 .qty-input {
-  width: 35px;
-  padding: 0.1rem;
+  width: 40px;
+  padding: 0.2rem;
   text-align: center;
   border: 1px solid #ddd;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .total-cell {
@@ -602,13 +638,13 @@
   background: #ff4444;
   color: white;
   border: none;
-  padding: 0.2rem 0.4rem;
+  padding: 0.3rem 0.5rem;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 18px;
   transition: background 0.3s;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -621,7 +657,7 @@
 /* Item Actions */
 .item-actions {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   justify-content: center;
   align-items: center;
 }
@@ -631,10 +667,10 @@
   background: #4CAF50;
   color: white;
   border: none;
-  padding: 0.2rem 0.5rem;
+  padding: 0.3rem 0.6rem;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 10px;
+  font-size: 12px;
   transition: background 0.3s;
   white-space: nowrap;
 }
@@ -662,7 +698,7 @@
 .original-price {
   text-decoration: line-through;
   color: #999;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .discounted-price {
@@ -863,16 +899,16 @@
 .summary-row {
   display: flex;
   justify-content: space-between;
-  padding: 0.25rem 0;
-  font-size: 0.9rem;
+  padding: 0.3rem 0;
+  font-size: 1rem;
   color: #333;
 }
 
 .summary-row.total {
   border-top: 2px solid #ddd;
-  padding-top: 0.4rem;
-  margin-top: 0.25rem;
-  font-size: 1rem;
+  padding-top: 0.5rem;
+  margin-top: 0.3rem;
+  font-size: 1.2rem;
   font-weight: bold;
   color: #646cff;
 }
@@ -884,12 +920,12 @@
 
 .void-cart-btn {
   flex: 1;
-  padding: 0.5rem;
+  padding: 0.6rem;
   background: #f44336;
   color: white;
   border: none;
   border-radius: 6px;
-  font-size: 0.9rem;
+  font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.3s;
@@ -901,12 +937,12 @@
 
 .checkout-btn {
   flex: 2;
-  padding: 0.5rem;
+  padding: 0.6rem;
   background: #4CAF50;
   color: white;
   border: none;
   border-radius: 6px;
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.3s;
@@ -1037,7 +1073,10 @@
 
 /* Payment Modal Styles */
 .payment-modal {
-  max-width: 500px;
+  max-width: 550px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
 }
 
 .payment-methods h4 {
@@ -1097,10 +1136,183 @@
 }
 
 .amount-due {
-  font-size: 1.1rem;
+  font-size: 1.8rem;
   margin-bottom: 1rem;
   text-align: center;
   color: #333;
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 10px;
+  border: 2px solid #dee2e6;
+  font-weight: 700;
+}
+
+.cash-payment {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Quick Cash Section */
+.quick-cash-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.quick-cash-section label {
+  font-weight: 600;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.quick-cash-buttons {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.quick-cash-btn {
+  width: 80px;
+  height: 80px;
+  padding: 0;
+  background: linear-gradient(135deg, #f57c00 0%, #e65100 100%);
+  border: 2px solid #d84315;
+  color: white;
+  font-size: 1.3rem;
+  font-weight: 700;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 3px 6px rgba(230, 81, 0, 0.25);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.quick-cash-btn:hover {
+  background: linear-gradient(135deg, #e65100 0%, #f57c00 100%);
+  transform: scale(1.08);
+  box-shadow: 0 5px 12px rgba(230, 81, 0, 0.35);
+}
+
+.quick-cash-btn:active {
+  transform: scale(0.98);
+  box-shadow: 0 2px 4px rgba(255, 152, 0, 0.3);
+}
+
+/* Payment Display Row */
+.payment-display-row {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.payment-display-box {
+  width: 180px;
+  height: 70px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  border-radius: 10px;
+  border: 2px solid;
+}
+
+.payment-display-box.full-width {
+  width: 100%;
+  max-width: 380px;
+}
+
+.payment-display-box label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.payment-display-box .amount-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  font-family: monospace;
+}
+
+.tendered-box {
+  background: #fff3cd;
+  border-color: #ffc107;
+}
+
+.tendered-box label {
+  color: #856404;
+}
+
+.tendered-box .amount-value {
+  color: #856404;
+}
+
+.change-box {
+  background: #d4edda;
+  border-color: #28a745;
+}
+
+.change-box label {
+  color: #155724;
+}
+
+.change-box .amount-value {
+  color: #155724;
+}
+
+/* Cash Keypad */
+.cash-keypad {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 10px;
+}
+
+.keypad-row {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.keypad-btn {
+  width: 70px;
+  height: 60px;
+  background: white;
+  border: 2px solid #dee2e6;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #333;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.keypad-btn:hover {
+  background: #646cff;
+  color: white;
+  border-color: #646cff;
+  transform: scale(1.05);
+}
+
+.keypad-btn.clear {
+  background: #ff6b6b;
+  color: white;
+  border-color: #ff6b6b;
+}
+
+.keypad-btn.clear:hover {
+  background: #ff5252;
+  border-color: #ff5252;
 }
 
 .cash-payment .form-group {

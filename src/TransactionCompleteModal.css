@@ -13,10 +13,10 @@
 
 .transaction-complete-modal {
   background: white;
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 32px;
-  min-width: 400px;
-  max-width: 500px;
+  min-width: 450px;
+  max-width: 550px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   animation: slideIn 0.3s ease-out;
 }
@@ -64,37 +64,61 @@
 }
 
 .transaction-summary {
-  background: #f5f5f5;
-  border-radius: 8px;
-  padding: 16px;
-  margin-top: 20px;
-}
-
-.summary-row {
   display: flex;
-  justify-content: space-between;
-  padding: 8px 0;
-  font-size: 16px;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 24px;
 }
 
-.summary-row span:first-child {
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px;
+  border-radius: 12px;
+  border: 2px solid;
+}
+
+.summary-item .label {
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.summary-item .value {
+  font-weight: 900;
+  font-size: 32px;
+  font-family: monospace;
+}
+
+.summary-item.total-item {
+  background: #f5f5f5;
+  border-color: #e0e0e0;
+}
+
+.summary-item.total-item .label {
   color: #666;
 }
 
-.summary-row span:last-child {
-  font-weight: 600;
+.summary-item.total-item .value {
   color: #333;
 }
 
-.summary-row.change {
-  border-top: 1px solid #ddd;
-  padding-top: 12px;
-  margin-top: 8px;
+.summary-item.change-item {
+  background: #e8f5e9;
+  border-color: #4CAF50;
 }
 
-.summary-row.change span:last-child {
-  color: #4CAF50;
-  font-size: 18px;
+.summary-item.change-item .label {
+  color: #2e7d32;
+}
+
+.summary-item.change-item .value {
+  color: #2e7d32;
+  font-size: 36px;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .modal-actions {

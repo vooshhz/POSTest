@@ -23,6 +23,7 @@ interface CartScannerProps {
 }
 
 export default function CartScanner({ barcode, setBarcode, cart, setCart, error, setError }: CartScannerProps) {
+  const [activeTab, setActiveTab] = useState<'scanner' | 'till'>('scanner');
   const [loading, setLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [scannedUpc, setScannedUpc] = useState("");
@@ -34,6 +35,7 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'credit' | 'debit' | null>(null);
   const [amountTendered, setAmountTendered] = useState("");
+  const [isQuickCash, setIsQuickCash] = useState(false);
   const [showTransactionComplete, setShowTransactionComplete] = useState(false);
   const [transactionSuccess, setTransactionSuccess] = useState(false);
   const [transactionData, setTransactionData] = useState<{
@@ -284,6 +286,7 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
     setShowPaymentModal(false);
     setPaymentMethod(null);
     setAmountTendered("");
+    setIsQuickCash(false);
   };
 
   const processPayment = async () => {
@@ -586,13 +589,28 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
             className="populate-btn"
             onClick={handlePopulate}
             disabled={loading}
+            style={{ display: activeTab === 'scanner' ? 'block' : 'none' }}
           >
             {loading ? 'Loading...' : 'Populate'}
           </button>
-          <TillDashboard />
+          <div className="pos-tabs">
+            <button 
+              className={`tab-btn ${activeTab === 'scanner' ? 'active' : ''}`}
+              onClick={() => setActiveTab('scanner')}
+            >
+              Scanner
+            </button>
+            <button 
+              className={`tab-btn ${activeTab === 'till' ? 'active' : ''}`}
+              onClick={() => setActiveTab('till')}
+            >
+              Till
+            </button>
+          </div>
         </div>
       </div>
       
+      {activeTab === 'scanner' ? (
       <div className="main-content">
         {/* Left Section - Scanner and Cart */}
         <div className="left-section">
@@ -823,6 +841,11 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
           </div>
         </div>
       </div>
+      ) : (
+        <div className="till-tab-content">
+          <TillDashboard />
+        </div>
+      )}
 
       {/* Payment Modal */}
       {showPaymentModal && (
@@ -864,23 +887,162 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
                     <div className="amount-due">
                       <strong>Amount Due:</strong> {formatCurrency(totals.total)}
                     </div>
-                    <div className="form-group">
-                      <label>Amount Tendered:</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min={totals.total.toString()}
-                        value={amountTendered}
-                        onChange={(e) => setAmountTendered(e.target.value)}
-                        placeholder="0.00"
-                        autoFocus
-                      />
-                    </div>
-                    {amountTendered && parseFloat(amountTendered) >= totals.total && (
-                      <div className="change-due">
-                        <strong>Change Due:</strong> {formatCurrency(parseFloat(amountTendered) - totals.total)}
+                    
+                    {/* Quick Cash Buttons */}
+                    <div className="quick-cash-section">
+                      <label>Quick Cash:</label>
+                      <div className="quick-cash-buttons">
+                        {(() => {
+                          const amount = Math.ceil(totals.total);
+                          const buttons = [];
+                          
+                          // Next highest $10
+                          if (amount <= 10) {
+                            buttons.push(10);
+                          } else {
+                            const next10 = Math.ceil(amount / 10) * 10;
+                            if (next10 > amount) buttons.push(next10);
+                          }
+                          
+                          // Next highest $20
+                          const next20 = Math.ceil(amount / 20) * 20;
+                          if (next20 > amount && !buttons.includes(next20)) buttons.push(next20);
+                          
+                          // Add $50 if amount is less than 50
+                          if (amount < 50) buttons.push(50);
+                          
+                          // Add $100
+                          if (amount < 100) buttons.push(100);
+                          
+                          return buttons.map(value => (
+                            <button
+                              key={value}
+                              className="quick-cash-btn"
+                              onClick={() => {
+                                setAmountTendered(value.toString());
+                                setIsQuickCash(true);
+                              }}
+                            >
+                              ${value}
+                            </button>
+                          ));
+                        })()}
                       </div>
-                    )}
+                    </div>
+
+                    {/* Amount Tendered Display */}
+                    <div className="payment-display-row">
+                      <div className="payment-display-box tendered-box full-width">
+                        <label>Amount Tendered</label>
+                        <span className="amount-value">
+                          {formatCurrency(parseFloat(amountTendered) || 0)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Number Keypad */}
+                    <div className="cash-keypad">
+                      <div className="keypad-row">
+                        <button className="keypad-btn" onClick={() => {
+                          if (isQuickCash) {
+                            setAmountTendered('7');
+                            setIsQuickCash(false);
+                          } else {
+                            setAmountTendered(prev => prev + '7');
+                          }
+                        }}>7</button>
+                        <button className="keypad-btn" onClick={() => {
+                          if (isQuickCash) {
+                            setAmountTendered('8');
+                            setIsQuickCash(false);
+                          } else {
+                            setAmountTendered(prev => prev + '8');
+                          }
+                        }}>8</button>
+                        <button className="keypad-btn" onClick={() => {
+                          if (isQuickCash) {
+                            setAmountTendered('9');
+                            setIsQuickCash(false);
+                          } else {
+                            setAmountTendered(prev => prev + '9');
+                          }
+                        }}>9</button>
+                      </div>
+                      <div className="keypad-row">
+                        <button className="keypad-btn" onClick={() => {
+                          if (isQuickCash) {
+                            setAmountTendered('4');
+                            setIsQuickCash(false);
+                          } else {
+                            setAmountTendered(prev => prev + '4');
+                          }
+                        }}>4</button>
+                        <button className="keypad-btn" onClick={() => {
+                          if (isQuickCash) {
+                            setAmountTendered('5');
+                            setIsQuickCash(false);
+                          } else {
+                            setAmountTendered(prev => prev + '5');
+                          }
+                        }}>5</button>
+                        <button className="keypad-btn" onClick={() => {
+                          if (isQuickCash) {
+                            setAmountTendered('6');
+                            setIsQuickCash(false);
+                          } else {
+                            setAmountTendered(prev => prev + '6');
+                          }
+                        }}>6</button>
+                      </div>
+                      <div className="keypad-row">
+                        <button className="keypad-btn" onClick={() => {
+                          if (isQuickCash) {
+                            setAmountTendered('1');
+                            setIsQuickCash(false);
+                          } else {
+                            setAmountTendered(prev => prev + '1');
+                          }
+                        }}>1</button>
+                        <button className="keypad-btn" onClick={() => {
+                          if (isQuickCash) {
+                            setAmountTendered('2');
+                            setIsQuickCash(false);
+                          } else {
+                            setAmountTendered(prev => prev + '2');
+                          }
+                        }}>2</button>
+                        <button className="keypad-btn" onClick={() => {
+                          if (isQuickCash) {
+                            setAmountTendered('3');
+                            setIsQuickCash(false);
+                          } else {
+                            setAmountTendered(prev => prev + '3');
+                          }
+                        }}>3</button>
+                      </div>
+                      <div className="keypad-row">
+                        <button className="keypad-btn" onClick={() => {
+                          if (isQuickCash) {
+                            setAmountTendered('0');
+                            setIsQuickCash(false);
+                          } else {
+                            setAmountTendered(prev => prev + '0');
+                          }
+                        }}>0</button>
+                        <button className="keypad-btn" onClick={() => {
+                          if (isQuickCash) {
+                            setAmountTendered('');
+                            setIsQuickCash(false);
+                          }
+                          setAmountTendered(prev => prev.includes('.') ? prev : prev + '.');
+                        }}>.</button>
+                        <button className="keypad-btn clear" onClick={() => {
+                          setAmountTendered('');
+                          setIsQuickCash(false);
+                        }}>C</button>
+                      </div>
+                    </div>
+
                     <div className="modal-buttons">
                       <button 
                         onClick={processPayment} 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import './TransactionHistory.css';
+import ReceiptModal from './ReceiptModal';
 
 interface Transaction {
   id: number;
@@ -33,6 +34,8 @@ export function TransactionHistory() {
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [currentPage, setCurrentPage] = useState(1);
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const transactionsPerPage = 20;
   
   // Date filter states
@@ -248,6 +251,30 @@ export function TransactionHistory() {
     await window.api.openTransactionDetails(transaction);
   };
 
+  const showReceiptForTransaction = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setShowReceipt(true);
+  };
+
+  const formatTransactionForReceipt = (transaction: Transaction) => {
+    const items = parseItems(transaction.items);
+    return {
+      items: items.map(item => ({
+        description: item.description || 'Unknown Item',
+        quantity: item.quantity,
+        price: item.price,
+        total: item.total || (item.price * item.quantity)
+      })),
+      subtotal: transaction.subtotal,
+      tax: transaction.tax,
+      total: transaction.total,
+      paymentType: transaction.payment_type as 'cash' | 'debit' | 'credit',
+      cashGiven: transaction.cash_given || undefined,
+      changeGiven: transaction.change_given || undefined,
+      timestamp: transaction.created_at
+    };
+  };
+
   // Pagination calculations
   const indexOfLastTransaction = currentPage * transactionsPerPage;
   const indexOfFirstTransaction = indexOfLastTransaction - transactionsPerPage;
@@ -431,12 +458,20 @@ export function TransactionHistory() {
                     <td className="currency-cell">{formatCurrency(transaction.tax)}</td>
                     <td className="total-cell">{formatCurrency(transaction.total)}</td>
                     <td>
-                      <button 
-                        onClick={() => openTransactionDetails(transaction)}
-                        className="view-btn"
-                      >
-                        View
-                      </button>
+                      <div className="action-buttons">
+                        <button 
+                          onClick={() => openTransactionDetails(transaction)}
+                          className="view-btn"
+                        >
+                          View
+                        </button>
+                        <button 
+                          onClick={() => showReceiptForTransaction(transaction)}
+                          className="receipt-btn"
+                        >
+                          Receipt
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -505,6 +540,18 @@ export function TransactionHistory() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Receipt Modal */}
+      {showReceipt && selectedTransaction && (
+        <ReceiptModal
+          isOpen={showReceipt}
+          onClose={() => {
+            setShowReceipt(false);
+            setSelectedTransaction(null);
+          }}
+          transaction={formatTransactionForReceipt(selectedTransaction)}
+        />
       )}
     </div>
   );
