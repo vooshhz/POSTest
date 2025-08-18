@@ -459,6 +459,29 @@ interface InventoryAPI {
     updated?: boolean;
     error?: string;
   }>;
+  getRandomProducts: (count: number) => Promise<{
+    success: boolean;
+    products?: Array<{
+      upc: string;
+      description: string;
+      volume: string;
+      wac: number;
+      retail: number;
+      category: string;
+      subcategory: string;
+    }>;
+    error?: string;
+  }>;
+  clearMockData: () => Promise<{
+    success: boolean;
+    message?: string;
+    error?: string;
+  }>;
+  saveMockTransaction: (transaction: any) => Promise<{
+    success: boolean;
+    transactionId?: number;
+    error?: string;
+  }>;
 }
 
 // Expose protected methods to the renderer
@@ -499,7 +522,10 @@ const api: InventoryAPI = {
   getUserActivity: (userId) => ipcRenderer.invoke("get-user-activity", userId),
   focusWindow: () => ipcRenderer.invoke("focus-window"),
   saveTransactionWithDate: (transaction) => ipcRenderer.invoke("save-transaction-with-date", transaction),
-  addToInventoryWithDate: (item) => ipcRenderer.invoke("add-to-inventory-with-date", item)
+  addToInventoryWithDate: (item) => ipcRenderer.invoke("add-to-inventory-with-date", item),
+  getRandomProducts: (count) => ipcRenderer.invoke("get-random-products", count),
+  clearMockData: () => ipcRenderer.invoke("clear-mock-data"),
+  saveMockTransaction: (transaction) => ipcRenderer.invoke("save-mock-transaction", transaction)
 };
 
 contextBridge.exposeInMainWorld("api", api);

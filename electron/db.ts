@@ -2714,6 +2714,137 @@ ipcMain.handle("add-to-inventory-with-date", async (_, item: InventoryItem & { c
     };
   }
   });
+  
+  // Get random products for mock data generation
+  ipcMain.handle("get-random-products", async (_, count: number = 100) => {
+    try {
+      const prodDb = getProductsDb();
+      
+      // Get random products from the database using correct column names
+      const products = prodDb.prepare(`
+        SELECT 
+          "UPC" as upc,
+          "Item Description" as description,
+          "Bottle Volume (ml)" as volume,
+          "State Bottle Cost" as wac,
+          "State Bottle Retail" as retail,
+          "Category Name" as category,
+          "Vendor Name" as subcategory
+        FROM products 
+        WHERE "UPC" IS NOT NULL 
+          AND "Item Description" IS NOT NULL
+          AND "State Bottle Cost" > 0
+          AND "State Bottle Retail" > 0
+        ORDER BY RANDOM() 
+        LIMIT ?
+      `).all(count);
+      
+      return {
+        success: true,
+        products
+      };
+    } catch (error) {
+      console.error("Get random products error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to get random products"
+      };
+    }
+  });
+  
+  // Clear mock data (transactions and inventory)
+  ipcMain.handle("clear-mock-data", async () => {
+    try {
+      const invDb = getInventoryDb();
+      
+      // Clear all transactions
+      invDb.prepare("DELETE FROM transactions").run();
+      
+      // Clear all inventory
+      invDb.prepare("DELETE FROM inventory").run();
+      
+      // Clear inventory adjustments
+      invDb.prepare("DELETE FROM inventory_adjustments").run();
+      
+      return {
+        success: true,
+        message: "Mock data cleared successfully"
+      };
+    } catch (error) {
+      console.error("Clear mock data error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to clear mock data"
+      };
+    }
+  });
+  
+  // Save mock transaction
+  ipcMain.handle("save-mock-transaction", async (_, transaction: any) => {
+    try {
+      const invDb = getInventoryDb();
+      
+      // Begin transaction
+      invDb.prepare("BEGIN TRANSACTION").run();
+      
+      try {
+        // Calculate tax properly
+        const subtotal = transaction.total;
+        const tax = subtotal * 0.06; // 6% tax
+        const total = subtotal + tax;
+        
+        // Insert the transaction using correct column names
+        const insertTransaction = invDb.prepare(`
+          INSERT INTO transactions (
+            created_at,
+            items,
+            subtotal,
+            tax,
+            total,
+            payment_type,
+            created_by_username
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        `);
+        
+        const result = insertTransaction.run(
+          transaction.timestamp,
+          JSON.stringify(transaction.items),
+          subtotal,
+          tax,
+          total,
+          transaction.payment_method || 'cash',
+          'mock_generator'
+        );
+        
+        // Update inventory for each item
+        for (const item of transaction.items) {
+          const updateInventory = invDb.prepare(`
+            UPDATE inventory 
+            SET quantity = quantity - ?
+            WHERE upc = ?
+          `);
+          
+          updateInventory.run(item.quantity, item.upc);
+        }
+        
+        invDb.prepare("COMMIT").run();
+        
+        return {
+          success: true,
+          transactionId: result.lastInsertRowid
+        };
+      } catch (error) {
+        invDb.prepare("ROLLBACK").run();
+        throw error;
+      }
+    } catch (error) {
+      console.error("Save mock transaction error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to save mock transaction"
+      };
+    }
+  });
 }
 
 // Cleanup on app quit

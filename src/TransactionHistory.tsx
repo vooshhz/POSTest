@@ -26,11 +26,18 @@ type SortField = 'id' | 'created_at' | 'item_count' | 'payment_type' | 'subtotal
 type SortDirection = 'asc' | 'desc';
 
 export function TransactionHistory() {
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const transactionsPerPage = 20;
+  
+  // Date filter states
+  const [filterType, setFilterType] = useState<'today' | 'yesterday' | 'week' | 'month' | 'ytd' | 'all'>('today');
+  
   const [totals, setTotals] = useState({
     totalTransactions: 0,
     totalItems: 0,
@@ -44,8 +51,8 @@ export function TransactionHistory() {
     try {
       const result = await window.api.getTransactions();
       if (result.success && result.data) {
-        setTransactions(result.data);
-        calculateTotals(result.data);
+        setAllTransactions(result.data);
+        applyFilters(result.data);
       } else {
         setError(result.error || 'Failed to load transactions');
       }
@@ -57,9 +64,73 @@ export function TransactionHistory() {
     }
   };
 
+  const applyFilters = (data: Transaction[]) => {
+    let filtered = [...data];
+    const now = new Date();
+    
+    // Helper function to get local date from ISO string
+    const getLocalDate = (isoString: string): string => {
+      const date = new Date(isoString);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+    
+    // Get today's local date
+    const todayLocal = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    
+    // Apply date filter
+    if (filterType === 'today') {
+      filtered = filtered.filter(t => {
+        const transDate = getLocalDate(t.created_at);
+        return transDate === todayLocal;
+      });
+    } else if (filterType === 'yesterday') {
+      const yesterday = new Date(now);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+      filtered = filtered.filter(t => {
+        const transDate = getLocalDate(t.created_at);
+        return transDate === yesterdayStr;
+      });
+    } else if (filterType === 'week') {
+      const weekAgo = new Date(now);
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      filtered = filtered.filter(t => {
+        const transDate = new Date(t.created_at);
+        return transDate >= weekAgo;
+      });
+    } else if (filterType === 'month') {
+      const monthAgo = new Date(now);
+      monthAgo.setMonth(monthAgo.getMonth() - 1);
+      filtered = filtered.filter(t => {
+        const transDate = new Date(t.created_at);
+        return transDate >= monthAgo;
+      });
+    } else if (filterType === 'ytd') {
+      const yearStart = new Date(now.getFullYear(), 0, 1);
+      filtered = filtered.filter(t => {
+        const transDate = new Date(t.created_at);
+        return transDate >= yearStart;
+      });
+    }
+    // 'all' shows everything - no filter needed
+    
+    setTransactions(filtered);
+    calculateTotals(filtered);
+    setCurrentPage(1); // Reset to first page when filter changes
+  };
+
   useEffect(() => {
     loadTransactions();
   }, []);
+
+  useEffect(() => {
+    if (allTransactions.length > 0) {
+      applyFilters(allTransactions);
+    }
+  }, [filterType]);
 
   const calculateTotals = (data: Transaction[]) => {
     const totals = data.reduce((acc, transaction) => {
@@ -123,8 +194,9 @@ export function TransactionHistory() {
     
     setSortField(field);
     setSortDirection(newDirection);
+    setCurrentPage(1); // Reset to first page when sorting changes
     
-    const sortedData = [...transactions].sort((a, b) => {
+    const sortedData = [...allTransactions].sort((a, b) => {
       let aValue: any;
       let bValue: any;
       
@@ -153,7 +225,8 @@ export function TransactionHistory() {
       }
     });
     
-    setTransactions(sortedData);
+    setAllTransactions(sortedData);
+    applyFilters(sortedData);
   };
 
   const getSortIndicator = (field: SortField) => {
@@ -173,6 +246,47 @@ export function TransactionHistory() {
   const openTransactionDetails = async (transaction: Transaction) => {
     // Use IPC to open transaction details in a new window
     await window.api.openTransactionDetails(transaction);
+  };
+
+  // Pagination calculations
+  const indexOfLastTransaction = currentPage * transactionsPerPage;
+  const indexOfFirstTransaction = indexOfLastTransaction - transactionsPerPage;
+  const currentTransactions = transactions.slice(indexOfFirstTransaction, indexOfLastTransaction);
+  const totalPages = Math.ceil(transactions.length / transactionsPerPage);
+
+  const handlePageChange = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
+  };
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  // Generate page numbers to display
+  const getPageNumbers = () => {
+    const pageNumbers = [];
+    const maxPagesToShow = 5;
+    
+    let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+    let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+    
+    if (endPage - startPage < maxPagesToShow - 1) {
+      startPage = Math.max(1, endPage - maxPagesToShow + 1);
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+      pageNumbers.push(i);
+    }
+    
+    return pageNumbers;
   };
 
   if (loading) {
@@ -205,11 +319,55 @@ export function TransactionHistory() {
         </div>
       </div>
 
-      {/* Refresh Button */}
-      <div className="transaction-actions">
-        <button onClick={loadTransactions} className="refresh-btn">
-          Refresh
-        </button>
+      {/* Date Filter Controls */}
+      <div className="transaction-filters">
+        <div className="filter-section">
+          <div className="filter-type-buttons">
+            <button 
+              className={`filter-type-btn ${filterType === 'today' ? 'active' : ''}`}
+              onClick={() => setFilterType('today')}
+            >
+              Today
+            </button>
+            <button 
+              className={`filter-type-btn ${filterType === 'yesterday' ? 'active' : ''}`}
+              onClick={() => setFilterType('yesterday')}
+            >
+              Yesterday
+            </button>
+            <button 
+              className={`filter-type-btn ${filterType === 'week' ? 'active' : ''}`}
+              onClick={() => setFilterType('week')}
+            >
+              Last Week
+            </button>
+            <button 
+              className={`filter-type-btn ${filterType === 'month' ? 'active' : ''}`}
+              onClick={() => setFilterType('month')}
+            >
+              Last Month
+            </button>
+            <button 
+              className={`filter-type-btn ${filterType === 'ytd' ? 'active' : ''}`}
+              onClick={() => setFilterType('ytd')}
+            >
+              YTD
+            </button>
+            <button 
+              className={`filter-type-btn ${filterType === 'all' ? 'active' : ''}`}
+              onClick={() => setFilterType('all')}
+            >
+              All Time
+            </button>
+          </div>
+        </div>
+
+        {/* Refresh Button */}
+        <div className="transaction-actions">
+          <button onClick={loadTransactions} className="refresh-btn">
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Error Display */}
@@ -251,7 +409,7 @@ export function TransactionHistory() {
               </tr>
             </thead>
             <tbody>
-              {transactions.map((transaction) => {
+              {currentTransactions.map((transaction) => {
                 const items = parseItems(transaction.items);
                 const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
                 
@@ -260,8 +418,8 @@ export function TransactionHistory() {
                     <td className="id-cell">#{transaction.id}</td>
                     <td className="date-cell">
                       <div className="date-time">
-                        <span className="date">{formatDate(transaction.created_at)}</span>
-                        <span className="time">{formatTime(transaction.created_at)}</span>
+                        <span className="date" style={{ color: '#333' }}>{formatDate(transaction.created_at)}</span>
+                        <span className="time" style={{ color: '#666' }}>{formatTime(transaction.created_at)}</span>
                       </div>
                     </td>
                     <td className="user-cell">{transaction.created_by_username || 'system'}</td>
@@ -285,6 +443,67 @@ export function TransactionHistory() {
               })}
             </tbody>
           </table>
+          
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="pagination-controls">
+              <div className="pagination-info">
+                Showing {indexOfFirstTransaction + 1} - {Math.min(indexOfLastTransaction, transactions.length)} of {transactions.length} transactions
+              </div>
+              
+              <div className="pagination-buttons">
+                <button 
+                  onClick={() => handlePageChange(1)} 
+                  disabled={currentPage === 1}
+                  className="pagination-btn"
+                >
+                  First
+                </button>
+                
+                <button 
+                  onClick={handlePreviousPage} 
+                  disabled={currentPage === 1}
+                  className="pagination-btn"
+                >
+                  Previous
+                </button>
+                
+                {currentPage > 3 && totalPages > 5 && (
+                  <span className="pagination-ellipsis">...</span>
+                )}
+                
+                {getPageNumbers().map(number => (
+                  <button
+                    key={number}
+                    onClick={() => handlePageChange(number)}
+                    className={`pagination-btn ${currentPage === number ? 'active' : ''}`}
+                  >
+                    {number}
+                  </button>
+                ))}
+                
+                {currentPage < totalPages - 2 && totalPages > 5 && (
+                  <span className="pagination-ellipsis">...</span>
+                )}
+                
+                <button 
+                  onClick={handleNextPage} 
+                  disabled={currentPage === totalPages}
+                  className="pagination-btn"
+                >
+                  Next
+                </button>
+                
+                <button 
+                  onClick={() => handlePageChange(totalPages)} 
+                  disabled={currentPage === totalPages}
+                  className="pagination-btn"
+                >
+                  Last
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

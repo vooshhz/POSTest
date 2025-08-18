@@ -25,7 +25,8 @@
       "Bash(pnpm electron-builder:*)",
       "Bash(del nul)",
       "WebSearch",
-      "Bash(del \"C:\\Users\\aadha\\Projects\\POSTest\\src\\YTDTest.tsx\")"
+      "Bash(del \"C:\\Users\\aadha\\Projects\\POSTest\\src\\YTDTest.tsx\")",
+      "Bash(dir:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

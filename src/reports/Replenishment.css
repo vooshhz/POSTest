@@ -1,0 +1,281 @@
+.replenishment-container {
+  padding: 20px;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.replenishment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.replenishment-header h3 {
+  margin: 0;
+  font-size: 24px;
+  color: #333;
+}
+
+.replenishment-controls {
+  display: flex;
+  gap: 20px;
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.control-group label {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+.timeframe-select,
+.threshold-input {
+  padding: 6px 10px;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.threshold-input {
+  width: 60px;
+}
+
+.replenishment-section {
+  margin-bottom: 30px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+  overflow: hidden;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.out-of-stock-header {
+  background: #fff5f5;
+  border-bottom-color: #ffcccc;
+}
+
+.low-stock-header {
+  background: #fffbf0;
+  border-bottom-color: #ffe0aa;
+}
+
+.section-header h4 {
+  margin: 0;
+  font-size: 18px;
+  color: #333;
+}
+
+.urgency-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.urgency-badge.critical {
+  background: #dc3545;
+  color: white;
+}
+
+.urgency-badge.warning {
+  background: #ffc107;
+  color: #333;
+}
+
+.no-items {
+  padding: 40px;
+  text-align: center;
+  color: #999;
+  font-size: 14px;
+}
+
+.replenishment-table-wrapper {
+  overflow-x: auto;
+}
+
+.replenishment-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.replenishment-table thead {
+  background: #f8f9fa;
+}
+
+.replenishment-table th {
+  padding: 12px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.replenishment-table td {
+  padding: 12px;
+  font-size: 14px;
+  color: #333;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.replenishment-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.out-of-stock-row {
+  background: #fff5f5;
+}
+
+.critical-row {
+  background: #fff5f5;
+}
+
+.warning-row {
+  background: #fffbf0;
+}
+
+.upc-cell {
+  font-family: monospace;
+  font-weight: 500;
+}
+
+.description-cell {
+  max-width: 250px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.category-cell {
+  color: #666;
+  font-size: 13px;
+}
+
+.stock-cell,
+.velocity-cell {
+  text-align: center;
+  font-weight: 500;
+}
+
+.days-remaining-cell {
+  text-align: center;
+}
+
+.days-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.days-badge.critical {
+  background: #dc3545;
+  color: white;
+}
+
+.days-badge.warning {
+  background: #ffc107;
+  color: #333;
+}
+
+.last-sale-cell {
+  color: #666;
+  font-size: 13px;
+}
+
+.reorder-qty-cell {
+  text-align: center;
+  font-weight: 600;
+  color: #007bff;
+}
+
+.reorder-value-cell {
+  text-align: right;
+  font-weight: 600;
+  color: #28a745;
+}
+
+.replenishment-summary {
+  margin-top: 30px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.summary-stats {
+  display: flex;
+  justify-content: space-around;
+}
+
+.summary-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 600;
+  color: #333;
+}
+
+.replenishment-loading,
+.replenishment-error {
+  padding: 40px;
+  text-align: center;
+  font-size: 16px;
+}
+
+.replenishment-error {
+  color: #dc3545;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .replenishment-header {
+    flex-direction: column;
+    gap: 20px;
+    align-items: flex-start;
+  }
+  
+  .replenishment-controls {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .control-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .summary-stats {
+    flex-direction: column;
+    gap: 20px;
+  }
+}

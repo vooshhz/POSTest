@@ -158,19 +158,30 @@
 .transaction-table td {
   padding: 0.75rem 1rem;
   border-bottom: 1px solid #eee;
-  color: #333;
+  color: #333 !important;
   text-align: center;
+  background-color: white !important;
 }
 
 .transaction-table tbody tr:hover {
   background: #f9f9ff;
 }
 
+.transaction-table tbody tr:hover td {
+  background-color: #f9f9ff !important;
+}
+
+.transaction-table tbody tr:hover .date-cell .date,
+.transaction-table tbody tr:hover .date-cell .time {
+  color: #333 !important;
+}
+
 .id-cell {
   font-weight: 600;
-  color: #646cff;
+  color: #646cff !important;
   font-family: monospace;
   text-align: center;
+  background-color: white !important;
 }
 
 .date-cell .date-time {
@@ -178,16 +189,18 @@
   flex-direction: column;
   gap: 0.25rem;
   align-items: center;
+  background-color: transparent !important;
 }
 
 .date-cell .date {
   font-weight: 500;
-  color: #333;
+  color: #333 !important;
 }
 
 .date-cell .time {
   font-size: 0.85rem;
-  color: #666;
+  color: #495057 !important;
+  font-weight: 500;
 }
 
 .items-cell {
@@ -263,6 +276,32 @@
   color: #6b46c1;
 }
 
+/* Force all transaction table text to be dark regardless of theme */
+.transaction-table * {
+  color: #333 !important;
+}
+
+.transaction-table td,
+.transaction-table td *,
+.transaction-table .date-cell,
+.transaction-table .date-cell *,
+.transaction-table .date-cell .date,
+.transaction-table .date-cell .time,
+.transaction-table .date-cell .date-time,
+.transaction-table .date-cell .date-time * {
+  color: #333 !important;
+  background-color: transparent !important;
+}
+
+/* Specific overrides for date and time */
+.date-time span,
+.date-time .date,
+.date-time .time,
+span.date,
+span.time {
+  color: #333 !important;
+}
+
 /* Dark mode override - ensure text stays dark */
 @media (prefers-color-scheme: dark) {
   .transaction-table td,
@@ -333,4 +372,140 @@
   .summary-card {
     min-width: calc(50% - 0.5rem);
   }
+}
+
+/* Filter Styles */
+.transaction-filters {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.filter-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  flex: 1;
+}
+
+.filter-type-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.filter-type-btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid #dee2e6;
+  background: white;
+  color: #495057;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.filter-type-btn:hover {
+  background: #f8f9fa;
+  border-color: #646cff;
+}
+
+.filter-type-btn.active {
+  background: #646cff;
+  color: white;
+  border-color: #646cff;
+  font-weight: 500;
+}
+
+.date-input-section,
+.date-range-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.date-input {
+  padding: 0.5rem;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  min-width: 150px;
+}
+
+.date-input:focus {
+  outline: none;
+  border-color: #646cff;
+  box-shadow: 0 0 0 2px rgba(100, 108, 255, 0.1);
+}
+
+.date-separator {
+  color: #666;
+  font-weight: 500;
+}
+
+.transaction-actions {
+  display: flex;
+  align-items: flex-end;
+}
+
+/* Pagination Styles */
+.pagination-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-top: 1px solid #dee2e6;
+  margin-top: -1px;
+}
+
+.pagination-info {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.pagination-buttons {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.pagination-btn {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #dee2e6;
+  background: white;
+  color: #333;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  min-width: 40px;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: #f8f9fa;
+  border-color: #646cff;
+  color: #646cff;
+}
+
+.pagination-btn.active {
+  background: #646cff;
+  color: white;
+  border-color: #646cff;
+  font-weight: 600;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f8f9fa;
+}
+
+.pagination-ellipsis {
+  color: #999;
+  padding: 0 0.5rem;
+  font-weight: 500;
 }

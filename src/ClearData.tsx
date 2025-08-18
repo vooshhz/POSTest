@@ -88,16 +88,13 @@ export default function ClearData() {
     setMessage("Clearing all data...");
 
     try {
-      const inventoryResult = await window.api.clearInventory();
-      const salesResult = await window.api.clearTransactions();
+      // Use the clearAllData API which properly clears everything including adjustments
+      const result = await window.api.clearAllData();
       
-      if (inventoryResult.success && salesResult.success) {
-        setMessage("✅ All data cleared successfully");
+      if (result.success) {
+        setMessage(`✅ All data cleared successfully!\n${result.message}`);
       } else {
-        const errors = [];
-        if (!inventoryResult.success) errors.push(`Inventory: ${inventoryResult.error}`);
-        if (!salesResult.success) errors.push(`Sales: ${salesResult.error}`);
-        setMessage(`❌ Errors occurred:\n${errors.join('\n')}`);
+        setMessage(`❌ Error: ${result.error}`);
       }
     } catch (error) {
       setMessage(`❌ Failed to clear data: ${error}`);

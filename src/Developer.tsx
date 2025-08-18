@@ -2,10 +2,11 @@ import { useState } from "react";
 import TestInventory from "./TestInventory";
 import TestSales from "./TestSales";
 import ClearData from "./ClearData";
+import MockDataByDateRange from "./MockDataByDateRange";
 import "./Developer.css";
 
 export default function Developer() {
-  const [activeTab, setActiveTab] = useState<'test-inventory' | 'test-sales' | 'clear-data'>('test-inventory');
+  const [activeTab, setActiveTab] = useState<'test-inventory' | 'test-sales' | 'mock-data' | 'clear-data'>('test-inventory');
 
   return (
     <div className="developer-container">
@@ -28,6 +29,12 @@ export default function Developer() {
           Test Sales
         </button>
         <button 
+          className={`dev-tab ${activeTab === 'mock-data' ? 'active' : ''}`}
+          onClick={() => setActiveTab('mock-data')}
+        >
+          Mock Data By Date Range
+        </button>
+        <button 
           className={`dev-tab ${activeTab === 'clear-data' ? 'active' : ''} danger-tab`}
           onClick={() => setActiveTab('clear-data')}
         >
@@ -38,6 +45,7 @@ export default function Developer() {
       <div className="dev-content">
         {activeTab === 'test-inventory' && <TestInventory />}
         {activeTab === 'test-sales' && <TestSales />}
+        {activeTab === 'mock-data' && <MockDataByDateRange />}
         {activeTab === 'clear-data' && <ClearData />}
       </div>
     </div>
