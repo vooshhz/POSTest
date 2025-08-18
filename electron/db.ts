@@ -155,8 +155,80 @@ function getInventoryDb() {
       CREATE INDEX IF NOT EXISTS idx_adjustments_user ON inventory_adjustments(created_by_user_id);
     `);
     
+    // Create till management tables
+    inventoryDb.exec(`
+      CREATE TABLE IF NOT EXISTS till_settings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        enabled INTEGER NOT NULL DEFAULT 0,
+        ones INTEGER NOT NULL DEFAULT 0,
+        fives INTEGER NOT NULL DEFAULT 0,
+        tens INTEGER NOT NULL DEFAULT 0,
+        twenties INTEGER NOT NULL DEFAULT 0,
+        fifties INTEGER NOT NULL DEFAULT 0,
+        hundreds INTEGER NOT NULL DEFAULT 0,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+      
+      CREATE TABLE IF NOT EXISTS daily_till (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date DATE NOT NULL UNIQUE,
+        starting_ones INTEGER NOT NULL DEFAULT 0,
+        starting_fives INTEGER NOT NULL DEFAULT 0,
+        starting_tens INTEGER NOT NULL DEFAULT 0,
+        starting_twenties INTEGER NOT NULL DEFAULT 0,
+        starting_fifties INTEGER NOT NULL DEFAULT 0,
+        starting_hundreds INTEGER NOT NULL DEFAULT 0,
+        current_ones INTEGER NOT NULL DEFAULT 0,
+        current_fives INTEGER NOT NULL DEFAULT 0,
+        current_tens INTEGER NOT NULL DEFAULT 0,
+        current_twenties INTEGER NOT NULL DEFAULT 0,
+        current_fifties INTEGER NOT NULL DEFAULT 0,
+        current_hundreds INTEGER NOT NULL DEFAULT 0,
+        cash_transactions INTEGER NOT NULL DEFAULT 0,
+        cash_in REAL NOT NULL DEFAULT 0,
+        cash_out REAL NOT NULL DEFAULT 0,
+        status TEXT DEFAULT 'open' CHECK(status IN ('open', 'closed')),
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        closed_at DATETIME
+      );
+      CREATE INDEX IF NOT EXISTS idx_daily_till_date ON daily_till(date);
+    `);
+    
     // Add migration for existing databases
     try {
+      // Check if cash_in and cash_out columns exist in daily_till
+      const tillInfo = inventoryDb.pragma("table_info(daily_till)");
+      const hasCashIn = (tillInfo as any[]).some((col: any) => col.name === 'cash_in');
+      const hasCashOut = (tillInfo as any[]).some((col: any) => col.name === 'cash_out');
+      const hasStatus = (tillInfo as any[]).some((col: any) => col.name === 'status');
+      const hasCashTransactions = (tillInfo as any[]).some((col: any) => col.name === 'cash_transactions');
+      
+      if (!hasCashIn) {
+        inventoryDb.exec(`ALTER TABLE daily_till ADD COLUMN cash_in REAL NOT NULL DEFAULT 0`);
+        console.log("✅ Added cash_in column to daily_till table");
+      }
+      
+      if (!hasCashOut) {
+        inventoryDb.exec(`ALTER TABLE daily_till ADD COLUMN cash_out REAL NOT NULL DEFAULT 0`);
+        console.log("✅ Added cash_out column to daily_till table");
+      }
+      
+      if (!hasStatus) {
+        inventoryDb.exec(`ALTER TABLE daily_till ADD COLUMN status TEXT DEFAULT 'open' CHECK(status IN ('open', 'closed'))`);
+        console.log("✅ Added status column to daily_till table");
+      }
+      
+      if (!hasCashTransactions) {
+        inventoryDb.exec(`ALTER TABLE daily_till ADD COLUMN cash_transactions INTEGER NOT NULL DEFAULT 0`);
+        console.log("✅ Added cash_transactions column to daily_till table");
+      }
+      
+      // Update any existing till records without status to be 'open'
+      if (!hasStatus) {
+        inventoryDb.exec(`UPDATE daily_till SET status = 'open' WHERE status IS NULL`);
+        console.log("✅ Updated existing till records with 'open' status");
+      }
+      
       // Check if columns exist and add them if they don't
       const transactionsInfo = inventoryDb.pragma("table_info(transactions)");
       const hasUserTracking = (transactionsInfo as any[]).some((col: any) => col.name === 'created_by_user_id');
@@ -889,6 +961,12 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
         
         // Commit the transaction
         invDb.prepare("COMMIT").run();
+        
+        // Update till if payment was cash
+        if (transaction.payment_type === 'cash') {
+          // Update till with the cash amount
+          await updateTillForCashTransaction(transaction.total, false);
+        }
         
         return {
           success: true,
@@ -1788,7 +1866,6 @@ function registerInventoryAnalysis(ipcMain: IpcMain) {
       const items = invDb.prepare(`
         SELECT 
           upc,
-          description,
           cost,
           price,
           quantity,
@@ -1797,7 +1874,6 @@ function registerInventoryAnalysis(ipcMain: IpcMain) {
         WHERE quantity >= 0
       `).all() as Array<{
         upc: string;
-        description: string;
         cost: number;
         price: number;
         quantity: number;
@@ -1839,19 +1915,25 @@ function registerInventoryAnalysis(ipcMain: IpcMain) {
       
       const lastSaleMap = new Map(lastSales.map(s => [s.upc, s.last_sold]));
       
-      // Get categories from products database
-      let categoryMap = new Map<string, string>();
+      // Get categories and descriptions from products database
+      const categoryMap = new Map<string, string>();
+      const descriptionMap = new Map<string, string>();
       if (productsDb) {
         try {
           const products = productsDb.prepare(`
-            SELECT upc, category FROM products
-          `).all() as Array<{ upc: string; category: string | null }>;
+            SELECT 
+              "UPC" as upc, 
+              "Category Name" as category,
+              "Item Description" as description
+            FROM products
+          `).all() as Array<{ upc: string; category: string | null; description: string | null }>;
           
           products.forEach(p => {
             if (p.category) categoryMap.set(p.upc, p.category);
+            if (p.description) descriptionMap.set(p.upc, p.description);
           });
         } catch (err) {
-          console.log("Could not fetch product categories:", err);
+          console.log("Could not fetch product data:", err);
         }
       }
       
@@ -1863,6 +1945,7 @@ function registerInventoryAnalysis(ipcMain: IpcMain) {
         const turnoverRate = item.quantity > 0 ? (soldQuantity / item.quantity) : 0;
         const lastSold = lastSaleMap.get(item.upc) || null;
         const category = categoryMap.get(item.upc) || null;
+        const description = descriptionMap.get(item.upc) || 'Unknown Item';
         
         const daysInStock = lastSold 
           ? Math.floor((Date.now() - new Date(lastSold).getTime()) / (1000 * 60 * 60 * 24))
@@ -1870,7 +1953,7 @@ function registerInventoryAnalysis(ipcMain: IpcMain) {
         
         return {
           upc: item.upc,
-          description: item.description,
+          description,
           category,
           cost: item.cost,
           price: item.price,
@@ -2845,6 +2928,449 @@ ipcMain.handle("add-to-inventory-with-date", async (_, item: InventoryItem & { c
       };
     }
   });
+  
+  // Till Management IPC Handlers
+  // Get till settings
+  ipcMain.handle("get-till-settings", async () => {
+    try {
+      const invDb = getInventoryDb();
+      
+      // Get or create default settings
+      let settings = invDb.prepare(`
+        SELECT * FROM till_settings ORDER BY id DESC LIMIT 1
+      `).get() as any;
+      
+      if (!settings) {
+        // Create default settings
+        invDb.prepare(`
+          INSERT INTO till_settings (enabled, ones, fives, tens, twenties, fifties, hundreds)
+          VALUES (0, 0, 0, 0, 0, 0, 0)
+        `).run();
+        
+        settings = invDb.prepare(`
+          SELECT * FROM till_settings ORDER BY id DESC LIMIT 1
+        `).get();
+      }
+      
+      return {
+        success: true,
+        data: {
+          enabled: settings.enabled === 1,
+          denominations: {
+            ones: settings.ones,
+            fives: settings.fives,
+            tens: settings.tens,
+            twenties: settings.twenties,
+            fifties: settings.fifties,
+            hundreds: settings.hundreds
+          }
+        }
+      };
+    } catch (error) {
+      console.error("Get till settings error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to get till settings"
+      };
+    }
+  });
+
+  // Save till settings
+  ipcMain.handle("save-till-settings", async (_, settings: any) => {
+    try {
+      const invDb = getInventoryDb();
+      
+      // Update or insert settings
+      const existing = invDb.prepare(`
+        SELECT id FROM till_settings ORDER BY id DESC LIMIT 1
+      `).get() as any;
+      
+      if (existing) {
+        invDb.prepare(`
+          UPDATE till_settings
+          SET enabled = ?, ones = ?, fives = ?, tens = ?, twenties = ?, fifties = ?, hundreds = ?, updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `).run(
+          settings.enabled ? 1 : 0,
+          settings.denominations.ones,
+          settings.denominations.fives,
+          settings.denominations.tens,
+          settings.denominations.twenties,
+          settings.denominations.fifties,
+          settings.denominations.hundreds,
+          existing.id
+        );
+      } else {
+        invDb.prepare(`
+          INSERT INTO till_settings (enabled, ones, fives, tens, twenties, fifties, hundreds)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          settings.enabled ? 1 : 0,
+          settings.denominations.ones,
+          settings.denominations.fives,
+          settings.denominations.tens,
+          settings.denominations.twenties,
+          settings.denominations.fifties,
+          settings.denominations.hundreds
+        );
+      }
+      
+      return { success: true };
+    } catch (error) {
+      console.error("Save till settings error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to save till settings"
+      };
+    }
+  });
+
+  // Get current till status
+  ipcMain.handle("get-current-till", async () => {
+    try {
+      const invDb = getInventoryDb();
+      const today = new Date().toISOString().split('T')[0];
+      
+      // First check if there's ANY till record for today
+      let till = invDb.prepare(`
+        SELECT * FROM daily_till WHERE date = ?
+      `).get(today) as any;
+      
+      if (till) {
+        // If till exists but status is NULL or closed, update it to open if settings are enabled
+        if (till.status !== 'open') {
+          const settings = invDb.prepare(`
+            SELECT * FROM till_settings ORDER BY id DESC LIMIT 1
+          `).get() as any;
+          
+          if (settings && settings.enabled === 1) {
+            // Reopen the till with current values
+            invDb.prepare(`
+              UPDATE daily_till 
+              SET status = 'open', closed_at = NULL
+              WHERE date = ?
+            `).run(today);
+            
+            till = invDb.prepare(`
+              SELECT * FROM daily_till WHERE date = ?
+            `).get(today) as any;
+          } else {
+            // Till exists but is closed and settings are not enabled
+            return { success: true, data: null };
+          }
+        }
+        
+        return {
+          success: true,
+          data: formatTillData(till)
+        };
+      }
+      
+      // No till exists for today, check if we should create one
+      const settings = invDb.prepare(`
+        SELECT * FROM till_settings ORDER BY id DESC LIMIT 1
+      `).get() as any;
+      
+      if (settings && settings.enabled === 1) {
+        // Auto-initialize till for today
+        try {
+          invDb.prepare(`
+            INSERT INTO daily_till (
+              date, 
+              starting_ones, starting_fives, starting_tens, starting_twenties, starting_fifties, starting_hundreds,
+              current_ones, current_fives, current_tens, current_twenties, current_fifties, current_hundreds,
+              status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open')
+          `).run(
+            today,
+            settings.ones, settings.fives, settings.tens, settings.twenties, settings.fifties, settings.hundreds,
+            settings.ones, settings.fives, settings.tens, settings.twenties, settings.fifties, settings.hundreds
+          );
+          
+          const newTill = invDb.prepare(`
+            SELECT * FROM daily_till WHERE date = ?
+          `).get(today) as any;
+          
+          return {
+            success: true,
+            data: formatTillData(newTill)
+          };
+        } catch (insertError) {
+          console.error("Error inserting new till:", insertError);
+          return { success: true, data: null };
+        }
+      }
+      
+      return { success: true, data: null };
+    } catch (error) {
+      console.error("Get current till error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to get current till"
+      };
+    }
+  });
+
+  // Initialize till for today
+  ipcMain.handle("initialize-till", async (_, denominations: any) => {
+    try {
+      const invDb = getInventoryDb();
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Check if till already exists for today
+      const existing = invDb.prepare(`
+        SELECT id FROM daily_till WHERE date = ?
+      `).get(today) as any;
+      
+      if (existing) {
+        return {
+          success: false,
+          error: "Till already initialized for today"
+        };
+      }
+      
+      invDb.prepare(`
+        INSERT INTO daily_till (
+          date, 
+          starting_ones, starting_fives, starting_tens, starting_twenties, starting_fifties, starting_hundreds,
+          current_ones, current_fives, current_tens, current_twenties, current_fifties, current_hundreds
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        today,
+        denominations.ones, denominations.fives, denominations.tens, 
+        denominations.twenties, denominations.fifties, denominations.hundreds,
+        denominations.ones, denominations.fives, denominations.tens, 
+        denominations.twenties, denominations.fifties, denominations.hundreds
+      );
+      
+      const newTill = invDb.prepare(`
+        SELECT * FROM daily_till WHERE date = ?
+      `).get(today) as any;
+      
+      return {
+        success: true,
+        data: formatTillData(newTill)
+      };
+    } catch (error) {
+      console.error("Initialize till error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to initialize till"
+      };
+    }
+  });
+
+  // Close till for the day
+  ipcMain.handle("close-till", async () => {
+    try {
+      const invDb = getInventoryDb();
+      const today = new Date().toISOString().split('T')[0];
+      
+      invDb.prepare(`
+        UPDATE daily_till 
+        SET status = 'closed', closed_at = CURRENT_TIMESTAMP
+        WHERE date = ? AND status = 'open'
+      `).run(today);
+      
+      return { success: true };
+    } catch (error) {
+      console.error("Close till error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to close till"
+      };
+    }
+  });
+
+  // Reset till (for testing)
+  ipcMain.handle("reset-till", async () => {
+    try {
+      const invDb = getInventoryDb();
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Delete today's till record
+      invDb.prepare(`
+        DELETE FROM daily_till WHERE date = ?
+      `).run(today);
+      
+      // Get till settings to reinitialize if enabled
+      const settings = invDb.prepare(`
+        SELECT * FROM till_settings ORDER BY id DESC LIMIT 1
+      `).get() as any;
+      
+      let newTillData = null;
+      
+      if (settings && settings.enabled === 1) {
+        // Reinitialize with default settings
+        invDb.prepare(`
+          INSERT INTO daily_till (
+            date, 
+            starting_ones, starting_fives, starting_tens, starting_twenties, starting_fifties, starting_hundreds,
+            current_ones, current_fives, current_tens, current_twenties, current_fifties, current_hundreds,
+            cash_in, cash_out
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)
+        `).run(
+          today,
+          settings.ones, settings.fives, settings.tens, settings.twenties, settings.fifties, settings.hundreds,
+          settings.ones, settings.fives, settings.tens, settings.twenties, settings.fifties, settings.hundreds
+        );
+        
+        const newTill = invDb.prepare(`
+          SELECT * FROM daily_till WHERE date = ?
+        `).get(today) as any;
+        
+        newTillData = formatTillData(newTill);
+      }
+      
+      return {
+        success: true,
+        data: newTillData,
+        message: "Till has been reset successfully"
+      };
+    } catch (error) {
+      console.error("Reset till error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to reset till"
+      };
+    }
+  });
+
+  // Update till after cash transaction
+  ipcMain.handle("update-till-cash", async (_, amount: number, isReturn = false) => {
+    try {
+      // Use the helper function
+      await updateTillForCashTransaction(amount, isReturn);
+      return { success: true };
+    } catch (error) {
+      console.error("Update till cash error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to update till"
+      };
+    }
+  });
+}
+
+// Helper function to update till for cash transactions
+async function updateTillForCashTransaction(amount: number, isReturn: boolean) {
+  try {
+    const invDb = getInventoryDb();
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Get current till
+    const till = invDb.prepare(`
+      SELECT * FROM daily_till WHERE date = ? AND status = 'open'
+    `).get(today) as any;
+    
+    if (!till) {
+      // Till not initialized, skip update
+      return;
+    }
+    
+    // Round amount to nearest dollar
+    const roundedAmount = Math.round(amount);
+    const cashDelta = isReturn ? -Math.abs(roundedAmount) : Math.abs(roundedAmount);
+    
+    // Calculate denomination changes (simplified - uses common bills)
+    let remainingAmount = Math.abs(roundedAmount);
+    let hundredsDelta = 0;
+    let fiftiesDelta = 0;
+    let twentiesDelta = 0;
+    let tensDelta = 0;
+    let fivesDelta = 0;
+    let onesDelta = 0;
+    
+    // For simplicity, we'll primarily use twenties and adjust with smaller bills
+    twentiesDelta = Math.floor(remainingAmount / 20);
+    remainingAmount = remainingAmount % 20;
+    
+    if (remainingAmount >= 10) {
+      tensDelta = 1;
+      remainingAmount -= 10;
+    }
+    
+    if (remainingAmount >= 5) {
+      fivesDelta = 1;
+      remainingAmount -= 5;
+    }
+    
+    onesDelta = remainingAmount;
+    
+    // Apply sign based on transaction type
+    const sign = cashDelta > 0 ? 1 : -1;
+    
+    // Update cash in/out tracking
+    const cashInUpdate = isReturn ? 0 : roundedAmount;
+    const cashOutUpdate = isReturn ? roundedAmount : 0;
+    
+    invDb.prepare(`
+      UPDATE daily_till 
+      SET 
+        current_ones = current_ones + ?,
+        current_fives = current_fives + ?,
+        current_tens = current_tens + ?,
+        current_twenties = current_twenties + ?,
+        current_fifties = current_fifties + ?,
+        current_hundreds = current_hundreds + ?,
+        cash_transactions = cash_transactions + ?,
+        cash_in = cash_in + ?,
+        cash_out = cash_out + ?
+      WHERE date = ? AND status = 'open'
+    `).run(
+      onesDelta * sign,
+      fivesDelta * sign,
+      tensDelta * sign,
+      twentiesDelta * sign,
+      fiftiesDelta * sign,
+      hundredsDelta * sign,
+      isReturn ? 0 : 1, // Only count non-return transactions
+      cashInUpdate,
+      cashOutUpdate,
+      today
+    );
+  } catch (error) {
+    console.error("Update till for cash transaction error:", error);
+    // Don't throw - till updates shouldn't break transactions
+  }
+}
+
+// Helper function to format till data
+function formatTillData(till: any) {
+  if (!till) return null;
+  
+  const startingCash = 
+    till.starting_ones * 1 +
+    till.starting_fives * 5 +
+    till.starting_tens * 10 +
+    till.starting_twenties * 20 +
+    till.starting_fifties * 50 +
+    till.starting_hundreds * 100;
+  
+  const currentCash = 
+    till.current_ones * 1 +
+    till.current_fives * 5 +
+    till.current_tens * 10 +
+    till.current_twenties * 20 +
+    till.current_fifties * 50 +
+    till.current_hundreds * 100;
+  
+  return {
+    date: till.date,
+    startingCash,
+    currentCash,
+    transactions: till.cash_transactions,
+    cashIn: till.cash_in || 0,
+    cashOut: till.cash_out || 0,
+    denominations: {
+      ones: till.current_ones,
+      fives: till.current_fives,
+      tens: till.current_tens,
+      twenties: till.current_twenties,
+      fifties: till.current_fifties,
+      hundreds: till.current_hundreds
+    }
+  };
 }
 
 // Cleanup on app quit

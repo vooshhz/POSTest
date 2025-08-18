@@ -1,0 +1,221 @@
+.till-dashboard {
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-left: 10px;
+}
+
+.till-dashboard.compact {
+  padding: 8px 12px;
+}
+
+.till-message {
+  padding: 8px 12px;
+  background: #d4edda;
+  color: #155724;
+  border-bottom: 1px solid #c3e6cb;
+  text-align: center;
+  font-size: 14px;
+}
+
+.till-summary {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 10px 15px;
+  background: #f8f9fa;
+}
+
+.till-status-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.till-status-badge.active {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.till-status-badge.inactive {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.status-icon {
+  font-size: 16px;
+}
+
+.till-quick-stats {
+  display: flex;
+  gap: 20px;
+  flex: 1;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.stat-value {
+  font-size: 16px;
+  font-weight: bold;
+  color: #212529;
+}
+
+.stat-value.cash-in {
+  color: #28a745;
+}
+
+.stat-value.cash-out {
+  color: #dc3545;
+}
+
+.stat-value.positive {
+  color: #28a745;
+}
+
+.stat-value.negative {
+  color: #dc3545;
+}
+
+.till-actions-compact {
+  display: flex;
+  gap: 8px;
+}
+
+.till-toggle-btn,
+.till-reset-btn,
+.till-close-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.till-toggle-btn {
+  background: #6c757d;
+  color: white;
+}
+
+.till-toggle-btn:hover {
+  background: #5a6268;
+}
+
+.till-reset-btn {
+  background: #ffc107;
+  color: #212529;
+}
+
+.till-reset-btn:hover:not(:disabled) {
+  background: #e0a800;
+}
+
+.till-close-btn {
+  background: #dc3545;
+  color: white;
+}
+
+.till-close-btn:hover:not(:disabled) {
+  background: #c82333;
+}
+
+.till-toggle-btn:disabled,
+.till-reset-btn:disabled,
+.till-close-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.till-details {
+  padding: 15px;
+  border-top: 1px solid #dee2e6;
+  background: white;
+}
+
+.till-detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 14px;
+}
+
+.till-detail-row span:first-child {
+  color: #6c757d;
+}
+
+.till-detail-row span:last-child {
+  font-weight: 600;
+  color: #212529;
+}
+
+.till-denominations {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #e9ecef;
+}
+
+.till-denominations h5 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  color: #495057;
+  font-weight: 600;
+}
+
+.denomination-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.denom {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.denom-label {
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.denom-count {
+  font-weight: bold;
+  color: #212529;
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 1400px) {
+  .till-quick-stats {
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .stat-item {
+    font-size: 12px;
+  }
+  
+  .stat-value {
+    font-size: 14px;
+  }
+}

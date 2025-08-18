@@ -25,6 +25,12 @@
   font-size: 1.5rem;
 }
 
+.pos-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .populate-btn {
   background: #646cff;
   color: white;

@@ -2,10 +2,11 @@ import { useState, useEffect } from "react";
 import UserManagement from "./UserManagement";
 import StoreInfo from "./StoreInfo";
 import ReceiptSettings from "./ReceiptSettings";
+import TillSettings from "./TillSettings";
 import "./Settings.css";
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState<'users' | 'store' | 'receipts' | 'system'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'store' | 'receipts' | 'till' | 'system'>('users');
   const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
@@ -49,6 +50,14 @@ export default function Settings() {
         >
           Receipts
         </button>
+        {currentUser?.role === 'admin' && (
+          <button 
+            className={`settings-tab ${activeTab === 'till' ? 'active' : ''}`}
+            onClick={() => setActiveTab('till')}
+          >
+            Till
+          </button>
+        )}
         <button 
           className={`settings-tab ${activeTab === 'system' ? 'active' : ''}`}
           onClick={() => setActiveTab('system')}
@@ -61,6 +70,7 @@ export default function Settings() {
         {activeTab === 'users' && <UserManagement currentUser={currentUser} onUserUpdate={checkCurrentUser} />}
         {activeTab === 'store' && <StoreInfo />}
         {activeTab === 'receipts' && <ReceiptSettings />}
+        {activeTab === 'till' && <TillSettings currentUser={currentUser} />}
         {activeTab === 'system' && (
           <div className="settings-panel">
             <h3>System Settings</h3>

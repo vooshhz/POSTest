@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import "./CartScanner.css";
 import TransactionCompleteModal from "./TransactionCompleteModal";
+import TillDashboard from "./TillDashboard";
 
 interface CartItem {
   upc: string;
@@ -513,13 +514,83 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
     setCart(updatedCart);
   };
 
+  const handlePopulate = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      
+      // Get current inventory with stock levels
+      const inventoryResult = await window.api.getInventory();
+      if (!inventoryResult.success || !inventoryResult.data) {
+        setError("Failed to load inventory");
+        return;
+      }
+      
+      // Filter for items with quantity > 0
+      const availableItems = inventoryResult.data.filter((item: any) => 
+        item.quantity > 0 && item.description
+      );
+      
+      if (availableItems.length === 0) {
+        setError("No items available in inventory");
+        return;
+      }
+      
+      // Randomly select 1-5 items
+      const numItems = Math.floor(Math.random() * 5) + 1;
+      const selectedItems: CartItem[] = [];
+      const usedUpcs = new Set<string>();
+      
+      for (let i = 0; i < numItems && i < availableItems.length; i++) {
+        // Pick a random item that hasn't been selected yet
+        let randomItem: any;
+        do {
+          randomItem = availableItems[Math.floor(Math.random() * availableItems.length)];
+        } while (usedUpcs.has(randomItem.upc) && usedUpcs.size < availableItems.length);
+        
+        if (usedUpcs.has(randomItem.upc)) continue;
+        usedUpcs.add(randomItem.upc);
+        
+        // Random quantity between 1-2, but not more than available
+        const maxQty = Math.min(2, randomItem.quantity);
+        const qty = Math.floor(Math.random() * maxQty) + 1;
+        
+        selectedItems.push({
+          upc: randomItem.upc,
+          description: randomItem.description,
+          volume: randomItem.volume,
+          quantity: qty,
+          cost: randomItem.cost,
+          price: randomItem.price
+        });
+      }
+      
+      // Add items to cart
+      setCart(selectedItems);
+      setError("");
+      
+    } catch (err) {
+      console.error("Error populating cart:", err);
+      setError("Failed to populate cart");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="cart-scanner-container">
       <div className="pos-header">
         <h2>Point of Sale</h2>
-        <button className="populate-btn">
-          Populate
-        </button>
+        <div className="pos-header-controls">
+          <button 
+            className="populate-btn"
+            onClick={handlePopulate}
+            disabled={loading}
+          >
+            {loading ? 'Loading...' : 'Populate'}
+          </button>
+          <TillDashboard />
+        </div>
       </div>
       
       <div className="main-content">

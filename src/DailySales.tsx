@@ -36,6 +36,7 @@ export default function DailySales() {
   const [loading, setLoading] = useState(false);
   const [salesData, setSalesData] = useState<DailySalesData | null>(null);
   const [multiDaySalesData, setMultiDaySalesData] = useState<DailySalesData[]>([]);
+  const [aggregatedData, setAggregatedData] = useState<DailySalesData | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -73,6 +74,7 @@ export default function DailySales() {
     setLoading(true);
     setError("");
     setSalesData(null);
+    setAggregatedData(null);
     
     try {
       const allData: DailySalesData[] = [];
@@ -90,10 +92,19 @@ export default function DailySales() {
       }
       
       setMultiDaySalesData(allData);
+      
+      // Aggregate the data for display
+      if (allData.length > 0) {
+        const aggregated = aggregateMultiDayData(allData);
+        setAggregatedData(aggregated);
+      } else {
+        setError(`No sales data found for date range: ${startDate} to ${endDate}`);
+      }
     } catch (err) {
       setError("Failed to load sales data for date range");
       console.error(err);
       setMultiDaySalesData([]);
+      setAggregatedData(null);
     } finally {
       setLoading(false);
     }
@@ -117,10 +128,89 @@ export default function DailySales() {
     return `${displayHour}${period}`;
   };
 
-  const getMaxHourlyAmount = () => {
-    if (!salesData?.hourlyBreakdown.length) return 100;
-    return Math.max(...salesData.hourlyBreakdown.map(h => h.amount));
+  const aggregateMultiDayData = (dataArray: DailySalesData[]): DailySalesData => {
+    // Initialize aggregated data
+    const aggregated: DailySalesData = {
+      date: `${startDate} to ${endDate}`,
+      totalSales: 0,
+      salesCount: 0,
+      itemsSold: 0,
+      avgSaleAmount: 0,
+      totalTax: 0,
+      paymentBreakdown: {
+        cash: 0,
+        debit: 0,
+        credit: 0
+      },
+      hourlyBreakdown: [],
+      topProducts: []
+    };
+
+    // Aggregate basic metrics
+    dataArray.forEach(day => {
+      aggregated.totalSales += day.totalSales;
+      aggregated.salesCount += day.salesCount;
+      aggregated.itemsSold += day.itemsSold;
+      aggregated.totalTax += day.totalTax;
+      aggregated.paymentBreakdown.cash += day.paymentBreakdown.cash;
+      aggregated.paymentBreakdown.debit += day.paymentBreakdown.debit;
+      aggregated.paymentBreakdown.credit += day.paymentBreakdown.credit;
+    });
+
+    // Calculate average sale amount
+    aggregated.avgSaleAmount = aggregated.salesCount > 0 
+      ? aggregated.totalSales / aggregated.salesCount 
+      : 0;
+
+    // Aggregate hourly breakdown
+    const hourlyMap = new Map<number, { sales: number; amount: number }>();
+    dataArray.forEach(day => {
+      day.hourlyBreakdown.forEach(hour => {
+        const existing = hourlyMap.get(hour.hour) || { sales: 0, amount: 0 };
+        hourlyMap.set(hour.hour, {
+          sales: existing.sales + hour.sales,
+          amount: existing.amount + hour.amount
+        });
+      });
+    });
+    
+    aggregated.hourlyBreakdown = Array.from(hourlyMap.entries())
+      .map(([hour, data]) => ({ hour, ...data }))
+      .sort((a, b) => a.hour - b.hour);
+
+    // Aggregate top products
+    const productMap = new Map<string, { description: string; quantity: number; revenue: number }>();
+    dataArray.forEach(day => {
+      day.topProducts.forEach(product => {
+        const existing = productMap.get(product.upc) || {
+          description: product.description,
+          quantity: 0,
+          revenue: 0
+        };
+        productMap.set(product.upc, {
+          description: product.description,
+          quantity: existing.quantity + product.quantity,
+          revenue: existing.revenue + product.revenue
+        });
+      });
+    });
+
+    aggregated.topProducts = Array.from(productMap.entries())
+      .map(([upc, data]) => ({ upc, ...data }))
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 10); // Top 10 products
+
+    return aggregated;
   };
+
+  const getMaxHourlyAmount = () => {
+    const data = isRangeMode ? aggregatedData : salesData;
+    if (!data?.hourlyBreakdown.length) return 100;
+    return Math.max(...data.hourlyBreakdown.map(h => h.amount));
+  };
+
+  // Determine which data to display
+  const displayData = isRangeMode ? aggregatedData : salesData;
 
   if (loading) {
     return (
@@ -179,35 +269,47 @@ export default function DailySales() {
         </div>
       )}
 
-      {!salesData || salesData.salesCount === 0 ? (
+      {!displayData || displayData.salesCount === 0 ? (
         <div className="no-sales">
-          <p>No sales recorded for {new Date(selectedDate + 'T12:00:00').toLocaleDateString()}</p>
+          <p>
+            {isRangeMode 
+              ? `No sales recorded for date range: ${startDate} to ${endDate}`
+              : `No sales recorded for ${new Date(selectedDate + 'T12:00:00').toLocaleDateString()}`
+            }
+          </p>
         </div>
       ) : (
         <>
+          {/* Period indicator for date range */}
+          {isRangeMode && (
+            <div className="date-range-indicator">
+              <strong>Date Range:</strong> {startDate} to {endDate}
+            </div>
+          )}
+          
           {/* Key Metrics Cards */}
           <div className="metrics-grid">
             <div className="metric-card">
               <div className="metric-label">Total Revenue</div>
-              <div className="metric-value">{formatCurrency(salesData.totalSales)}</div>
+              <div className="metric-value">{formatCurrency(displayData.totalSales)}</div>
               <div className="metric-detail">Including tax</div>
             </div>
             
             <div className="metric-card">
               <div className="metric-label">Transactions</div>
-              <div className="metric-value">{salesData.salesCount}</div>
-              <div className="metric-detail">Avg: {formatCurrency(salesData.avgSaleAmount)}</div>
+              <div className="metric-value">{displayData.salesCount}</div>
+              <div className="metric-detail">Avg: {formatCurrency(displayData.avgSaleAmount)}</div>
             </div>
             
             <div className="metric-card">
               <div className="metric-label">Items Sold</div>
-              <div className="metric-value">{salesData.itemsSold}</div>
-              <div className="metric-detail">{(salesData.itemsSold / salesData.salesCount).toFixed(1)} per sale</div>
+              <div className="metric-value">{displayData.itemsSold}</div>
+              <div className="metric-detail">{(displayData.itemsSold / displayData.salesCount).toFixed(1)} per sale</div>
             </div>
             
             <div className="metric-card">
               <div className="metric-label">Tax Collected</div>
-              <div className="metric-value">{formatCurrency(salesData.totalTax)}</div>
+              <div className="metric-value">{formatCurrency(displayData.totalTax)}</div>
               <div className="metric-detail"></div>
             </div>
           </div>
@@ -219,12 +321,12 @@ export default function DailySales() {
               <div className="payment-bar">
                 <div className="payment-label">
                   <span>Cash</span>
-                  <span>{formatCurrency(salesData.paymentBreakdown.cash)}</span>
+                  <span>{formatCurrency(displayData.paymentBreakdown.cash)}</span>
                 </div>
                 <div className="bar-container">
                   <div 
                     className="bar cash-bar" 
-                    style={{ width: `${(salesData.paymentBreakdown.cash / salesData.totalSales) * 100}%` }}
+                    style={{ width: `${(displayData.paymentBreakdown.cash / displayData.totalSales) * 100}%` }}
                   />
                 </div>
               </div>
@@ -232,12 +334,12 @@ export default function DailySales() {
               <div className="payment-bar">
                 <div className="payment-label">
                   <span>Debit</span>
-                  <span>{formatCurrency(salesData.paymentBreakdown.debit)}</span>
+                  <span>{formatCurrency(displayData.paymentBreakdown.debit)}</span>
                 </div>
                 <div className="bar-container">
                   <div 
                     className="bar debit-bar" 
-                    style={{ width: `${(salesData.paymentBreakdown.debit / salesData.totalSales) * 100}%` }}
+                    style={{ width: `${(displayData.paymentBreakdown.debit / displayData.totalSales) * 100}%` }}
                   />
                 </div>
               </div>
@@ -245,12 +347,12 @@ export default function DailySales() {
               <div className="payment-bar">
                 <div className="payment-label">
                   <span>Credit</span>
-                  <span>{formatCurrency(salesData.paymentBreakdown.credit)}</span>
+                  <span>{formatCurrency(displayData.paymentBreakdown.credit)}</span>
                 </div>
                 <div className="bar-container">
                   <div 
                     className="bar credit-bar" 
-                    style={{ width: `${(salesData.paymentBreakdown.credit / salesData.totalSales) * 100}%` }}
+                    style={{ width: `${(displayData.paymentBreakdown.credit / displayData.totalSales) * 100}%` }}
                   />
                 </div>
               </div>
@@ -262,7 +364,7 @@ export default function DailySales() {
             <h4>Sales by Hour</h4>
             <div className="hourly-chart">
               {Array.from({ length: 24 }, (_, hour) => {
-                const hourData = salesData.hourlyBreakdown.find(h => h.hour === hour);
+                const hourData = displayData.hourlyBreakdown.find(h => h.hour === hour);
                 const amount = hourData?.amount || 0;
                 const maxAmount = getMaxHourlyAmount();
                 const height = maxAmount > 0 ? (amount / maxAmount) * 100 : 0;
@@ -301,12 +403,12 @@ export default function DailySales() {
                   </tr>
                 </thead>
                 <tbody>
-                  {salesData.topProducts.length === 0 ? (
+                  {displayData.topProducts.length === 0 ? (
                     <tr>
                       <td colSpan={4} className="no-data">No products sold</td>
                     </tr>
                   ) : (
-                    salesData.topProducts.map((product, index) => (
+                    displayData.topProducts.map((product, index) => (
                       <tr key={product.upc}>
                         <td>
                           <div className="product-rank">
@@ -329,8 +431,8 @@ export default function DailySales() {
           <div className="daily-summary">
             <div className="summary-text">
               <strong>Daily Summary:</strong> 
-              {' '}Processed {salesData.salesCount} transactions totaling {formatCurrency(salesData.totalSales)} 
-              {' '}with {salesData.itemsSold} items sold.
+              {' '}Processed {displayData.salesCount} transactions totaling {formatCurrency(displayData.totalSales)} 
+              {' '}with {displayData.itemsSold} items sold.
             </div>
           </div>
         </>

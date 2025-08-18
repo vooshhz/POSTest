@@ -482,6 +482,111 @@ interface InventoryAPI {
     transactionId?: number;
     error?: string;
   }>;
+  getTillSettings: () => Promise<{
+    success: boolean;
+    data?: {
+      enabled: boolean;
+      denominations: {
+        ones: number;
+        fives: number;
+        tens: number;
+        twenties: number;
+        fifties: number;
+        hundreds: number;
+      };
+    };
+    error?: string;
+  }>;
+  saveTillSettings: (settings: {
+    enabled: boolean;
+    denominations: {
+      ones: number;
+      fives: number;
+      tens: number;
+      twenties: number;
+      fifties: number;
+      hundreds: number;
+    };
+  }) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+  getCurrentTill: () => Promise<{
+    success: boolean;
+    data?: {
+      date: string;
+      startingCash: number;
+      currentCash: number;
+      transactions: number;
+      cashIn: number;
+      cashOut: number;
+      denominations: {
+        ones: number;
+        fives: number;
+        tens: number;
+        twenties: number;
+        fifties: number;
+        hundreds: number;
+      };
+    } | null;
+    error?: string;
+  }>;
+  initializeTill: (denominations: {
+    ones: number;
+    fives: number;
+    tens: number;
+    twenties: number;
+    fifties: number;
+    hundreds: number;
+  }) => Promise<{
+    success: boolean;
+    data?: {
+      date: string;
+      startingCash: number;
+      currentCash: number;
+      transactions: number;
+      cashIn: number;
+      cashOut: number;
+      denominations: {
+        ones: number;
+        fives: number;
+        tens: number;
+        twenties: number;
+        fifties: number;
+        hundreds: number;
+      };
+    };
+    error?: string;
+  }>;
+  closeTill: () => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+  resetTill: () => Promise<{
+    success: boolean;
+    data?: {
+      date: string;
+      startingCash: number;
+      currentCash: number;
+      transactions: number;
+      cashIn: number;
+      cashOut: number;
+      denominations: {
+        ones: number;
+        fives: number;
+        tens: number;
+        twenties: number;
+        fifties: number;
+        hundreds: number;
+      };
+    } | null;
+    message?: string;
+    error?: string;
+  }>;
+  updateTillCash: (amount: number, isReturn?: boolean) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
 }
 
 // Expose protected methods to the renderer
@@ -525,7 +630,14 @@ const api: InventoryAPI = {
   addToInventoryWithDate: (item) => ipcRenderer.invoke("add-to-inventory-with-date", item),
   getRandomProducts: (count) => ipcRenderer.invoke("get-random-products", count),
   clearMockData: () => ipcRenderer.invoke("clear-mock-data"),
-  saveMockTransaction: (transaction) => ipcRenderer.invoke("save-mock-transaction", transaction)
+  saveMockTransaction: (transaction) => ipcRenderer.invoke("save-mock-transaction", transaction),
+  getTillSettings: () => ipcRenderer.invoke("get-till-settings"),
+  saveTillSettings: (settings) => ipcRenderer.invoke("save-till-settings", settings),
+  getCurrentTill: () => ipcRenderer.invoke("get-current-till"),
+  initializeTill: (denominations) => ipcRenderer.invoke("initialize-till", denominations),
+  closeTill: () => ipcRenderer.invoke("close-till"),
+  resetTill: () => ipcRenderer.invoke("reset-till"),
+  updateTillCash: (amount, isReturn) => ipcRenderer.invoke("update-till-cash", amount, isReturn)
 };
 
 contextBridge.exposeInMainWorld("api", api);

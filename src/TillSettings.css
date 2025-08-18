@@ -1,0 +1,317 @@
+.till-settings {
+  padding: 20px;
+}
+
+.till-settings h3 {
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.till-settings h4 {
+  margin-top: 30px;
+  margin-bottom: 15px;
+  color: #444;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 8px;
+}
+
+.till-settings h5 {
+  margin-top: 20px;
+  margin-bottom: 12px;
+  color: #555;
+}
+
+.message {
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.message.success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.message.error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.till-settings-section {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.enable-till {
+  margin-bottom: 25px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  margin-right: 10px;
+  cursor: pointer;
+}
+
+.checkbox-label span {
+  font-weight: 500;
+}
+
+.help-text {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #666;
+  font-style: italic;
+}
+
+.denominations-section {
+  margin-top: 20px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+
+.denominations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 20px;
+  margin-top: 15px;
+}
+
+.denomination-input {
+  display: flex;
+  flex-direction: column;
+  background: white;
+  padding: 12px;
+  border-radius: 4px;
+  border: 1px solid #dee2e6;
+}
+
+.denomination-input label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #495057;
+  margin-bottom: 6px;
+}
+
+.denomination-input input {
+  padding: 8px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 16px;
+  text-align: center;
+}
+
+.denomination-input input:focus {
+  outline: none;
+  border-color: #4dabf7;
+  box-shadow: 0 0 0 2px rgba(77, 171, 247, 0.1);
+}
+
+.denomination-input .total {
+  margin-top: 6px;
+  font-size: 14px;
+  color: #28a745;
+  font-weight: 500;
+  text-align: center;
+}
+
+.total-cash {
+  margin-top: 25px;
+  padding: 15px;
+  background: white;
+  border-radius: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 18px;
+  border: 2px solid #28a745;
+}
+
+.total-cash .amount {
+  color: #28a745;
+  font-weight: bold;
+  font-size: 24px;
+}
+
+.settings-actions {
+  margin-top: 25px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.save-btn {
+  padding: 10px 30px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.save-btn:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+.save-btn:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.current-till-section {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 2px solid #17a2b8;
+}
+
+.till-status {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+}
+
+.status-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.status-row:last-child {
+  border-bottom: none;
+}
+
+.status-row span:first-child {
+  font-weight: 500;
+  color: #495057;
+}
+
+.status-row .current-amount {
+  font-size: 18px;
+  font-weight: bold;
+  color: #007bff;
+}
+
+.status-row .positive {
+  color: #28a745;
+  font-weight: bold;
+}
+
+.status-row .negative {
+  color: #dc3545;
+  font-weight: bold;
+}
+
+.status-row .cash-in {
+  color: #28a745;
+  font-weight: 600;
+}
+
+.status-row .cash-out {
+  color: #dc3545;
+  font-weight: 600;
+}
+
+.current-denominations {
+  margin-top: 20px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+
+.denominations-display {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.denom-item {
+  background: white;
+  padding: 10px;
+  border-radius: 4px;
+  text-align: center;
+  border: 1px solid #dee2e6;
+}
+
+.denom-item span:first-child {
+  font-weight: 500;
+  color: #495057;
+  margin-right: 8px;
+}
+
+.till-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.close-till-btn {
+  padding: 10px 25px;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.close-till-btn:hover {
+  background: #c82333;
+}
+
+.reset-till-btn {
+  padding: 10px 25px;
+  background: #ffc107;
+  color: #212529;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.reset-till-btn:hover {
+  background: #e0a800;
+}
+
+.access-denied {
+  padding: 40px;
+  text-align: center;
+  color: #dc3545;
+  font-size: 16px;
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+}
+
+.loading {
+  padding: 40px;
+  text-align: center;
+  color: #666;
+  font-size: 16px;
+}
