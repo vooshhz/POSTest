@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build && electron-builder",
     "build:web": "vite build",
-    "start": "node server.js",
+    "start": "node ./server.js"
     "lint": "eslint .",
     "preview": "vite preview"
   },
