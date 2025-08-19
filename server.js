@@ -10,8 +10,8 @@ const app = express();
 // Serve static files from the dist directory
 app.use(express.static('dist'));
 
-// Handle all routes by serving index.html (for React Router)
-app.get('*', (req, res) => {
+// Simple catch-all handler without using complex routing
+app.use((req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
