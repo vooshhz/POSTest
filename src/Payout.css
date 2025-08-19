@@ -7,22 +7,31 @@
 .payout-header {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   margin-bottom: 30px;
   gap: 20px;
 }
 
 .back-button {
-  padding: 10px 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
   background: #f5f5f5;
   border: 1px solid #ddd;
   border-radius: 8px;
   cursor: pointer;
   font-size: 16px;
+  font-weight: 500;
   transition: all 0.2s;
+  min-width: fit-content;
+  white-space: nowrap;
 }
 
 .back-button:hover {
   background: #e0e0e0;
+  transform: translateX(-2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .payout-header h2 {

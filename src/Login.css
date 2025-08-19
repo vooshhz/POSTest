@@ -418,8 +418,11 @@
 
 /* Back Button */
 .back-button {
-  width: 100%;
-  padding: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
   background: #f5f7fa;
   color: #666;
   border: 1px solid #e0e0e0;
@@ -428,12 +431,15 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
-  margin-top: 12px;
+  margin: 12px 0 0;
+  min-width: 100px;
+  align-self: flex-start;
 }
 
 .back-button:hover:not(:disabled) {
   background: #e8eaf0;
   border-color: #c0c0c0;
+  transform: translateX(-2px);
 }
 
 .back-button:disabled {

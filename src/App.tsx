@@ -373,6 +373,14 @@ export default function App() {
         <TimeClock 
           user={currentUser}
           onClose={() => setShowTimeClock(false)}
+          onLogout={async () => {
+            setShowTimeClock(false);
+            await window.api.userLogout();
+            setCurrentUser(null);
+            setIsAuthenticated(false);
+            setCurrentView("home");
+            window.location.reload();
+          }}
         />
       )}
 

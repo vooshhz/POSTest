@@ -390,11 +390,15 @@
 }
 
 .num-pad-btn.zero {
-  width: 180px; /* Increased proportionally */
+  width: 85px; /* Same as regular buttons for alignment */
+}
+
+.num-pad-btn.dot {
+  width: 85px; /* Same as regular buttons for alignment */
 }
 
 .num-pad-btn.enter {
-  width: 180px; /* Increased proportionally */
+  width: 178px; /* Wider to make row flush with row above */
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border-color: transparent;

@@ -4,9 +4,10 @@ import './TimeClock.css';
 interface TimeClockProps {
   user: any;
   onClose: () => void;
+  onLogout?: () => void;
 }
 
-const TimeClock: React.FC<TimeClockProps> = ({ user, onClose }) => {
+const TimeClock: React.FC<TimeClockProps> = ({ user, onClose, onLogout }) => {
   const [currentShift, setCurrentShift] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -56,8 +57,14 @@ const TimeClock: React.FC<TimeClockProps> = ({ user, onClose }) => {
       const result = await window.api.punchOut(user.id);
       if (result.success) {
         setCurrentShift(null);
-        alert('Successfully punched out!');
+        alert('Successfully punched out! You will now be logged out.');
         onClose();
+        // Automatically log out the user after punching out
+        if (onLogout) {
+          setTimeout(() => {
+            onLogout();
+          }, 500); // Small delay to ensure the modal closes first
+        }
       } else {
         alert(result.error || 'Failed to punch out');
       }

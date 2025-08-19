@@ -523,9 +523,19 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
   };
 
   const handlePayoutComplete = (type: string, amount: number, description?: string) => {
+    // Generate proper UPC based on payout type
+    let upcPrefix = 'PAYOUT_';
+    if (type.includes('Lottery')) {
+      upcPrefix = 'PAYOUT_LOTTERY_';
+    } else if (type.includes('Bottle') || type.includes('Can')) {
+      upcPrefix = 'PAYOUT_BOTTLE_';
+    } else {
+      upcPrefix = 'PAYOUT_OTHER_';
+    }
+    
     // Add payout as a credit (negative price) to the cart
     const payoutItem: CartItem = {
-      upc: `PAYOUT_${Date.now()}`, // Unique ID for payout
+      upc: `${upcPrefix}${Date.now()}`, // Unique ID for payout with type prefix
       description: type,
       volume: description || null,
       quantity: 1,
@@ -852,7 +862,7 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
             </div>
             <div className="number-pad-row">
               <button className="num-pad-btn zero" onClick={() => handleNumberPadClick('0')}>0</button>
-              <button className="num-pad-btn" onClick={() => handleNumberPadClick('.')}>.</button>
+              <button className="num-pad-btn dot" onClick={() => handleNumberPadClick('.')}>.</button>
               <button className="num-pad-btn enter" onClick={() => handleNumberPadClick('Enter')}>Add</button>
             </div>
           </div>
