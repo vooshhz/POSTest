@@ -1,3 +1,4 @@
+import { api } from './api/apiLayer';
 import { useState, useEffect } from "react";
 import DatePicker from "./components/DatePicker";
 import DateRangePicker from "./components/DateRangePicker";
@@ -52,7 +53,7 @@ export default function DailySales() {
     setError("");
     
     try {
-      const result = await window.api.getDailySales(selectedDate);
+      const result = await api.getDailySales(selectedDate);
       
       if (result.success && result.data) {
         setSalesData(result.data);
@@ -84,7 +85,7 @@ export default function DailySales() {
       // Load data for each day in the range
       for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
         const dateStr = d.toISOString().split('T')[0];
-        const result = await window.api.getDailySales(dateStr);
+        const result = await api.getDailySales(dateStr);
         
         if (result.success && result.data) {
           allData.push(result.data);

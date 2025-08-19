@@ -1,3 +1,4 @@
+import { api } from './api/apiLayer';
 import { useState } from "react";
 import "./ClearData.css";
 
@@ -23,7 +24,7 @@ export default function ClearData() {
     setMessage("Clearing inventory data...");
 
     try {
-      const result = await window.api.clearInventory();
+      const result = await api.clearInventory();
       if (result.success) {
         setMessage("✅ Inventory data cleared successfully");
       } else {
@@ -54,7 +55,7 @@ export default function ClearData() {
     setMessage("Clearing sales data...");
 
     try {
-      const result = await window.api.clearTransactions();
+      const result = await api.clearTransactions();
       if (result.success) {
         setMessage("✅ Sales data cleared successfully");
       } else {
@@ -89,7 +90,7 @@ export default function ClearData() {
 
     try {
       // Use the clearAllData API which properly clears everything including adjustments
-      const result = await window.api.clearAllData();
+      const result = await api.clearAllData();
       
       if (result.success) {
         setMessage(`✅ All data cleared successfully!\n${result.message}`);

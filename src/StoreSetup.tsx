@@ -1,3 +1,4 @@
+import { api } from './api/apiLayer';
 import React, { useState } from 'react';
 import './StoreSetup.css';
 
@@ -132,7 +133,7 @@ export function StoreSetup({ onComplete, onCancel }: StoreSetupProps) {
     setSaving(true);
     try {
       // First save store info
-      const storeResult = await window.api.saveStoreInfo(formData);
+      const storeResult = await api.saveStoreInfo(formData);
       
       if (!storeResult.success) {
         alert('Failed to save store information: ' + (storeResult.error || 'Unknown error'));
@@ -142,7 +143,7 @@ export function StoreSetup({ onComplete, onCancel }: StoreSetupProps) {
 
       // Then create admin user - directly without checking current user
       // Since this is initial setup, there should be no current user
-      const userResult = await window.api.addUserDuringSetup({
+      const userResult = await api.addUserDuringSetup({
         username: adminData.username,
         password: adminData.password,
         role: 'admin',
@@ -156,7 +157,7 @@ export function StoreSetup({ onComplete, onCancel }: StoreSetupProps) {
       }
 
       // Auto-login the admin user
-      const loginResult = await window.api.userLogin(adminData.username, adminData.password);
+      const loginResult = await api.userLogin(adminData.username, adminData.password);
       if (loginResult.success) {
         onComplete();
       } else {

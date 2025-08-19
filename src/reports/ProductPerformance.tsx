@@ -1,3 +1,4 @@
+import { api } from '../api/apiLayer';
 import { useState, useEffect } from "react";
 import "./ProductPerformance.css";
 
@@ -13,7 +14,7 @@ export default function ProductPerformance() {
     setLoading(true);
     try {
       // Fetch inventory and sales data
-      const inventory = await window.api.getInventory();
+      const inventory = await api.getInventory();
       if (inventory.success && inventory.data) {
         setProducts(inventory.data.slice(0, 20));
       }

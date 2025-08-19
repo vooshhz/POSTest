@@ -1,3 +1,4 @@
+import { api } from './api/apiLayer';
 import { useState, useEffect } from 'react';
 import './TransactionHistory.css';
 import ReceiptModal from './ReceiptModal';
@@ -52,7 +53,7 @@ export function TransactionHistory() {
     setLoading(true);
     setError(null);
     try {
-      const result = await window.api.getTransactions();
+      const result = await api.getTransactions();
       if (result.success && result.data) {
         setAllTransactions(result.data);
         applyFilters(result.data);
@@ -248,7 +249,7 @@ export function TransactionHistory() {
 
   const openTransactionDetails = async (transaction: Transaction) => {
     // Use IPC to open transaction details in a new window
-    await window.api.openTransactionDetails(transaction);
+    await api.openTransactionDetails(transaction);
   };
 
   const showReceiptForTransaction = (transaction: Transaction) => {

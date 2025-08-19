@@ -1,0 +1,20 @@
+# Task: Create Web-Compatible API Layer
+
+## Goal
+Replace all `window.api.*` calls with a dual-mode API that works in both Electron and web browsers.
+
+## Steps Required:
+1. Find all `window.api` calls in the codebase
+2. Create a new file `src/api/index.ts` with wrapper functions
+3. Replace all direct `window.api` calls with the new wrapper
+4. Create an Express server file that implements the same API endpoints
+
+## Context
+- The app currently uses Electron IPC via `window.api`
+- Need to maintain backward compatibility with Electron
+- Web version should use fetch() to call REST endpoints
+- All database files are: LiquorDatabase.db, LiquorInventory.db, StoreInformation.db
+
+## Example Pattern:
+Replace: `window.api.searchByUpc(upc)`
+With: `api.searchByUpc(upc)` that auto-detects environment

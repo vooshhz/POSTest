@@ -1,3 +1,4 @@
+import { api } from './api/apiLayer';
 import React, { useState, useEffect } from 'react';
 import './TimeClock.css';
 
@@ -22,7 +23,7 @@ const TimeClock: React.FC<TimeClockProps> = ({ user, onClose, onLogout }) => {
 
   const checkCurrentShift = async () => {
     try {
-      const result = await window.api.getCurrentShift(user.id);
+      const result = await api.getCurrentShift(user.id);
       if (result.success && result.data) {
         setCurrentShift(result.data);
       }
@@ -36,7 +37,7 @@ const TimeClock: React.FC<TimeClockProps> = ({ user, onClose, onLogout }) => {
   const handlePunchIn = async () => {
     try {
       setLoading(true);
-      const result = await window.api.punchIn(user.id);
+      const result = await api.punchIn(user.id);
       if (result.success) {
         await checkCurrentShift();
         alert('Successfully punched in!');
@@ -54,7 +55,7 @@ const TimeClock: React.FC<TimeClockProps> = ({ user, onClose, onLogout }) => {
   const handlePunchOut = async () => {
     try {
       setLoading(true);
-      const result = await window.api.punchOut(user.id);
+      const result = await api.punchOut(user.id);
       if (result.success) {
         setCurrentShift(null);
         alert('Successfully punched out! You will now be logged out.');

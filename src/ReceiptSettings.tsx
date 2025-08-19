@@ -1,3 +1,4 @@
+import { api } from './api/apiLayer';
 import { useState, useEffect } from "react";
 import "./ReceiptSettings.css";
 
@@ -31,7 +32,7 @@ export default function ReceiptSettings() {
   const loadStoreInfo = async () => {
     setLoading(true);
     try {
-      const result = await window.api.getStoreInfo();
+      const result = await api.getStoreInfo();
       if (result.success && result.data) {
         setStoreInfo(result.data);
         setReceiptHeader(result.data.receipt_header || "");
@@ -58,7 +59,7 @@ export default function ReceiptSettings() {
         receipt_footer: receiptFooter
       };
 
-      const result = await window.api.saveStoreInfo(updatedInfo);
+      const result = await api.saveStoreInfo(updatedInfo);
       if (result.success) {
         setMessage("Receipt settings saved successfully");
         setStoreInfo(updatedInfo);

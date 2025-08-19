@@ -1,3 +1,4 @@
+import { api } from '../api/apiLayer';
 import { useState, useEffect } from "react";
 import "./HourlyAnalysis.css";
 
@@ -13,7 +14,7 @@ export default function HourlyAnalysis() {
 
   const fetchHourlyData = async () => {
     try {
-      const result = await window.api.getDailySales(selectedDate);
+      const result = await api.getDailySales(selectedDate);
       if (result.success && result.data) {
         setHourlyData(result.data.hourlyBreakdown || []);
       }

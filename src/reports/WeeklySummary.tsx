@@ -1,3 +1,4 @@
+import { api } from '../api/apiLayer';
 import { useState, useEffect } from "react";
 import DatePicker from "../components/DatePicker";
 import "./WeeklySummary.css";
@@ -77,7 +78,7 @@ export default function WeeklySummary({ periodType: propPeriodType, customDate }
     try {
       // For YTD, we'll use month type and handle the display differently
       const apiPeriodType = periodType === 'ytd' ? 'month' : periodType;
-      const result = await window.api.getWeeklySummary(selectedDate, apiPeriodType);
+      const result = await api.getWeeklySummary(selectedDate, apiPeriodType);
       
       if (result.success && result.data) {
         setData(result.data);

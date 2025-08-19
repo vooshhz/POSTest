@@ -1,5 +1,6 @@
 // REPLACE THE ENTIRE src/App.tsx file with this:
 
+import { api } from './api/apiLayer';
 import CartScanner from "./CartScanner";
 import InventoryList from "./InventoryList";
 import { TransactionHistory } from "./TransactionHistory";
@@ -41,7 +42,7 @@ const LogoutConfirmDialog: React.FC<LogoutConfirmDialogProps> = ({ currentUser, 
   const checkActiveShift = async () => {
     if (currentUser?.role === 'cashier') {
       try {
-        const result = await window.api.getCurrentShift(currentUser.id);
+        const result = await api.getCurrentShift(currentUser.id);
         if (result.success && result.data) {
           setHasActiveShift(true);
           setShiftInfo(result.data);
@@ -217,7 +218,7 @@ export default function App() {
 
   const checkStoreInfo = async () => {
     try {
-      const result = await window.api.checkStoreInfo();
+      const result = await api.checkStoreInfo();
       
       if (result.success) {
         if (result.hasStoreInfo && result.data) {
@@ -253,7 +254,7 @@ export default function App() {
   const checkAuthentication = async () => {
     try {
       console.log('Checking authentication...');
-      const result = await window.api.getCurrentUser();
+      const result = await api.getCurrentUser();
       console.log('Auth check result:', result);
       if (result.success && result.user) {
         setCurrentUser(result.user);
@@ -280,7 +281,7 @@ export default function App() {
     // Check if cashier has active shift
     if (currentUser?.role === 'cashier') {
       try {
-        const shiftResult = await window.api.getCurrentShift(currentUser.id);
+        const shiftResult = await api.getCurrentShift(currentUser.id);
         if (shiftResult.success && shiftResult.data) {
           // Cashier has active shift, show punch out option
           setShowLogoutConfirm(true);
@@ -299,13 +300,13 @@ export default function App() {
     try {
       // Punch out if requested and user is cashier with active shift
       if (punchOut && currentUser?.role === 'cashier') {
-        const punchOutResult = await window.api.punchOut(currentUser.id);
+        const punchOutResult = await api.punchOut(currentUser.id);
         if (!punchOutResult.success) {
           console.error('Failed to punch out:', punchOutResult.error);
         }
       }
       
-      await window.api.userLogout();
+      await api.userLogout();
       setCurrentUser(null);
       setIsAuthenticated(false);
       setCurrentView("home");
@@ -352,7 +353,7 @@ export default function App() {
     setImportStatus("Importing CSV data...");
     
     try {
-      const result = await window.api.importCsv();
+      const result = await api.importCsv();
       if (result.success) {
         setImportStatus(`✅ ${result.message}`);
       } else {
@@ -375,7 +376,7 @@ export default function App() {
           onClose={() => setShowTimeClock(false)}
           onLogout={async () => {
             setShowTimeClock(false);
-            await window.api.userLogout();
+            await api.userLogout();
             setCurrentUser(null);
             setIsAuthenticated(false);
             setCurrentView("home");

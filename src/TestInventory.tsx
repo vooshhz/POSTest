@@ -1,3 +1,4 @@
+import { api } from './api/apiLayer';
 import { useState } from "react";
 import "./TestInventory.css";
 
@@ -72,7 +73,7 @@ export default function TestInventory() {
         maxQuantity: parseInt(formData.maxQuantity)
       };
 
-      const response = await window.api.generateTestInventory(params);
+      const response = await api.generateTestInventory(params);
 
       if (response.success) {
         setResult({
@@ -116,7 +117,7 @@ export default function TestInventory() {
 
     setLoading(true);
     try {
-      const response = await window.api.clearInventory();
+      const response = await api.clearInventory();
       if (response.success) {
         setResult({
           success: true,
@@ -153,7 +154,7 @@ export default function TestInventory() {
     setResult(null);
 
     try {
-      const response = await window.api.clearAllData();
+      const response = await api.clearAllData();
 
       if (response.success) {
         setResult({

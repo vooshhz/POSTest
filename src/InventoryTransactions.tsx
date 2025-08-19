@@ -1,3 +1,4 @@
+import { api } from './api/apiLayer';
 import { useState, useEffect } from "react";
 import "./InventoryTransactions.css";
 
@@ -43,7 +44,7 @@ export default function InventoryTransactions({ searchFilter }: InventoryTransac
     setError("");
     
     try {
-      const result = await window.api.getInventoryTransactions();
+      const result = await api.getInventoryTransactions();
       
       if (result.success && result.data) {
         setTransactions(result.data);
@@ -139,11 +140,11 @@ export default function InventoryTransactions({ searchFilter }: InventoryTransac
 
   const openTransaction = async (transactionId: number) => {
     // Get the full transaction details
-    const result = await window.api.getTransactions();
+    const result = await api.getTransactions();
     if (result.success && result.data) {
       const transaction = result.data.find((t: any) => t.id === transactionId);
       if (transaction) {
-        await window.api.openTransactionDetails(transaction);
+        await api.openTransactionDetails(transaction);
       }
     }
   };

@@ -1,3 +1,4 @@
+import { api } from '../api/apiLayer';
 import { useState, useEffect } from "react";
 import "./FinancialReports.css";
 
@@ -12,7 +13,7 @@ export default function FinancialReports() {
   const fetchFinancialData = async () => {
     try {
       const today = new Date().toISOString().split('T')[0];
-      const result = await window.api.getDailySales(today);
+      const result = await api.getDailySales(today);
       if (result.success && result.data) {
         setFinancialData(result.data);
       }

@@ -1,3 +1,4 @@
+import { api } from './api/apiLayer';
 import { useState, useEffect } from "react";
 import UserManagement from "./UserManagement";
 import StoreInfo from "./StoreInfo";
@@ -14,7 +15,7 @@ export default function Settings() {
   }, []);
 
   const checkCurrentUser = async () => {
-    const result = await window.api.getCurrentUser();
+    const result = await api.getCurrentUser();
     if (result.success) {
       setCurrentUser(result.user);
     }

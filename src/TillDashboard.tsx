@@ -1,3 +1,4 @@
+import { api } from './api/apiLayer';
 import { useState, useEffect } from "react";
 import "./TillDashboard.css";
 
@@ -33,7 +34,7 @@ export default function TillDashboard() {
 
   const loadTillStatus = async () => {
     try {
-      const result = await window.api.getCurrentTill();
+      const result = await api.getCurrentTill();
       if (result.success && result.data) {
         setTillStatus(result.data);
       } else {
@@ -51,7 +52,7 @@ export default function TillDashboard() {
 
     setLoading(true);
     try {
-      const result = await window.api.closeTill();
+      const result = await api.closeTill();
       if (result.success) {
         setMessage("Till closed successfully!");
         setTillStatus(null);
@@ -74,7 +75,7 @@ export default function TillDashboard() {
 
     setLoading(true);
     try {
-      const result = await window.api.resetTill();
+      const result = await api.resetTill();
       if (result.success) {
         setMessage(result.message || "Till reset successfully!");
         if (result.data) {

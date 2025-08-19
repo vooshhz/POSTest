@@ -1,3 +1,4 @@
+import { api } from './api/apiLayer';
 import { useState, useRef, useEffect } from "react";
 import "./Login.css";
 
@@ -89,7 +90,7 @@ export default function Login({ onLoginSuccess, storeName }: LoginProps) {
     setError("");
 
     try {
-      const result = await window.api.userLogin(username, password);
+      const result = await api.userLogin(username, password);
       
       if (result.success && result.user) {
         onLoginSuccess(result.user);

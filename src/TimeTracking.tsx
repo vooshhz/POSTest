@@ -1,3 +1,4 @@
+import { api } from './api/apiLayer';
 import React, { useState, useEffect } from 'react';
 import './TimeTracking.css';
 
@@ -33,7 +34,7 @@ const TimeTracking: React.FC = () => {
 
   const loadUsers = async () => {
     try {
-      const result = await window.api.getUsers();
+      const result = await api.getUsers();
       if (result.success && result.users) {
         setUsers(result.users.filter(u => u.active === 1));
       }
@@ -54,7 +55,7 @@ const TimeTracking: React.FC = () => {
         filters.userId = selectedUser;
       }
       
-      const result = await window.api.getTimeClockEntries(filters);
+      const result = await api.getTimeClockEntries(filters);
       if (result.success && result.data) {
         setEntries(result.data);
       }

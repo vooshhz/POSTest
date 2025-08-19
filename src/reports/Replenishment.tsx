@@ -1,3 +1,4 @@
+import { api } from '../api/apiLayer';
 import { useState, useEffect } from 'react';
 import './Replenishment.css';
 
@@ -39,13 +40,13 @@ export default function Replenishment() {
     
     try {
       // Get current inventory
-      const inventoryResult = await window.api.getInventory();
+      const inventoryResult = await api.getInventory();
       if (!inventoryResult.success || !inventoryResult.data) {
         throw new Error('Failed to load inventory');
       }
 
       // Get recent transactions to calculate velocity
-      const transactionsResult = await window.api.getTransactions();
+      const transactionsResult = await api.getTransactions();
       if (!transactionsResult.success || !transactionsResult.data) {
         throw new Error('Failed to load transactions');
       }

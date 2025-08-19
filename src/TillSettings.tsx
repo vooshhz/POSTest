@@ -1,3 +1,4 @@
+import { api } from './api/apiLayer';
 import { useState, useEffect } from "react";
 import "./TillSettings.css";
 
@@ -40,7 +41,7 @@ export default function TillSettings({ currentUser }: Props) {
 
   const loadTillSettings = async () => {
     try {
-      const result = await window.api.getTillSettings();
+      const result = await api.getTillSettings();
       if (result.success && result.data) {
         setSettings(result.data);
       }
@@ -56,12 +57,12 @@ export default function TillSettings({ currentUser }: Props) {
     setMessage("");
     
     try {
-      const result = await window.api.saveTillSettings(settings);
+      const result = await api.saveTillSettings(settings);
       if (result.success) {
         setMessage("Till settings saved successfully!");
         // If enabling, initialize the till automatically
         if (settings.enabled) {
-          await window.api.initializeTill(settings.denominations);
+          await api.initializeTill(settings.denominations);
         }
       } else {
         setMessage(result.error || "Failed to save settings");

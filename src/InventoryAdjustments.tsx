@@ -1,3 +1,4 @@
+import { api } from './api/apiLayer';
 import { useState, useEffect } from "react";
 import "./InventoryAdjustments.css";
 
@@ -45,7 +46,7 @@ export default function InventoryAdjustments() {
         filters.upc = searchUPC;
       }
       
-      const result = await window.api.getInventoryAdjustments(filters);
+      const result = await api.getInventoryAdjustments(filters);
       
       if (result.success && result.data) {
         setAdjustments(result.data);

@@ -1,3 +1,4 @@
+import { api } from './api/apiLayer';
 import { useState, useEffect } from "react";
 import "./UserManagement.css";
 
@@ -40,7 +41,7 @@ export default function UserManagement({ currentUser }: UserManagementProps) {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const result = await window.api.getUsers();
+      const result = await api.getUsers();
       if (result.success && result.users) {
         setUsers(result.users);
       } else {
@@ -105,7 +106,7 @@ export default function UserManagement({ currentUser }: UserManagementProps) {
         userData.password = newUser.password;
       }
 
-      const result = await window.api.addUser(userData);
+      const result = await api.addUser(userData);
 
       if (result.success) {
         setShowAddUser(false);
@@ -140,7 +141,7 @@ export default function UserManagement({ currentUser }: UserManagementProps) {
     setError("");
 
     try {
-      const result = await window.api.removeUser(userId);
+      const result = await api.removeUser(userId);
       if (result.success) {
         await loadUsers();
       } else {

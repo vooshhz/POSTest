@@ -1,3 +1,4 @@
+import { api } from '../api/apiLayer';
 import { useState, useEffect } from "react";
 import "./InventoryAnalysis.css";
 
@@ -58,7 +59,7 @@ export default function InventoryAnalysis() {
     setError(null);
     
     try {
-      const result = await window.api.getInventoryAnalysis();
+      const result = await api.getInventoryAnalysis();
       
       if (result.success && result.data) {
         setMetrics(result.data.metrics);

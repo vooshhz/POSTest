@@ -1,3 +1,4 @@
+import { api } from './api/apiLayer';
 import { useState, useEffect } from "react";
 import "./StoreInfo.css";
 
@@ -39,7 +40,7 @@ export default function StoreInfo() {
   const loadStoreInfo = async () => {
     setLoading(true);
     try {
-      const result = await window.api.getStoreInfo();
+      const result = await api.getStoreInfo();
       if (result.success && result.data) {
         setStoreData(result.data);
       }
@@ -62,7 +63,7 @@ export default function StoreInfo() {
     setMessage("");
 
     try {
-      const result = await window.api.saveStoreInfo(storeData);
+      const result = await api.saveStoreInfo(storeData);
       if (result.success) {
         setMessage("Store information updated successfully");
         setTimeout(() => setMessage(""), 3000);

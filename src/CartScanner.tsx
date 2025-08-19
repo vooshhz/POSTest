@@ -1,3 +1,4 @@
+import { api } from './api/apiLayer';
 import { useState, useRef, useEffect } from "react";
 import "./CartScanner.css";
 import TransactionCompleteModal from "./TransactionCompleteModal";
@@ -90,7 +91,7 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
       if (barcode.length > 2 && isNaN(Number(barcode))) {
         // It's text, not a UPC
         try {
-          const result = await window.api.searchInventoryByDescription(barcode);
+          const result = await api.searchInventoryByDescription(barcode);
           if (result.success && result.data) {
             setSearchResults(result.data.slice(0, 5)); // Limit to 5 results
             setShowDropdown(true); // Always show dropdown when searching
@@ -139,7 +140,7 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
 
     try {
       // Check if item exists in inventory
-      const result = await window.api.checkInventory(barcode.trim());
+      const result = await api.checkInventory(barcode.trim());
       
       if (result.success && result.data) {
         // Check if item already in cart
@@ -324,7 +325,7 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
         change_given: changeGiven
       };
       
-      const result = await window.api.saveTransaction(transaction);
+      const result = await api.saveTransaction(transaction);
       
       if (result.success) {
         // Simulate payment processing
@@ -390,7 +391,7 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
     setLoading(true);
 
     try {
-      const result = await window.api.addToInventory({
+      const result = await api.addToInventory({
         upc: scannedUpc,
         cost,
         price,
@@ -399,7 +400,7 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
 
       if (result.success) {
         // After successfully adding to inventory, try to add to cart
-        const checkResult = await window.api.checkInventory(scannedUpc);
+        const checkResult = await api.checkInventory(scannedUpc);
         if (checkResult.success && checkResult.data) {
           const newItem: CartItem = {
             upc: checkResult.data.upc,
@@ -554,7 +555,7 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
       setError("");
       
       // Get current inventory with stock levels
-      const inventoryResult = await window.api.getInventory();
+      const inventoryResult = await api.getInventory();
       if (!inventoryResult.success || !inventoryResult.data) {
         setError("Failed to load inventory");
         return;

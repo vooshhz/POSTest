@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build && electron-builder",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "build:web": "vite build",
+    "start": "node server.js",
+    "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -15,6 +17,7 @@
     "better-sqlite3": "^12.2.0",
     "csv-parse": "^6.1.0",
     "dotenv": "^16.3.1",
+    "express": "^5.1.0",
     "jsbarcode": "^3.12.1",
     "lucide-react": "^0.539.0",
     "papaparse": "^5.5.3",

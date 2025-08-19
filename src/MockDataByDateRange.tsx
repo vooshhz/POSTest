@@ -1,3 +1,4 @@
+import { api } from './api/apiLayer';
 import { useState, useEffect } from "react";
 import "./MockDataByDateRange.css";
 
@@ -49,7 +50,7 @@ export default function MockDataByDateRange() {
     
     try {
       // Get 100 random SKUs from the product database
-      const result = await window.api.getRandomProducts(100);
+      const result = await api.getRandomProducts(100);
       
       if (!result.success || !result.products) {
         throw new Error("Failed to fetch products");
@@ -242,14 +243,14 @@ export default function MockDataByDateRange() {
       // Step 3: Clear existing mock data
       setProgressMessage("Clearing existing mock data...");
       setProgress(30);
-      await window.api.clearMockData();
+      await api.clearMockData();
       
       // Step 4: Set up initial inventory
       setProgressMessage("Setting up initial inventory...");
       setProgress(40);
       
       for (const sku of skus) {
-        await window.api.addToInventory({
+        await api.addToInventory({
           upc: sku.upc,
           quantity: inventoryReqs[sku.upc],
           cost: sku.cost,
@@ -275,7 +276,7 @@ export default function MockDataByDateRange() {
         
         // Save transactions to database
         for (const transaction of dayTransactions) {
-          await window.api.saveMockTransaction(transaction);
+          await api.saveMockTransaction(transaction);
           totalRevenue += transaction.total;
           totalItems += transaction.items.reduce((sum: number, item: { quantity: number }) => sum + item.quantity, 0);
         }

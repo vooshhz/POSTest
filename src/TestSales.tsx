@@ -1,3 +1,4 @@
+import { api } from './api/apiLayer';
 import { useState } from "react";
 import "./TestSales.css";
 
@@ -111,7 +112,7 @@ export default function TestSales() {
         paymentTypes: enabledPaymentTypes
       };
 
-      const response = await window.api.generateTestSales(params);
+      const response = await api.generateTestSales(params);
 
       if (response.success) {
         setResult({
@@ -164,7 +165,7 @@ export default function TestSales() {
 
     setLoading(true);
     try {
-      const response = await window.api.clearTransactions();
+      const response = await api.clearTransactions();
       if (response.success) {
         setResult({
           success: true,

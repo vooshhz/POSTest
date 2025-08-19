@@ -1,3 +1,4 @@
+import { api } from './api/apiLayer';
 import { useState, useEffect, useRef } from "react";
 import InventoryAdjustments from "./InventoryAdjustments";
 import "./InventoryList.css";
@@ -83,7 +84,7 @@ export default function InventoryList({ barcode, setBarcode, searchFilter, setSe
     setError("");
     
     try {
-      const result = await window.api.getInventory();
+      const result = await api.getInventory();
       
       if (result.success && result.data) {
         setInventory(result.data);
@@ -173,7 +174,7 @@ export default function InventoryList({ barcode, setBarcode, searchFilter, setSe
     setShowAddModal(false);
 
     try {
-      const result = await window.api.searchByUpc(barcode.trim());
+      const result = await api.searchByUpc(barcode.trim());
       console.log("Search result:", result); // Debug log
       
       if (result.success && result.data) {
@@ -254,7 +255,7 @@ export default function InventoryList({ barcode, setBarcode, searchFilter, setSe
     setScanError("");
 
     try {
-      const result = await window.api.addToInventory({
+      const result = await api.addToInventory({
         upc: product.upc,
         cost,
         price,
@@ -332,7 +333,7 @@ export default function InventoryList({ barcode, setBarcode, searchFilter, setSe
     }
 
     try {
-      const result = await window.api.addToInventory({
+      const result = await api.addToInventory({
         upc: editingItem.upc,
         cost,
         price,
