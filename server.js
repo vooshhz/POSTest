@@ -5,7 +5,7 @@ const app = express();
 // Serve static files from the dist directory
 app.use(express.static('dist'));
 
-// Handle client-side routing
+// Handle all routes by serving index.html (for React Router)
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
