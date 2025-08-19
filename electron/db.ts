@@ -5,6 +5,7 @@ import Database from "better-sqlite3";
 import path from "node:path";
 import fs from "node:fs";
 import Papa from "papaparse";
+import { PnLEngine } from "./pnl-engine";
 
 // Separate database connections
 const productsDbPath = path.join(process.cwd(), "LiquorDatabase.db");
@@ -3271,6 +3272,132 @@ ipcMain.handle("add-to-inventory-with-date", async (_, item: InventoryItem & { c
       return {
         success: false,
         error: error instanceof Error ? error.message : "Failed to update till"
+      };
+    }
+  });
+
+  // P&L Engine IPC Handlers
+  const pnlEngine = new PnLEngine(getInventoryDb(), getProductsDb());
+  
+  // Get P&L for a period
+  ipcMain.handle("get-pnl", async (_, startDate: string, endDate: string) => {
+    try {
+      const pnl = pnlEngine.calculatePnL(startDate, endDate);
+      return {
+        success: true,
+        data: pnl
+      };
+    } catch (error) {
+      console.error("Get P&L error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to get P&L"
+      };
+    }
+  });
+  
+  // Get P&L breakdown by period
+  ipcMain.handle("get-pnl-breakdown", async (_, startDate: string, endDate: string) => {
+    try {
+      const breakdown = pnlEngine.generatePnLBreakdown(startDate, endDate);
+      return {
+        success: true,
+        data: breakdown
+      };
+    } catch (error) {
+      console.error("Get P&L breakdown error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to get P&L breakdown"
+      };
+    }
+  });
+  
+  // Get category performance
+  ipcMain.handle("get-category-performance", async (_, startDate: string, endDate: string) => {
+    try {
+      const performance = pnlEngine.getCategoryPerformance(startDate, endDate);
+      return {
+        success: true,
+        data: performance
+      };
+    } catch (error) {
+      console.error("Get category performance error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to get category performance"
+      };
+    }
+  });
+  
+  // Get product performance
+  ipcMain.handle("get-product-performance", async (_, startDate: string, endDate: string, limit?: number) => {
+    try {
+      const performance = pnlEngine.getProductPerformance(startDate, endDate, limit);
+      return {
+        success: true,
+        data: performance
+      };
+    } catch (error) {
+      console.error("Get product performance error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to get product performance"
+      };
+    }
+  });
+  
+  // Add operating expense
+  ipcMain.handle("add-operating-expense", async (_, expense: any) => {
+    try {
+      pnlEngine.addExpense(expense);
+      return { success: true };
+    } catch (error) {
+      console.error("Add expense error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to add expense"
+      };
+    }
+  });
+  
+  // Get operating expenses
+  ipcMain.handle("get-operating-expenses", async (_, startDate: string, endDate: string) => {
+    try {
+      const expenses = pnlEngine.getExpenses(startDate, endDate);
+      return {
+        success: true,
+        data: expenses
+      };
+    } catch (error) {
+      console.error("Get expenses error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to get expenses"
+      };
+    }
+  });
+  
+  // Compare P&L periods
+  ipcMain.handle("compare-pnl-periods", async (_, current: {start: string, end: string}, previous: {start: string, end: string}) => {
+    try {
+      const currentPnL = pnlEngine.calculatePnL(current.start, current.end);
+      const previousPnL = pnlEngine.calculatePnL(previous.start, previous.end);
+      const comparison = pnlEngine.comparePerformance(currentPnL, previousPnL);
+      
+      return {
+        success: true,
+        data: {
+          current: currentPnL,
+          previous: previousPnL,
+          comparison
+        }
+      };
+    } catch (error) {
+      console.error("Compare P&L periods error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to compare P&L periods"
       };
     }
   });

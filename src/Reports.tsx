@@ -6,17 +6,19 @@ import FinancialReports from "./reports/FinancialReports";
 import VendorAnalysis from "./reports/VendorAnalysis";
 import ComplianceAudit from "./reports/ComplianceAudit";
 import Replenishment from "./reports/Replenishment";
+import ProfitAndLoss from "./reports/ProfitAndLoss";
 import "./Reports.css";
 
 type ReportTab = 'sales' | 'inventory-analysis' | 
                  'product-performance' | 'financial' | 
-                 'vendor-analysis' | 'compliance' | 'replenishment';
+                 'vendor-analysis' | 'compliance' | 'replenishment' | 'pnl';
 
 export default function Reports() {
   const [activeTab, setActiveTab] = useState<ReportTab>('sales');
 
   const tabs: { id: ReportTab; label: string }[] = [
     { id: 'sales', label: 'Sales' },
+    { id: 'pnl', label: 'P&L' },
     { id: 'inventory-analysis', label: 'Inventory' },
     { id: 'product-performance', label: 'Products' },
     { id: 'replenishment', label: 'Replenishment' },
@@ -45,6 +47,7 @@ export default function Reports() {
       
       <div className="reports-content">
         {activeTab === 'sales' && <Sales />}
+        {activeTab === 'pnl' && <ProfitAndLoss />}
         {activeTab === 'inventory-analysis' && <InventoryAnalysis />}
         {activeTab === 'product-performance' && <ProductPerformance />}
         {activeTab === 'replenishment' && <Replenishment />}

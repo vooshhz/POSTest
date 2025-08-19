@@ -22,6 +22,7 @@ const TimeTracking: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<number | 'all'>('all');
   const [users, setUsers] = useState<Array<{ id: number; username: string; full_name: string }>>([]);
+  const [activeTab, setActiveTab] = useState<'summary' | 'entries' | 'daily'>('summary');
   const [dateRange, setDateRange] = useState({
     start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0]
@@ -192,100 +193,127 @@ const TimeTracking: React.FC = () => {
         </div>
       </div>
 
-      {loading ? (
-        <div className="loading">Loading time entries...</div>
-      ) : entries.length === 0 ? (
-        <div className="no-data">No time entries found for the selected period.</div>
-      ) : (
-        <>
-          <div className="summary-cards">
-            {Object.entries(byUser).map(([userName, userEntries]) => {
-              const totalHours = calculateTotalHours(userEntries);
-              const activeShift = userEntries.find(e => !e.punch_out);
-              
-              return (
-                <div key={userName} className="employee-card">
-                  <div className="employee-name">{userName}</div>
-                  <div className="employee-stats">
-                    <div className="stat">
-                      <span className="stat-label">Total Hours:</span>
-                      <span className="stat-value">{totalHours.toFixed(2)}h</span>
-                    </div>
-                    <div className="stat">
-                      <span className="stat-label">Shifts:</span>
-                      <span className="stat-value">{userEntries.length}</span>
-                    </div>
-                    {activeShift && (
-                      <div className="active-indicator">
-                        Currently Clocked In
+      <div className="tab-navigation">
+        <button 
+          className={`tab-button ${activeTab === 'summary' ? 'active' : ''}`}
+          onClick={() => setActiveTab('summary')}
+        >
+          Employee Summary
+        </button>
+        <button 
+          className={`tab-button ${activeTab === 'entries' ? 'active' : ''}`}
+          onClick={() => setActiveTab('entries')}
+        >
+          Detailed Entries
+        </button>
+        <button 
+          className={`tab-button ${activeTab === 'daily' ? 'active' : ''}`}
+          onClick={() => setActiveTab('daily')}
+        >
+          Daily Summary
+        </button>
+      </div>
+
+      <div className="tab-content">
+        {loading ? (
+          <div className="loading">Loading time entries...</div>
+        ) : entries.length === 0 ? (
+          <div className="no-data">No time entries found for the selected period.</div>
+        ) : (
+          <>
+            {activeTab === 'summary' && (
+              <div className="summary-cards">
+                {Object.entries(byUser).map(([userName, userEntries]) => {
+                  const totalHours = calculateTotalHours(userEntries);
+                  const activeShift = userEntries.find(e => !e.punch_out);
+                  
+                  return (
+                    <div key={userName} className="employee-card">
+                      <div className="employee-name">{userName}</div>
+                      <div className="employee-stats">
+                        <div className="stat">
+                          <span className="stat-label">Total Hours:</span>
+                          <span className="stat-value">{totalHours.toFixed(2)}h</span>
+                        </div>
+                        <div className="stat">
+                          <span className="stat-label">Shifts:</span>
+                          <span className="stat-value">{userEntries.length}</span>
+                        </div>
+                        {activeShift && (
+                          <div className="active-indicator">
+                            Currently Clocked In
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="entries-table">
-            <h2>Detailed Time Entries</h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Employee</th>
-                  <th>Punch In</th>
-                  <th>Punch Out</th>
-                  <th>Duration</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {entries.map(entry => (
-                  <tr key={entry.id}>
-                    <td>{formatDate(entry.shift_date)}</td>
-                    <td>{entry.full_name}</td>
-                    <td>{formatTime(entry.punch_in)}</td>
-                    <td>{entry.punch_out ? formatTime(entry.punch_out) : '-'}</td>
-                    <td>{formatDuration(entry.duration_minutes)}</td>
-                    <td>
-                      {entry.punch_out ? (
-                        <span className="status-complete">Complete</span>
-                      ) : (
-                        <span className="status-active">Active</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="weekly-summary">
-            <h2>Daily Summary</h2>
-            {Object.entries(groupEntriesByDate(entries))
-              .sort((a, b) => b[0].localeCompare(a[0]))
-              .map(([date, dateEntries]) => {
-                const totalMinutes = dateEntries.reduce((sum, entry) => 
-                  sum + (entry.duration_minutes || 0), 0
-                );
-                const totalHours = totalMinutes / 60;
-                
-                return (
-                  <div key={date} className="daily-summary">
-                    <div className="summary-date">{formatDate(date)}</div>
-                    <div className="summary-details">
-                      <span>{dateEntries.length} shifts</span>
-                      <span className="separator">•</span>
-                      <span>{totalHours.toFixed(2)} total hours</span>
-                      <span className="separator">•</span>
-                      <span>{dateEntries.filter(e => !e.punch_out).length} active</span>
                     </div>
-                  </div>
-                );
-              })}
-          </div>
-        </>
-      )}
+                  );
+                })}
+              </div>
+            )}
+
+            {activeTab === 'entries' && (
+              <div className="entries-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Employee</th>
+                      <th>Punch In</th>
+                      <th>Punch Out</th>
+                      <th>Duration</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {entries.map(entry => (
+                      <tr key={entry.id}>
+                        <td>{formatDate(entry.shift_date)}</td>
+                        <td>{entry.full_name}</td>
+                        <td>{formatTime(entry.punch_in)}</td>
+                        <td>{entry.punch_out ? formatTime(entry.punch_out) : '-'}</td>
+                        <td>{formatDuration(entry.duration_minutes)}</td>
+                        <td>
+                          {entry.punch_out ? (
+                            <span className="status-complete">Complete</span>
+                          ) : (
+                            <span className="status-active">Active</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {activeTab === 'daily' && (
+              <div className="daily-summary-container">
+                {Object.entries(groupEntriesByDate(entries))
+                  .sort((a, b) => b[0].localeCompare(a[0]))
+                  .map(([date, dateEntries]) => {
+                    const totalMinutes = dateEntries.reduce((sum, entry) => 
+                      sum + (entry.duration_minutes || 0), 0
+                    );
+                    const totalHours = totalMinutes / 60;
+                    
+                    return (
+                      <div key={date} className="daily-summary">
+                        <div className="summary-date">{formatDate(date)}</div>
+                        <div className="summary-details">
+                          <span>{dateEntries.length} shifts</span>
+                          <span className="separator">•</span>
+                          <span>{totalHours.toFixed(2)} total hours</span>
+                          <span className="separator">•</span>
+                          <span>{dateEntries.filter(e => !e.punch_out).length} active</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 };

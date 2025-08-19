@@ -627,6 +627,41 @@ interface InventoryAPI {
     success: boolean;
     error?: string;
   }>;
+  // P&L Engine
+  getPnL: (startDate: string, endDate: string) => Promise<{
+    success: boolean;
+    data?: any;
+    error?: string;
+  }>;
+  getPnLBreakdown: (startDate: string, endDate: string) => Promise<{
+    success: boolean;
+    data?: any;
+    error?: string;
+  }>;
+  getCategoryPerformance: (startDate: string, endDate: string) => Promise<{
+    success: boolean;
+    data?: any[];
+    error?: string;
+  }>;
+  getProductPerformance: (startDate: string, endDate: string, limit?: number) => Promise<{
+    success: boolean;
+    data?: any[];
+    error?: string;
+  }>;
+  addOperatingExpense: (expense: any) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+  getOperatingExpenses: (startDate: string, endDate: string) => Promise<{
+    success: boolean;
+    data?: any[];
+    error?: string;
+  }>;
+  comparePnLPeriods: (current: {start: string, end: string}, previous: {start: string, end: string}) => Promise<{
+    success: boolean;
+    data?: any;
+    error?: string;
+  }>;
 }
 
 // Expose protected methods to the renderer
@@ -682,7 +717,15 @@ const api: InventoryAPI = {
   initializeTill: (denominations) => ipcRenderer.invoke("initialize-till", denominations),
   closeTill: () => ipcRenderer.invoke("close-till"),
   resetTill: () => ipcRenderer.invoke("reset-till"),
-  updateTillCash: (amount, isReturn) => ipcRenderer.invoke("update-till-cash", amount, isReturn)
+  updateTillCash: (amount, isReturn) => ipcRenderer.invoke("update-till-cash", amount, isReturn),
+  // P&L Engine
+  getPnL: (startDate, endDate) => ipcRenderer.invoke("get-pnl", startDate, endDate),
+  getPnLBreakdown: (startDate, endDate) => ipcRenderer.invoke("get-pnl-breakdown", startDate, endDate),
+  getCategoryPerformance: (startDate, endDate) => ipcRenderer.invoke("get-category-performance", startDate, endDate),
+  getProductPerformance: (startDate, endDate, limit) => ipcRenderer.invoke("get-product-performance", startDate, endDate, limit),
+  addOperatingExpense: (expense) => ipcRenderer.invoke("add-operating-expense", expense),
+  getOperatingExpenses: (startDate, endDate) => ipcRenderer.invoke("get-operating-expenses", startDate, endDate),
+  comparePnLPeriods: (current, previous) => ipcRenderer.invoke("compare-pnl-periods", current, previous)
 };
 
 contextBridge.exposeInMainWorld("api", api);
