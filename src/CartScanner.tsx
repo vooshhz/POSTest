@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import "./CartScanner.css";
 import TransactionCompleteModal from "./TransactionCompleteModal";
 import TillDashboard from "./TillDashboard";
+import Payout from "./Payout";
 
 interface CartItem {
   upc: string;
@@ -25,6 +26,7 @@ interface CartScannerProps {
 export default function CartScanner({ barcode, setBarcode, cart, setCart, error, setError }: CartScannerProps) {
   const [activeTab, setActiveTab] = useState<'scanner' | 'till'>('scanner');
   const [loading, setLoading] = useState(false);
+  const [showPayoutModal, setShowPayoutModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [scannedUpc, setScannedUpc] = useState("");
   const [inventoryForm, setInventoryForm] = useState({
@@ -477,6 +479,9 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
   };
 
   const openDiscountModal = (index: number) => {
+    // Don't allow discounts on credit/payout items
+    if (cart[index].price < 0) return;
+    
     setDiscountItemIndex(index);
     setDiscountAmount("");
     setShowDiscountModal(true);
@@ -515,6 +520,22 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
     const updatedCart = [...cart];
     updatedCart[index] = { ...cart[index], discount: undefined };
     setCart(updatedCart);
+  };
+
+  const handlePayoutComplete = (type: string, amount: number, description?: string) => {
+    // Add payout as a credit (negative price) to the cart
+    const payoutItem: CartItem = {
+      upc: `PAYOUT_${Date.now()}`, // Unique ID for payout
+      description: type,
+      volume: description || null,
+      quantity: 1,
+      cost: 0,
+      price: -amount // Negative amount for credit
+    };
+    
+    setCart([...cart, payoutItem]);
+    setShowPayoutModal(false);
+    setError("");
   };
 
   const handlePopulate = async () => {
@@ -616,23 +637,31 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
         <div className="left-section">
           <div className="scanner-section">
             <div className="scanner-input-wrapper">
-              <div className="scanner-input-group">
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={barcode}
-                  onChange={(e) => setBarcode(e.target.value)}
-                  onKeyDown={handleKeyPress}
-                  placeholder="Scan or enter UPC / Search by name"
-                  className="scanner-input"
-                  disabled={false}
-                />
+              <div className="scanner-controls-row">
+                <div className="scanner-input-group">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={barcode}
+                    onChange={(e) => setBarcode(e.target.value)}
+                    onKeyDown={handleKeyPress}
+                    placeholder="Scan or enter UPC / Search by name"
+                    className="scanner-input"
+                    disabled={false}
+                  />
+                  <button 
+                    onClick={handleScan}
+                    className="scan-btn"
+                    disabled={false}
+                  >
+                    Add
+                  </button>
+                </div>
                 <button 
-                  onClick={handleScan}
-                  className="scan-btn"
-                  disabled={false}
+                  className="scanner-payout-btn" 
+                  onClick={() => setShowPayoutModal(true)}
                 >
-                  Add
+                  💰 Payout
                 </button>
               </div>
               
@@ -673,23 +702,24 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
           </div>
 
           <div className="cart-section">
-        <div className="cart-header">
-          <h3>Cart ({cart.length} items)</h3>
-          {cart.length > 0 && (
-            <div className="cart-actions">
-              <button onClick={clearCart} className="clear-cart-btn">
-                Clear Cart
-              </button>
-            </div>
-          )}
-        </div>
+            <div className="cart-content">
+              <div className="cart-header">
+                <h3>Cart ({cart.length} items)</h3>
+                {cart.length > 0 && (
+                  <div className="cart-actions">
+                    <button onClick={clearCart} className="clear-cart-btn">
+                      Clear Cart
+                    </button>
+                  </div>
+                )}
+              </div>
 
-        {cart.length === 0 ? (
-          <div className="empty-cart">Cart is empty</div>
-        ) : (
-          <>
-            <div className="cart-items">
-              <table className="cart-table">
+              {cart.length === 0 ? (
+                <div className="empty-cart">Cart is empty</div>
+              ) : (
+                <div className="cart-items-wrapper">
+                  <div className="cart-items">
+                    <table className="cart-table">
                 <thead>
                   <tr>
                     <th>#</th>
@@ -706,27 +736,32 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
                       <td className="item-number">{index + 1}</td>
                       <td className="description-cell">{item.description || "N/A"}</td>
                       <td>
-                        <div className="quantity-controls">
-                          <button 
-                            onClick={() => updateQuantity(index, item.quantity - 1)}
-                            className="qty-btn"
-                          >
-                            -
-                          </button>
-                          <input
-                            type="number"
-                            value={item.quantity}
-                            onChange={(e) => updateQuantity(index, parseInt(e.target.value) || 0)}
-                            className="qty-input"
-                            min="0"
-                          />
-                          <button 
-                            onClick={() => updateQuantity(index, item.quantity + 1)}
-                            className="qty-btn"
-                          >
-                            +
-                          </button>
-                        </div>
+                        {/* Credit/payout items have fixed quantity of 1 */}
+                        {item.price < 0 ? (
+                          <div className="quantity-fixed">1</div>
+                        ) : (
+                          <div className="quantity-controls">
+                            <button 
+                              onClick={() => updateQuantity(index, item.quantity - 1)}
+                              className="qty-btn"
+                            >
+                              -
+                            </button>
+                            <input
+                              type="number"
+                              value={item.quantity}
+                              onChange={(e) => updateQuantity(index, parseInt(e.target.value) || 0)}
+                              className="qty-input"
+                              min="0"
+                            />
+                            <button 
+                              onClick={() => updateQuantity(index, item.quantity + 1)}
+                              className="qty-btn"
+                            >
+                              +
+                            </button>
+                          </div>
+                        )}
                       </td>
                       <td>
                         {item.discount ? (
@@ -743,21 +778,24 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
                       </td>
                       <td>
                         <div className="item-actions">
-                          {item.discount ? (
-                            <button 
-                              onClick={() => removeDiscount(index)}
-                              className="discount-btn has-discount"
-                              title={`Remove $${item.discount.toFixed(2)} discount`}
-                            >
-                              -${item.discount.toFixed(2)}
-                            </button>
-                          ) : (
-                            <button 
-                              onClick={() => openDiscountModal(index)}
-                              className="discount-btn"
-                            >
-                              Discount
-                            </button>
+                          {/* No discount for credit/payout items */}
+                          {item.price >= 0 && (
+                            item.discount ? (
+                              <button 
+                                onClick={() => removeDiscount(index)}
+                                className="discount-btn has-discount"
+                                title={`Remove $${item.discount.toFixed(2)} discount`}
+                              >
+                                -${item.discount.toFixed(2)}
+                              </button>
+                            ) : (
+                              <button 
+                                onClick={() => openDiscountModal(index)}
+                                className="discount-btn"
+                              >
+                                Discount
+                              </button>
+                            )
                           )}
                           <button 
                             onClick={() => removeFromCart(index)}
@@ -772,10 +810,21 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
                 </tbody>
               </table>
             </div>
-          </>
-        )}
           </div>
-        </div>
+        )}
+      </div>
+      
+      {/* Cart Bottom Actions - Always visible */}
+      <div className="cart-bottom-actions">
+        <button className="void-cart-btn" onClick={voidCart}>
+          Void
+        </button>
+        <button className="checkout-btn" onClick={handleCheckout}>
+          Checkout
+        </button>
+      </div>
+    </div>
+  </div>
 
         {/* Right Section - Manual Entry Panel */}
         <div className="manual-entry-panel">
@@ -827,14 +876,6 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
                 <span>Total:</span>
                 <span>{formatCurrency(totals.total)}</span>
               </div>
-            </div>
-            <div className="cart-action-buttons">
-              <button className="void-cart-btn" onClick={voidCart}>
-                Void
-              </button>
-              <button className="checkout-btn" onClick={handleCheckout}>
-                Checkout
-              </button>
             </div>
           </div>
         </div>
@@ -1201,6 +1242,18 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payout Modal */}
+      {showPayoutModal && (
+        <div className="modal-overlay">
+          <div className="payout-modal">
+            <Payout 
+              onComplete={handlePayoutComplete}
+              onCancel={() => setShowPayoutModal(false)}
+            />
           </div>
         </div>
       )}

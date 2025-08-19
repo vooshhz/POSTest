@@ -1,0 +1,214 @@
+.timeclock-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.timeclock-modal {
+  background: white;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.timeclock-header {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  padding: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.timeclock-header h2 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.current-time {
+  font-size: 18px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+}
+
+.timeclock-content {
+  padding: 2rem;
+}
+
+.employee-info {
+  text-align: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.employee-info h3 {
+  margin: 0 0 0.5rem;
+  font-size: 22px;
+  color: #1f2937;
+}
+
+.employee-role {
+  color: #6b7280;
+  font-size: 16px;
+  text-transform: capitalize;
+  margin: 0;
+}
+
+.status-message {
+  text-align: center;
+  font-size: 18px;
+  color: #6b7280;
+  margin-bottom: 2rem;
+}
+
+.punch-btn {
+  width: 100%;
+  padding: 1.25rem;
+  border: none;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.btn-icon {
+  font-size: 24px;
+}
+
+.punch-in {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+}
+
+.punch-in:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+}
+
+.shift-info {
+  background: #f3f4f6;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.shift-info h4 {
+  margin: 0 0 1rem;
+  color: #374151;
+  font-size: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.shift-details {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.label {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.value {
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 16px;
+}
+
+.duration {
+  color: #3b82f6;
+  font-size: 18px;
+}
+
+.shift-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.continue {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  flex: 1;
+}
+
+.continue:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+}
+
+.punch-out {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  flex: 1;
+}
+
+.punch-out:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(239, 68, 68, 0.3);
+}
+
+.timeclock-footer {
+  padding: 0 2rem 2rem;
+}
+
+.cancel-btn {
+  width: 100%;
+  padding: 0.75rem;
+  background: transparent;
+  border: 2px solid #d1d5db;
+  border-radius: 8px;
+  color: #6b7280;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancel-btn:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.loading {
+  padding: 3rem;
+  text-align: center;
+  font-size: 18px;
+  color: #6b7280;
+}

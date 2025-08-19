@@ -1,0 +1,274 @@
+.time-tracking {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.time-tracking-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.time-tracking-header h1 {
+  margin: 0;
+  font-size: 28px;
+  color: #1f2937;
+}
+
+.export-btn {
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.export-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+}
+
+.filters {
+  display: flex;
+  gap: 2rem;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.filter-group label {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.filter-group select,
+.filter-group input[type="date"] {
+  padding: 0.5rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 16px;
+  background: white;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.filter-group select:focus,
+.filter-group input[type="date"]:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.loading,
+.no-data {
+  text-align: center;
+  padding: 4rem;
+  font-size: 18px;
+  color: #6b7280;
+}
+
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.employee-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.employee-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.employee-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 1rem;
+}
+
+.employee-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stat-label {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.stat-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: #3b82f6;
+}
+
+.active-indicator {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border-radius: 6px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.entries-table {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+.entries-table h2 {
+  margin: 0 0 1.5rem;
+  font-size: 20px;
+  color: #1f2937;
+}
+
+.entries-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.entries-table th {
+  text-align: left;
+  padding: 0.75rem;
+  background: #f3f4f6;
+  font-size: 14px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.entries-table td {
+  padding: 1rem 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 15px;
+  color: #374151;
+}
+
+.entries-table tr:last-child td {
+  border-bottom: none;
+}
+
+.entries-table tr:hover {
+  background: #f9fafb;
+}
+
+.status-complete {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  background: #e0e7ff;
+  color: #3730a3;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.status-active {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  background: #d1fae5;
+  color: #064e3b;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.weekly-summary {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.weekly-summary h2 {
+  margin: 0 0 1.5rem;
+  font-size: 20px;
+  color: #1f2937;
+}
+
+.daily-summary {
+  padding: 1rem;
+  border-left: 4px solid #3b82f6;
+  background: #f9fafb;
+  margin-bottom: 1rem;
+  border-radius: 0 8px 8px 0;
+  transition: all 0.2s;
+}
+
+.daily-summary:hover {
+  background: #f3f4f6;
+  transform: translateX(4px);
+}
+
+.summary-date {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 0.5rem;
+}
+
+.summary-details {
+  display: flex;
+  gap: 1rem;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.separator {
+  color: #d1d5db;
+}
+
+@media (max-width: 768px) {
+  .filters {
+    flex-direction: column;
+  }
+  
+  .summary-cards {
+    grid-template-columns: 1fr;
+  }
+  
+  .entries-table {
+    overflow-x: auto;
+  }
+  
+  .entries-table table {
+    min-width: 600px;
+  }
+}

@@ -3,15 +3,16 @@
   align-items: center;
   justify-content: center;
   min-height: calc(100vh - 120px);
-  padding: 40px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 30px;
+  background: transparent;
+  position: relative;
 }
 
 .home-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 30px;
-  max-width: 900px;
+  gap: 25px;
+  max-width: 850px;
   width: 100%;
 }
 
@@ -19,8 +20,8 @@
   background: white;
   border: none;
   border-radius: 20px;
-  padding: 40px;
-  min-height: 250px;
+  padding: 36px;
+  min-height: 225px;
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
@@ -59,6 +60,35 @@
   background: linear-gradient(90deg, #9C27B0, #7B1FA2);
 }
 
+.timetracking-button::before {
+  background: linear-gradient(90deg, #3B82F6, #2563EB);
+}
+
+/* Grid layout for 5 buttons (admin/manager view) */
+.home-grid-five {
+  grid-template-columns: repeat(3, 1fr);
+  max-width: 1000px;
+}
+
+.home-grid-five .home-button {
+  min-height: 200px;
+  padding: 30px;
+}
+
+.home-grid-five .button-icon {
+  font-size: 40px;
+  margin-bottom: 15px;
+}
+
+.home-grid-five .button-title {
+  font-size: 22px;
+  margin-bottom: 8px;
+}
+
+.home-grid-five .button-description {
+  font-size: 13px;
+}
+
 .home-button:hover {
   transform: translateY(-5px);
   box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
@@ -69,19 +99,19 @@
 }
 
 .button-icon {
-  font-size: 48px;
-  margin-bottom: 20px;
+  font-size: 44px;
+  margin-bottom: 18px;
 }
 
 .button-title {
-  font-size: 28px;
+  font-size: 25px;
   font-weight: bold;
   color: #333;
-  margin-bottom: 10px;
+  margin-bottom: 9px;
 }
 
 .button-description {
-  font-size: 16px;
+  font-size: 14px;
   color: #666;
   opacity: 0.9;
 }

@@ -9,6 +9,8 @@ import Reports from "./Reports";
 import Settings from "./Settings";
 import Login from "./Login";
 import Home from "./Home";
+import TimeClock from "./TimeClock";
+import TimeTracking from "./TimeTracking";
 import "./App.css";
 import { useState, useEffect } from "react";
 
@@ -21,9 +23,164 @@ interface CartItem {
   price: number;
 }
 
+interface LogoutConfirmDialogProps {
+  currentUser: any;
+  onConfirm: (punchOut: boolean) => void;
+  onCancel: () => void;
+}
+
+const LogoutConfirmDialog: React.FC<LogoutConfirmDialogProps> = ({ currentUser, onConfirm, onCancel }) => {
+  const [hasActiveShift, setHasActiveShift] = useState(false);
+  const [shiftInfo, setShiftInfo] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    checkActiveShift();
+  }, []);
+
+  const checkActiveShift = async () => {
+    if (currentUser?.role === 'cashier') {
+      try {
+        const result = await window.api.getCurrentShift(currentUser.id);
+        if (result.success && result.data) {
+          setHasActiveShift(true);
+          setShiftInfo(result.data);
+        }
+      } catch (error) {
+        console.error('Error checking shift:', error);
+      }
+    }
+    setLoading(false);
+  };
+
+  const formatDuration = (punchIn: string) => {
+    const start = new Date(punchIn);
+    const now = new Date();
+    const diff = now.getTime() - start.getTime();
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours}h ${minutes}m`;
+  };
+
+  if (loading) {
+    return null;
+  }
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 9999
+    }}>
+      <div style={{
+        background: 'white',
+        padding: '30px',
+        borderRadius: '8px',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+        maxWidth: '450px',
+        width: '90%'
+      }}>
+        <h2 style={{ margin: '0 0 20px', fontSize: '20px' }}>Confirm Logout</h2>
+        
+        {hasActiveShift && shiftInfo && (
+          <div style={{
+            background: '#fef3c7',
+            border: '1px solid #fbbf24',
+            borderRadius: '6px',
+            padding: '12px',
+            marginBottom: '20px'
+          }}>
+            <p style={{ margin: '0 0 8px', fontWeight: 'bold', color: '#92400e' }}>
+              ⚠️ Active Shift Detected
+            </p>
+            <p style={{ margin: 0, fontSize: '14px', color: '#78350f' }}>
+              You've been clocked in for {formatDuration(shiftInfo.punch_in)}
+            </p>
+          </div>
+        )}
+        
+        <p style={{ margin: '0 0 24px', color: '#666' }}>
+          {hasActiveShift 
+            ? 'Would you like to punch out before logging out?'
+            : 'Are you sure you want to log out?'}
+        </p>
+        
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+          <button
+            onClick={onCancel}
+            style={{
+              padding: '8px 20px',
+              border: '1px solid #ddd',
+              borderRadius: '4px',
+              background: 'white',
+              cursor: 'pointer'
+            }}
+          >
+            Cancel
+          </button>
+          
+          {hasActiveShift && (
+            <>
+              <button
+                onClick={() => onConfirm(false)}
+                style={{
+                  padding: '8px 20px',
+                  border: 'none',
+                  borderRadius: '4px',
+                  background: '#f59e0b',
+                  color: 'white',
+                  cursor: 'pointer'
+                }}
+              >
+                Log Out Only
+              </button>
+              <button
+                onClick={() => onConfirm(true)}
+                style={{
+                  padding: '8px 20px',
+                  border: 'none',
+                  borderRadius: '4px',
+                  background: '#10b981',
+                  color: 'white',
+                  cursor: 'pointer'
+                }}
+              >
+                Punch Out & Log Out
+              </button>
+            </>
+          )}
+          
+          {!hasActiveShift && (
+            <button
+              onClick={() => onConfirm(false)}
+              style={{
+                padding: '8px 20px',
+                border: 'none',
+                borderRadius: '4px',
+                background: '#dc3545',
+                color: 'white',
+                cursor: 'pointer'
+              }}
+            >
+              Log Out
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<"home" | "scanner" | "inventory" | "transactions" | "reports" | "developer" | "settings">("home");
+  const [currentView, setCurrentView] = useState<"home" | "scanner" | "inventory" | "transactions" | "reports" | "developer" | "settings" | "timetracking">("home");
   const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
   const [storeName, setStoreName] = useState<string>("");
   const [inventoryRefreshKey, setInventoryRefreshKey] = useState(0);
@@ -32,6 +189,7 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showTimeClock, setShowTimeClock] = useState(false);
   
   // Cart Scanner state
   const [cartBarcode, setCartBarcode] = useState("");
@@ -111,16 +269,42 @@ export default function App() {
   const handleLoginSuccess = (user: any) => {
     setCurrentUser(user);
     setIsAuthenticated(true);
+    
+    // Show time clock for cashiers
+    if (user.role === 'cashier') {
+      setShowTimeClock(true);
+    }
   };
 
-  const handleLogout = () => {
-    // DO NOT use window.confirm() - it causes Electron focus bugs!
-    // Show custom confirmation instead
+  const handleLogout = async () => {
+    // Check if cashier has active shift
+    if (currentUser?.role === 'cashier') {
+      try {
+        const shiftResult = await window.api.getCurrentShift(currentUser.id);
+        if (shiftResult.success && shiftResult.data) {
+          // Cashier has active shift, show punch out option
+          setShowLogoutConfirm(true);
+          return;
+        }
+      } catch (error) {
+        console.error('Error checking shift:', error);
+      }
+    }
+    
+    // No active shift or not a cashier, show regular logout confirm
     setShowLogoutConfirm(true);
   };
   
-  const confirmLogout = async () => {
+  const confirmLogout = async (punchOut: boolean = false) => {
     try {
+      // Punch out if requested and user is cashier with active shift
+      if (punchOut && currentUser?.role === 'cashier') {
+        const punchOutResult = await window.api.punchOut(currentUser.id);
+        if (!punchOutResult.success) {
+          console.error('Failed to punch out:', punchOutResult.error);
+        }
+      }
+      
       await window.api.userLogout();
       setCurrentUser(null);
       setIsAuthenticated(false);
@@ -184,68 +368,23 @@ export default function App() {
 
   return (
     <div className="app">
+      {/* Time Clock Modal for Cashiers */}
+      {showTimeClock && currentUser && (
+        <TimeClock 
+          user={currentUser}
+          onClose={() => setShowTimeClock(false)}
+        />
+      )}
+
       {/* Custom Logout Confirmation Dialog */}
       {showLogoutConfirm && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999
-        }}>
-          <div style={{
-            background: 'white',
-            padding: '30px',
-            borderRadius: '8px',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-            maxWidth: '400px',
-            width: '90%'
-          }}>
-            <h2 style={{ margin: '0 0 20px', fontSize: '20px' }}>Confirm Logout</h2>
-            <p style={{ margin: '0 0 24px', color: '#666' }}>Are you sure you want to log out?</p>
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-              <button
-                onClick={cancelLogout}
-                style={{
-                  padding: '8px 20px',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px',
-                  background: 'white',
-                  cursor: 'pointer'
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmLogout}
-                style={{
-                  padding: '8px 20px',
-                  border: 'none',
-                  borderRadius: '4px',
-                  background: '#dc3545',
-                  color: 'white',
-                  cursor: 'pointer'
-                }}
-              >
-                Log Out
-              </button>
-            </div>
-          </div>
-        </div>
+        <LogoutConfirmDialog
+          currentUser={currentUser}
+          onConfirm={confirmLogout}
+          onCancel={cancelLogout}
+        />
       )}
       <div className="nav-tabs-left">
-        <button 
-          className={`nav-tab home-tab ${currentView === "home" ? "active" : ""}`}
-          onClick={() => setCurrentView("home")}
-          title="Home"
-        >
-          🏠 Home
-        </button>
         <button 
           className={`nav-tab developer-tab ${currentView === "developer" ? "active" : ""}`}
           onClick={() => setCurrentView("developer")}
@@ -266,6 +405,17 @@ export default function App() {
         </div>
       </div>
       
+      <div className="nav-tabs-right">
+        <button 
+          className={`nav-tab home-tab-large ${currentView === "home" ? "active" : ""}`}
+          onClick={() => setCurrentView("home")}
+          title="Home"
+        >
+          <span className="home-icon">🏠</span>
+          <span className="home-text">HOME</span>
+        </button>
+      </div>
+      
       <div className="header-info">
         <h1 className="store-title">{storeName || 'Liquor Inventory System'}</h1>
         <div className="date-time">
@@ -276,12 +426,20 @@ export default function App() {
       
       <div className="content-container">
         {currentView === "home" ? (
-          <Home onNavigate={(view) => {
-            if (view === 'inventory') {
-              setInventoryRefreshKey(prev => prev + 1);
-            }
-            setCurrentView(view as any);
-          }} />
+          <Home 
+            onNavigate={(view) => {
+              // Prevent cashiers from accessing reports
+              if (view === 'reports' && currentUser?.role === 'cashier') {
+                alert('Access denied. Reports are only available to managers and administrators.');
+                return;
+              }
+              if (view === 'inventory') {
+                setInventoryRefreshKey(prev => prev + 1);
+              }
+              setCurrentView(view as any);
+            }}
+            userRole={currentUser?.role}
+          />
         ) : currentView === "scanner" ? (
           <CartScanner 
             barcode={cartBarcode}
@@ -302,9 +460,25 @@ export default function App() {
         ) : currentView === "transactions" ? (
           <TransactionHistory />
         ) : currentView === "reports" ? (
-          <Reports />
+          currentUser?.role !== 'cashier' ? (
+            <Reports />
+          ) : (
+            <div style={{ padding: '2rem', textAlign: 'center' }}>
+              <h2>Access Denied</h2>
+              <p>Reports are only available to managers and administrators.</p>
+            </div>
+          )
         ) : currentView === "developer" ? (
           <Developer />
+        ) : currentView === "timetracking" ? (
+          currentUser?.role !== 'cashier' ? (
+            <TimeTracking />
+          ) : (
+            <div style={{ padding: '2rem', textAlign: 'center' }}>
+              <h2>Access Denied</h2>
+              <p>Time tracking is only available to managers and administrators.</p>
+            </div>
+          )
         ) : (
           <Settings />
         )}

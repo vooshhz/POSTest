@@ -71,8 +71,21 @@ function getStoreInfoDb() {
         FOREIGN KEY (user_id) REFERENCES users(id)
       );
       
+      CREATE TABLE IF NOT EXISTS time_clock (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        punch_in DATETIME NOT NULL,
+        punch_out DATETIME,
+        shift_date DATE NOT NULL,
+        duration_minutes INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+      );
+      
       CREATE INDEX IF NOT EXISTS idx_user_activity_user ON user_activity(user_id);
       CREATE INDEX IF NOT EXISTS idx_user_activity_timestamp ON user_activity(timestamp);
+      CREATE INDEX IF NOT EXISTS idx_time_clock_user ON time_clock(user_id);
+      CREATE INDEX IF NOT EXISTS idx_time_clock_date ON time_clock(shift_date);
     `);
     
     // Check if PIN column exists, add if it doesn't
@@ -911,6 +924,11 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
         
         // Deduct each item from inventory and record adjustments
         for (const item of items) {
+          // Skip inventory checks for payout/credit items (negative price or PAYOUT UPC)
+          if (item.price < 0 || item.upc.startsWith('PAYOUT_')) {
+            continue; // Payouts don't affect inventory
+          }
+          
           // Check current quantity and get item details
           const currentItem = invDb.prepare(`
             SELECT quantity, cost, price FROM inventory WHERE upc = ?
@@ -1304,6 +1322,7 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
   registerWeeklySummary(ipcMain);
   registerInventoryAnalysis(ipcMain);
   registerUserManagement(ipcMain);
+  registerTimeClock(ipcMain);
 }
 
 // Generate test inventory for development
@@ -2661,6 +2680,11 @@ function registerUserManagement(ipcMain: IpcMain) {
       
       // Deduct items from inventory and record adjustments
       for (const item of items) {
+        // Skip inventory checks for payout/credit items (negative price or PAYOUT UPC)
+        if (item.price < 0 || item.upc.startsWith('PAYOUT_')) {
+          continue; // Payouts don't affect inventory
+        }
+        
         // Update inventory quantity
         const updateStmt = invDb.prepare(`
           UPDATE inventory 
@@ -3371,6 +3395,184 @@ function formatTillData(till: any) {
       hundreds: till.current_hundreds
     }
   };
+}
+
+// Time Clock Management Functions
+function registerTimeClock(ipcMain: IpcMain) {
+  // Get current shift for a user
+  ipcMain.handle("get-current-shift", async (_, userId: number) => {
+    try {
+      const storeDb = getStoreInfoDb();
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Get the current active shift (punch_out is null)
+      const shift = storeDb.prepare(`
+        SELECT * FROM time_clock 
+        WHERE user_id = ? AND punch_out IS NULL
+        ORDER BY punch_in DESC
+        LIMIT 1
+      `).get(userId) as any;
+      
+      return {
+        success: true,
+        data: shift || null
+      };
+    } catch (error) {
+      console.error("Get current shift error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to get current shift"
+      };
+    }
+  });
+
+  // Punch in
+  ipcMain.handle("punch-in", async (_, userId: number) => {
+    try {
+      const storeDb = getStoreInfoDb();
+      
+      // Check if already punched in
+      const activeShift = storeDb.prepare(`
+        SELECT id FROM time_clock 
+        WHERE user_id = ? AND punch_out IS NULL
+      `).get(userId) as any;
+      
+      if (activeShift) {
+        return {
+          success: false,
+          error: "Already punched in. Please punch out first."
+        };
+      }
+      
+      const now = new Date();
+      const shiftDate = now.toISOString().split('T')[0];
+      
+      const result = storeDb.prepare(`
+        INSERT INTO time_clock (user_id, punch_in, shift_date)
+        VALUES (?, ?, ?)
+      `).run(userId, now.toISOString(), shiftDate);
+      
+      // Log activity
+      storeDb.prepare(`
+        INSERT INTO user_activity (user_id, action, details)
+        VALUES (?, 'punch_in', 'Punched in for shift')
+      `).run(userId);
+      
+      return {
+        success: true,
+        shiftId: result.lastInsertRowid
+      };
+    } catch (error) {
+      console.error("Punch in error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to punch in"
+      };
+    }
+  });
+
+  // Punch out
+  ipcMain.handle("punch-out", async (_, userId: number) => {
+    try {
+      const storeDb = getStoreInfoDb();
+      
+      // Get active shift
+      const activeShift = storeDb.prepare(`
+        SELECT id, punch_in FROM time_clock 
+        WHERE user_id = ? AND punch_out IS NULL
+        ORDER BY punch_in DESC
+        LIMIT 1
+      `).get(userId) as any;
+      
+      if (!activeShift) {
+        return {
+          success: false,
+          error: "No active shift found. Please punch in first."
+        };
+      }
+      
+      const now = new Date();
+      const punchIn = new Date(activeShift.punch_in);
+      const durationMinutes = Math.round((now.getTime() - punchIn.getTime()) / (1000 * 60));
+      
+      // Update the shift record
+      storeDb.prepare(`
+        UPDATE time_clock 
+        SET punch_out = ?, duration_minutes = ?
+        WHERE id = ?
+      `).run(now.toISOString(), durationMinutes, activeShift.id);
+      
+      // Log activity
+      storeDb.prepare(`
+        INSERT INTO user_activity (user_id, action, details)
+        VALUES (?, 'punch_out', ?)
+      `).run(userId, `Punched out after ${Math.floor(durationMinutes / 60)}h ${durationMinutes % 60}m`);
+      
+      return {
+        success: true,
+        duration: durationMinutes
+      };
+    } catch (error) {
+      console.error("Punch out error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to punch out"
+      };
+    }
+  });
+
+  // Get time clock entries with filters
+  ipcMain.handle("get-time-clock-entries", async (_, filters?: {
+    userId?: number;
+    startDate?: string;
+    endDate?: string;
+  }) => {
+    try {
+      const storeDb = getStoreInfoDb();
+      
+      let query = `
+        SELECT 
+          tc.*,
+          u.username,
+          u.full_name
+        FROM time_clock tc
+        JOIN users u ON tc.user_id = u.id
+        WHERE 1=1
+      `;
+      
+      const params: any[] = [];
+      
+      if (filters?.userId) {
+        query += ` AND tc.user_id = ?`;
+        params.push(filters.userId);
+      }
+      
+      if (filters?.startDate) {
+        query += ` AND tc.shift_date >= ?`;
+        params.push(filters.startDate);
+      }
+      
+      if (filters?.endDate) {
+        query += ` AND tc.shift_date <= ?`;
+        params.push(filters.endDate);
+      }
+      
+      query += ` ORDER BY tc.punch_in DESC`;
+      
+      const entries = storeDb.prepare(query).all(...params);
+      
+      return {
+        success: true,
+        data: entries
+      };
+    } catch (error) {
+      console.error("Get time clock entries error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to get time clock entries"
+      };
+    }
+  });
 }
 
 // Cleanup on app quit

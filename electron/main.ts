@@ -16,36 +16,39 @@ let win: BrowserWindow | null
 const transactionWindows = new Map<string, BrowserWindow>()
 
 function createWindow() {
-  // Get primary display dimensions
-  const primaryDisplay = screen.getPrimaryDisplay()
-  const { width: screenWidth, height: screenHeight } = primaryDisplay.bounds
-  
   win = new BrowserWindow({
     icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
     },
-    width: screenWidth,
-    height: screenHeight,
-    x: 0,
-    y: 0,
-    minWidth: 1280,
-    minHeight: 800,
     show: false,
     frame: true,
     titleBarStyle: 'default',
-    resizable: true,
+    fullscreen: false,
     maximizable: true,
-    minimizable: true,  // Allow minimizing
-    fullscreenable: true,
-    fullscreen: false  // Don't start in fullscreen
+    minimizable: true,
+    resizable: true
   })
   
-  // Show window after all settings are applied
-  win.show()
-  
-  // Start maximized instead of fullscreen for easier multitasking
+  // Maximize the window
   win.maximize()
+  
+  // Then show it
+  win.once('ready-to-show', () => {
+    win?.show()
+  })
+  
+  // Whenever the window is restored from minimize, maximize it again
+  win.on('restore', () => {
+    win?.maximize()
+  })
+  
+  // If someone tries to unmaximize, re-maximize it
+  win.on('unmaximize', () => {
+    setTimeout(() => {
+      win?.maximize()
+    }, 10)
+  })
 
   win.webContents.on('did-finish-load', () => {
     win?.webContents.send('main-process-message', (new Date).toLocaleString())

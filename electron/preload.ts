@@ -388,6 +388,46 @@ interface InventoryAPI {
     }>;
     error?: string;
   }>;
+  // Time Clock
+  getCurrentShift: (userId: number) => Promise<{
+    success: boolean;
+    data?: {
+      id: number;
+      user_id: number;
+      punch_in: string;
+      punch_out: string | null;
+      shift_date: string;
+    } | null;
+    error?: string;
+  }>;
+  punchIn: (userId: number) => Promise<{
+    success: boolean;
+    shiftId?: number;
+    error?: string;
+  }>;
+  punchOut: (userId: number) => Promise<{
+    success: boolean;
+    duration?: number;
+    error?: string;
+  }>;
+  getTimeClockEntries: (filters?: {
+    userId?: number;
+    startDate?: string;
+    endDate?: string;
+  }) => Promise<{
+    success: boolean;
+    data?: Array<{
+      id: number;
+      user_id: number;
+      username: string;
+      full_name: string;
+      punch_in: string;
+      punch_out: string | null;
+      shift_date: string;
+      duration_minutes: number | null;
+    }>;
+    error?: string;
+  }>;
   focusWindow: () => Promise<void>;
   getInventoryAnalysis: () => Promise<{
     success: boolean;
@@ -625,6 +665,11 @@ const api: InventoryAPI = {
   addUser: (userData) => ipcRenderer.invoke("add-user", userData),
   removeUser: (userId) => ipcRenderer.invoke("remove-user", userId),
   getUserActivity: (userId) => ipcRenderer.invoke("get-user-activity", userId),
+  // Time Clock
+  getCurrentShift: (userId) => ipcRenderer.invoke("get-current-shift", userId),
+  punchIn: (userId) => ipcRenderer.invoke("punch-in", userId),
+  punchOut: (userId) => ipcRenderer.invoke("punch-out", userId),
+  getTimeClockEntries: (filters) => ipcRenderer.invoke("get-time-clock-entries", filters),
   focusWindow: () => ipcRenderer.invoke("focus-window"),
   saveTransactionWithDate: (transaction) => ipcRenderer.invoke("save-transaction-with-date", transaction),
   addToInventoryWithDate: (item) => ipcRenderer.invoke("add-to-inventory-with-date", item),

@@ -1,0 +1,158 @@
+.payout-container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.payout-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 30px;
+  gap: 20px;
+}
+
+.back-button {
+  padding: 10px 20px;
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s;
+}
+
+.back-button:hover {
+  background: #e0e0e0;
+}
+
+.payout-header h2 {
+  margin: 0;
+  font-size: 28px;
+  color: #333;
+}
+
+.payout-selection {
+  text-align: center;
+}
+
+.payout-selection h3 {
+  font-size: 24px;
+  color: #555;
+  margin-bottom: 40px;
+}
+
+.payout-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 30px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.payout-type-button {
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 16px;
+  padding: 40px 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  min-height: 250px;
+}
+
+.payout-type-button:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+.payout-type-button.lottery {
+  border-color: #4CAF50;
+}
+
+.payout-type-button.lottery:hover {
+  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+  color: white;
+}
+
+.payout-type-button.bottle {
+  border-color: #2196F3;
+}
+
+.payout-type-button.bottle:hover {
+  background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+  color: white;
+}
+
+.payout-type-button.other {
+  border-color: #FF9800;
+}
+
+.payout-type-button.other:hover {
+  background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
+  color: white;
+}
+
+.payout-icon {
+  font-size: 64px;
+}
+
+.payout-label {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.payout-desc {
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+.payout-description {
+  max-width: 600px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.payout-description h3 {
+  font-size: 24px;
+  color: #555;
+  margin-bottom: 30px;
+}
+
+.description-input {
+  width: 100%;
+  padding: 15px;
+  font-size: 18px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  transition: border-color 0.2s;
+}
+
+.description-input:focus {
+  outline: none;
+  border-color: #4CAF50;
+}
+
+.continue-button {
+  padding: 15px 40px;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.continue-button:hover {
+  background: #45a049;
+}
+
+.continue-button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
