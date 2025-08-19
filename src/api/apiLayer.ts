@@ -24,9 +24,10 @@ class WebStorage {
   private adjustments: any[] = [];
   private timeClockEntries: any[] = [];
   
-  private constructor() {
-    this.loadFromLocalStorage();
-  }
+ private constructor() {
+  this.loadFromLocalStorage();
+  this.initializeDefaultData();
+}
   
   static getInstance(): WebStorage {
     if (!WebStorage.instance) {
@@ -71,6 +72,50 @@ class WebStorage {
       console.error('Failed to save to localStorage:', error);
     }
   }
+
+  private initializeDefaultData() {
+  // Add default users if none exist
+  if (this.users.size === 0) {
+    const defaultUsers = [
+      {
+        id: 1,
+        username: 'admin',
+        password: 'admin123',
+        role: 'admin',
+        full_name: 'Admin User',
+        active: 1,
+        created_at: new Date().toISOString()
+      },
+      {
+        id: 2,
+        username: 'demo',
+        password: 'demo123',
+        role: 'cashier',
+        pin: '1234',
+        full_name: 'Demo User',
+        active: 1,
+        created_at: new Date().toISOString()
+      }
+    ];
+    
+    defaultUsers.forEach(user => {
+      this.users.set(user.id, user);
+    });
+    
+    // Also set default store info if none exists
+    if (!this.storeInfo) {
+      this.storeInfo = {
+        store_name: 'Demo POS Store',
+        store_address: '123 Demo Street',
+        store_phone: '555-0100',
+        tax_rate: 0.08
+      };
+    }
+    
+    // Save the defaults
+    this.saveToLocalStorage();
+  }
+}
   
   // Inventory methods
   getInventoryItem(upc: string) {
