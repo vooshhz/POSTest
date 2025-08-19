@@ -8,6 +8,7 @@ import Developer from "./Developer";
 import Reports from "./Reports";
 import Settings from "./Settings";
 import Login from "./Login";
+import Home from "./Home";
 import "./App.css";
 import { useState, useEffect } from "react";
 
@@ -22,7 +23,7 @@ interface CartItem {
 
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<"scanner" | "inventory" | "transactions" | "reports" | "developer" | "settings">("scanner");
+  const [currentView, setCurrentView] = useState<"home" | "scanner" | "inventory" | "transactions" | "reports" | "developer" | "settings">("home");
   const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
   const [storeName, setStoreName] = useState<string>("");
   const [inventoryRefreshKey, setInventoryRefreshKey] = useState(0);
@@ -123,7 +124,7 @@ export default function App() {
       await window.api.userLogout();
       setCurrentUser(null);
       setIsAuthenticated(false);
-      setCurrentView("scanner");
+      setCurrentView("home");
       setShowLogoutConfirm(false);
       
       // Force a page reload to completely reset the app state
@@ -239,6 +240,13 @@ export default function App() {
       )}
       <div className="nav-tabs-left">
         <button 
+          className={`nav-tab home-tab ${currentView === "home" ? "active" : ""}`}
+          onClick={() => setCurrentView("home")}
+          title="Home"
+        >
+          🏠 Home
+        </button>
+        <button 
           className={`nav-tab developer-tab ${currentView === "developer" ? "active" : ""}`}
           onClick={() => setCurrentView("developer")}
         >
@@ -258,37 +266,6 @@ export default function App() {
         </div>
       </div>
       
-      <div className="nav-tabs-right">
-        <button 
-          className={`nav-tab ${currentView === "scanner" ? "active" : ""}`}
-          onClick={() => setCurrentView("scanner")}
-        >
-          Scanner
-        </button>
-        <button 
-          className={`nav-tab ${currentView === "inventory" ? "active" : ""}`}
-          onClick={() => {
-            setCurrentView("inventory");
-            // Trigger refresh when switching to inventory tab
-            setInventoryRefreshKey(prev => prev + 1);
-          }}
-        >
-          Inventory
-        </button>
-        <button 
-          className={`nav-tab ${currentView === "transactions" ? "active" : ""}`}
-          onClick={() => setCurrentView("transactions")}
-        >
-          Transactions
-        </button>
-        <button 
-          className={`nav-tab ${currentView === "reports" ? "active" : ""}`}
-          onClick={() => setCurrentView("reports")}
-        >
-          Reports
-        </button>
-      </div>
-      
       <div className="header-info">
         <h1 className="store-title">{storeName || 'Liquor Inventory System'}</h1>
         <div className="date-time">
@@ -298,32 +275,39 @@ export default function App() {
       </div>
       
       <div className="content-container">
-        {currentView === "scanner" ? (
-        <CartScanner 
-          barcode={cartBarcode}
-          setBarcode={setCartBarcode}
-          cart={cart}
-          setCart={setCart}
-          error={cartError}
-          setError={setCartError}
-        />
-      ) : currentView === "inventory" ? (
-        <InventoryList 
-          key={inventoryRefreshKey}
-          barcode={inventoryBarcode}
-          setBarcode={setInventoryBarcode}
-          searchFilter={searchFilter}
-          setSearchFilter={setSearchFilter}
-        />
-      ) : currentView === "transactions" ? (
-        <TransactionHistory />
-      ) : currentView === "reports" ? (
-        <Reports />
-      ) : currentView === "developer" ? (
-        <Developer />
-      ) : (
-        <Settings />
-      )}
+        {currentView === "home" ? (
+          <Home onNavigate={(view) => {
+            if (view === 'inventory') {
+              setInventoryRefreshKey(prev => prev + 1);
+            }
+            setCurrentView(view as any);
+          }} />
+        ) : currentView === "scanner" ? (
+          <CartScanner 
+            barcode={cartBarcode}
+            setBarcode={setCartBarcode}
+            cart={cart}
+            setCart={setCart}
+            error={cartError}
+            setError={setCartError}
+          />
+        ) : currentView === "inventory" ? (
+          <InventoryList 
+            key={inventoryRefreshKey}
+            barcode={inventoryBarcode}
+            setBarcode={setInventoryBarcode}
+            searchFilter={searchFilter}
+            setSearchFilter={setSearchFilter}
+          />
+        ) : currentView === "transactions" ? (
+          <TransactionHistory />
+        ) : currentView === "reports" ? (
+          <Reports />
+        ) : currentView === "developer" ? (
+          <Developer />
+        ) : (
+          <Settings />
+        )}
       </div>
     </div>
   );
