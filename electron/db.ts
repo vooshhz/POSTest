@@ -265,6 +265,15 @@ function getInventoryDb() {
         `);
         console.log("✅ Added user tracking to inventory_adjustments table");
       }
+      
+      // Check if taxable column exists in inventory table
+      const inventoryInfo = inventoryDb.pragma("table_info(inventory)");
+      const hasTaxable = (inventoryInfo as any[]).some((col: any) => col.name === 'taxable');
+      
+      if (!hasTaxable) {
+        inventoryDb.exec(`ALTER TABLE inventory ADD COLUMN taxable INTEGER DEFAULT 1`);
+        console.log("✅ Added taxable column to inventory table (default: taxable)");
+      }
     } catch (err) {
       console.log("Migration check completed");
     }
@@ -288,6 +297,7 @@ interface InventoryItem {
   cost: number;
   price: number;
   quantity: number;
+  taxable?: boolean;
 }
 
 interface Transaction {
@@ -694,7 +704,8 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
             volume: product?.volume || null,
             cost: inventoryItem.cost,
             price: inventoryItem.price,
-            quantity: inventoryItem.quantity
+            quantity: inventoryItem.quantity,
+            taxable: inventoryItem.taxable !== 0 // Convert from integer to boolean
           }
         };
       } else {
@@ -887,6 +898,38 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
       return {
         success: false,
         error: error instanceof Error ? error.message : "Failed to add to inventory"
+      };
+    }
+  });
+
+  // Update item taxable status
+  ipcMain.handle("update-item-taxable", async (_, upc: string, taxable: boolean) => {
+    try {
+      const invDb = getInventoryDb();
+      
+      // Update the taxable status
+      const result = invDb.prepare(`
+        UPDATE inventory 
+        SET taxable = ?
+        WHERE upc = ?
+      `).run(taxable ? 1 : 0, upc);
+      
+      if (result.changes > 0) {
+        return {
+          success: true,
+          message: "Taxable status updated"
+        };
+      } else {
+        return {
+          success: false,
+          error: "Item not found in inventory"
+        };
+      }
+    } catch (error) {
+      console.error("Update taxable status error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to update taxable status"
       };
     }
   });

@@ -13,6 +13,7 @@ interface CartItem {
   cost: number;
   price: number;
   discount?: number;
+  taxable?: boolean;
 }
 
 interface CartScannerProps {
@@ -28,6 +29,11 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
   const [activeTab, setActiveTab] = useState<'scanner' | 'till'>('scanner');
   const [loading, setLoading] = useState(false);
   const [showPayoutModal, setShowPayoutModal] = useState(false);
+  const [payoutInitialType, setPayoutInitialType] = useState<'lottery' | 'bottle' | 'other' | undefined>(undefined);
+  const [showManualEntryModal, setShowManualEntryModal] = useState(false);
+  const [manualEntryTaxable, setManualEntryTaxable] = useState(true);
+  const [manualEntryAmount, setManualEntryAmount] = useState("");
+  const [manualEntryType, setManualEntryType] = useState<'manual' | 'lottery'>('manual');
   const [showAddModal, setShowAddModal] = useState(false);
   const [scannedUpc, setScannedUpc] = useState("");
   const [inventoryForm, setInventoryForm] = useState({
@@ -51,6 +57,7 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
     }>;
     subtotal: number;
     tax: number;
+    creditTotal?: number;
     total: number;
     paymentType: 'cash' | 'debit' | 'credit';
     cashGiven?: number;
@@ -58,7 +65,6 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
     timestamp: string;
   } | undefined>(undefined);
   const [transactionError, setTransactionError] = useState("");
-  const [manualEntry, setManualEntry] = useState("");
   const [searchResults, setSearchResults] = useState<Array<{
     upc: string;
     description: string | null;
@@ -77,13 +83,206 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
   useEffect(() => {
     // Add a slight delay to ensure the component is fully mounted
     const timer = setTimeout(() => {
-      if (inputRef.current) {
+      if (inputRef.current && activeTab === 'scanner') {
         inputRef.current.focus();
         inputRef.current.click(); // Try clicking too
       }
     }, 100);
     return () => clearTimeout(timer);
-  }, []);
+  }, [activeTab]);
+
+  // Keep input focused when clicking anywhere in the scanner area
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (activeTab === 'scanner' && !showPayoutModal && !showManualEntryModal && !showAddModal && !showDiscountModal) {
+        // Check if click is not on an input, button, or modal
+        const target = e.target as HTMLElement;
+        if (!target.closest('input') && !target.closest('button') && !target.closest('.modal-overlay')) {
+          setTimeout(() => inputRef.current?.focus(), 50);
+        }
+      }
+    };
+
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, [activeTab, showPayoutModal, showManualEntryModal, showAddModal, showDiscountModal]);
+
+  // Periodically check and refocus if needed
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (activeTab === 'scanner' && 
+          !showPayoutModal && 
+          !showManualEntryModal && 
+          !showAddModal && 
+          !showDiscountModal && 
+          !showTransactionComplete &&
+          document.activeElement !== inputRef.current) {
+        inputRef.current?.focus();
+      }
+    }, 500); // Check every 500ms
+
+    return () => clearInterval(interval);
+  }, [activeTab, showPayoutModal, showManualEntryModal, showAddModal, showDiscountModal, showTransactionComplete]);
+
+  // Handle keyboard input for manual entry modal
+  useEffect(() => {
+    if (!showManualEntryModal) return;
+
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Handle number keys
+      if (e.key >= '0' && e.key <= '9') {
+        e.preventDefault();
+        setManualEntryAmount(prev => prev + e.key);
+      }
+      // Handle decimal point
+      else if (e.key === '.' && !manualEntryAmount.includes('.')) {
+        e.preventDefault();
+        setManualEntryAmount(prev => prev + '.');
+      }
+      // Handle backspace
+      else if (e.key === 'Backspace') {
+        e.preventDefault();
+        setManualEntryAmount(prev => prev.slice(0, -1));
+      }
+      // Handle clear (Delete or c)
+      else if (e.key === 'Delete' || e.key.toLowerCase() === 'c') {
+        e.preventDefault();
+        setManualEntryAmount('');
+      }
+      // Handle Enter for add to cart
+      else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (manualEntryAmount && parseFloat(manualEntryAmount) > 0) {
+          handleManualEntry();
+        }
+      }
+      // Handle Escape for cancel
+      else if (e.key === 'Escape') {
+        e.preventDefault();
+        setShowManualEntryModal(false);
+        setManualEntryType('manual');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [showManualEntryModal, manualEntryAmount, manualEntryType]);
+
+  // Handle keyboard input for cash payment modal
+  useEffect(() => {
+    if (!showPaymentModal || paymentMethod !== 'cash') return;
+
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Handle number keys
+      if (e.key >= '0' && e.key <= '9') {
+        e.preventDefault();
+        if (isQuickCash) {
+          setAmountTendered(e.key);
+          setIsQuickCash(false);
+        } else {
+          setAmountTendered(prev => prev + e.key);
+        }
+      }
+      // Handle decimal point
+      else if (e.key === '.' && !amountTendered.includes('.')) {
+        e.preventDefault();
+        if (isQuickCash) {
+          setAmountTendered('0.');
+          setIsQuickCash(false);
+        } else {
+          setAmountTendered(prev => prev + '.');
+        }
+      }
+      // Handle backspace
+      else if (e.key === 'Backspace') {
+        e.preventDefault();
+        if (isQuickCash) {
+          setAmountTendered('');
+          setIsQuickCash(false);
+        } else {
+          setAmountTendered(prev => prev.slice(0, -1));
+        }
+      }
+      // Handle clear (Delete or c)
+      else if (e.key === 'Delete' || e.key.toLowerCase() === 'c') {
+        e.preventDefault();
+        setAmountTendered('');
+        setIsQuickCash(false);
+      }
+      // Handle Enter for complete sale
+      else if (e.key === 'Enter') {
+        e.preventDefault();
+        const totals = calculateTotals();
+        if (totals.total <= 0 || (amountTendered && parseFloat(amountTendered) >= totals.total)) {
+          processPayment();
+        }
+      }
+      // Handle Escape for back
+      else if (e.key === 'Escape') {
+        e.preventDefault();
+        setPaymentMethod(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [showPaymentModal, paymentMethod, amountTendered, isQuickCash]);
+
+  // Handle keyboard input for discount modal
+  useEffect(() => {
+    if (!showDiscountModal || discountItemIndex === null) return;
+
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Handle number keys
+      if (e.key >= '0' && e.key <= '9') {
+        e.preventDefault();
+        setDiscountAmount(prev => prev + e.key);
+      }
+      // Handle decimal point
+      else if (e.key === '.' && !discountAmount.includes('.')) {
+        e.preventDefault();
+        setDiscountAmount(prev => prev + '.');
+      }
+      // Handle backspace
+      else if (e.key === 'Backspace') {
+        e.preventDefault();
+        setDiscountAmount(prev => prev.slice(0, -1));
+      }
+      // Handle clear (Delete or c)
+      else if (e.key === 'Delete' || e.key.toLowerCase() === 'c') {
+        e.preventDefault();
+        setDiscountAmount('');
+      }
+      // Handle Enter for apply discount
+      else if (e.key === 'Enter') {
+        e.preventDefault();
+        const discountValue = parseFloat(discountAmount);
+        if (!isNaN(discountValue) && discountValue > 0) {
+          const updatedCart = [...cart];
+          updatedCart[discountItemIndex] = { 
+            ...cart[discountItemIndex], 
+            discount: discountValue 
+          };
+          setCart(updatedCart);
+          setShowDiscountModal(false);
+          setDiscountItemIndex(null);
+          setDiscountAmount("");
+          // Refocus input after discount
+          setTimeout(() => inputRef.current?.focus(), 100);
+        }
+      }
+      // Handle Escape for cancel
+      else if (e.key === 'Escape') {
+        e.preventDefault();
+        setShowDiscountModal(false);
+        setDiscountAmount("");
+        setDiscountItemIndex(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [showDiscountModal, discountItemIndex, discountAmount, cart]);
 
   // Search inventory when input changes
   useEffect(() => {
@@ -118,7 +317,8 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
     setShowAddModal(false);
     setInventoryForm({ cost: "", price: "", quantity: "" });
     setScannedUpc("");
-    inputRef.current?.focus();
+    // Refocus with delay to ensure modal is closed
+    setTimeout(() => inputRef.current?.focus(), 100);
   };
 
   // Handle ESC key for modal
@@ -135,12 +335,53 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
   const handleScan = async () => {
     if (!barcode.trim()) return;
 
+    const code = barcode.trim();
+    
+    // Check for shortcut codes
+    if (code === "1000") {
+      // Non-Tax manual entry
+      setManualEntryType('manual');
+      setManualEntryTaxable(false);
+      setShowManualEntryModal(true);
+      setManualEntryAmount("");
+      setBarcode("");
+      return;
+    } else if (code === "2000") {
+      // Tax manual entry
+      setManualEntryType('manual');
+      setManualEntryTaxable(true);
+      setShowManualEntryModal(true);
+      setManualEntryAmount("");
+      setBarcode("");
+      return;
+    } else if (code === "5000") {
+      // Lottery (taxable manual entry with description)
+      setManualEntryType('lottery');
+      setManualEntryTaxable(true);
+      setShowManualEntryModal(true);
+      setManualEntryAmount("");
+      setBarcode("");
+      return;
+    } else if (code === "5001") {
+      // Lottery Payout
+      setPayoutInitialType('lottery');
+      setShowPayoutModal(true);
+      setBarcode("");
+      return;
+    } else if (code === "10000") {
+      // Bottle Deposit Payout
+      setPayoutInitialType('bottle');
+      setShowPayoutModal(true);
+      setBarcode("");
+      return;
+    }
+
     setLoading(true);
     setError("");
 
     try {
       // Check if item exists in inventory
-      const result = await api.checkInventory(barcode.trim());
+      const result = await api.checkInventory(code);
       
       if (result.success && result.data) {
         // Check if item already in cart
@@ -159,7 +400,8 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
             volume: result.data.volume,
             quantity: 1,
             cost: result.data.cost,
-            price: result.data.price
+            price: result.data.price,
+            taxable: result.data.taxable !== undefined ? result.data.taxable : true // Default to taxable
           };
           setCart([...cart, newItem]);
         }
@@ -239,11 +481,15 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
       const updatedCart = [...cart];
       updatedCart[index].quantity = newQuantity;
       setCart(updatedCart);
+      // Refocus input after updating quantity
+      setTimeout(() => inputRef.current?.focus(), 50);
     }
   };
 
   const removeFromCart = (index: number) => {
     setCart(cart.filter((_, i) => i !== index));
+    // Refocus input after removing item
+    setTimeout(() => inputRef.current?.focus(), 50);
   };
 
   const clearCart = () => {
@@ -253,23 +499,71 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
   };
 
   const calculateTotals = () => {
-    const subtotal = cart.reduce((sum, item) => {
+    // Separate debit items (positive price) from credit items (negative price)
+    let debitSubtotal = 0;
+    let taxableSubtotal = 0;
+    let creditTotal = 0;
+    let totalItems = 0;
+    let totalDiscount = 0;
+    
+    cart.forEach(item => {
       const itemTotal = item.price * item.quantity;
       const discount = (item.discount || 0) * item.quantity;
-      return sum + (itemTotal - discount);
-    }, 0);
-    const tax = subtotal * 0.06; // Michigan 6% sales tax
-    const total = subtotal + tax;
-    const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-    const totalDiscount = cart.reduce((sum, item) => sum + ((item.discount || 0) * item.quantity), 0);
+      const itemNetPrice = itemTotal - discount;
+      
+      if (item.price >= 0) {
+        // Debit items (regular products) - apply discounts
+        debitSubtotal += itemNetPrice;
+        totalDiscount += discount;
+        
+        // Only add to taxable subtotal if item is taxable
+        if (item.taxable !== false) { // Default to taxable if undefined
+          taxableSubtotal += itemNetPrice;
+        }
+      } else {
+        // Credit items (payouts, returns) - no discounts, no tax
+        creditTotal += itemTotal; // This will be negative
+      }
+      
+      totalItems += item.quantity;
+    });
+    
+    // Tax only applies to taxable items
+    const tax = taxableSubtotal * 0.06; // Michigan 6% sales tax
+    
+    // Calculate final total: debit subtotal + tax - credits
+    const subtotal = debitSubtotal; // Subtotal before credits
+    const total = debitSubtotal + tax + creditTotal; // Credits applied AFTER tax
     
     return {
       totalItems,
       subtotal,
+      taxableSubtotal,
       tax,
+      creditTotal, // Return credit total separately
       total,
       totalDiscount
     };
+  };
+
+  const toggleTaxable = async (index: number) => {
+    const item = cart[index];
+    // Don't toggle for payout, manual entry, or lottery items
+    if (!item.upc.startsWith('PAYOUT_') && !item.upc.startsWith('MANUAL_') && !item.upc.startsWith('LOTTERY_')) {
+      const newTaxableStatus = item.taxable === false ? true : false;
+      
+      // Update in database if it's a real inventory item
+      const result = await api.updateItemTaxable(item.upc, newTaxableStatus);
+      
+      if (result.success) {
+        // Update cart
+        const updatedCart = [...cart];
+        updatedCart[index].taxable = newTaxableStatus;
+        setCart(updatedCart);
+      } else {
+        setError(`Failed to update taxable status: ${result.error}`);
+      }
+    }
   };
 
   const voidCart = () => {
@@ -293,7 +587,8 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
   };
 
   const processPayment = async () => {
-    if (paymentMethod === 'cash') {
+    // When total is negative (money owed to customer), skip payment validation
+    if (totals.total > 0 && paymentMethod === 'cash') {
       const tendered = parseFloat(amountTendered);
       if (isNaN(tendered) || tendered < totals.total) {
         alert("Insufficient payment amount");
@@ -303,8 +598,23 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
 
     // Save transaction to database
     try {
-      const cashGiven = paymentMethod === 'cash' ? parseFloat(amountTendered) : undefined;
-      const changeGiven = paymentMethod === 'cash' ? cashGiven! - totals.total : undefined;
+      // If total is negative (refund/payout), cash given is 0 and change is the absolute value
+      let cashGiven: number | undefined;
+      let changeGiven: number | undefined;
+      
+      if (totals.total <= 0) {
+        // Customer is owed money
+        cashGiven = 0;
+        changeGiven = Math.abs(totals.total); // Amount owed to customer
+      } else if (paymentMethod === 'cash') {
+        // Customer owes money and paying cash
+        cashGiven = parseFloat(amountTendered);
+        changeGiven = cashGiven ? Math.max(0, cashGiven - totals.total) : undefined;
+      } else {
+        // Card payment
+        cashGiven = undefined;
+        changeGiven = undefined;
+      }
       
       // Prepare items data as JSON string
       const itemsData = cart.map(item => ({
@@ -335,6 +645,7 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
             items: itemsData,
             subtotal: totals.subtotal,
             tax: totals.tax,
+            creditTotal: totals.creditTotal < 0 ? totals.creditTotal : undefined,
             total: totals.total,
             paymentType: paymentMethod as 'cash' | 'debit' | 'credit',
             cashGiven: cashGiven,
@@ -426,58 +737,6 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
 
   const totals = calculateTotals();
 
-  // Number pad functions
-  const handleNumberPadClick = (value: string) => {
-    if (value === 'C') {
-      setManualEntry("");
-    } else if (value === '←') {
-      setManualEntry(prev => prev.slice(0, -1));
-    } else if (value === '.') {
-      if (!manualEntry.includes('.')) {
-        setManualEntry(prev => prev + value);
-      }
-    } else if (value === 'Enter') {
-      handleManualPriceAdd();
-    } else {
-      // Limit to 2 decimal places if decimal exists
-      if (manualEntry.includes('.')) {
-        const parts = manualEntry.split('.');
-        if (parts[1].length < 2) {
-          setManualEntry(prev => prev + value);
-        }
-      } else {
-        setManualEntry(prev => prev + value);
-      }
-    }
-  };
-
-  const handleManualPriceAdd = () => {
-    if (!manualEntry || parseFloat(manualEntry) <= 0) {
-      setError("Please enter a valid amount");
-      return;
-    }
-
-    const price = parseFloat(manualEntry);
-    const manualItem: CartItem = {
-      upc: `MANUAL-${Date.now()}`,
-      description: "Manual Entry",
-      volume: null,
-      quantity: 1,
-      cost: 0,
-      price: price
-    };
-
-    setCart([...cart, manualItem]);
-    setManualEntry("");
-    setError("");
-  };
-
-  const formatDisplayAmount = (amount: string) => {
-    if (!amount) return "$0.00";
-    const num = parseFloat(amount);
-    if (isNaN(num)) return "$0.00";
-    return `$${num.toFixed(2)}`;
-  };
 
   const openDiscountModal = (index: number) => {
     // Don't allow discounts on credit/payout items
@@ -521,6 +780,8 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
     const updatedCart = [...cart];
     updatedCart[index] = { ...cart[index], discount: undefined };
     setCart(updatedCart);
+    // Refocus input after removing discount
+    setTimeout(() => inputRef.current?.focus(), 50);
   };
 
   const handlePayoutComplete = (type: string, amount: number, description?: string) => {
@@ -546,7 +807,51 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
     
     setCart([...cart, payoutItem]);
     setShowPayoutModal(false);
+    setPayoutInitialType(undefined);
     setError("");
+    // Refocus the input after payout
+    setTimeout(() => inputRef.current?.focus(), 100);
+  };
+
+  const handleManualEntry = () => {
+    const amount = parseFloat(manualEntryAmount);
+    if (isNaN(amount) || amount <= 0) {
+      setError("Please enter a valid amount");
+      return;
+    }
+
+    // Add manual entry item to cart
+    let manualItem: CartItem;
+    
+    if (manualEntryType === 'lottery') {
+      manualItem = {
+        upc: `LOTTERY_${Date.now()}`,
+        description: "Lottery Ticket",
+        volume: null,
+        quantity: 1,
+        cost: 0,
+        price: amount,
+        taxable: true // Lottery is always taxable
+      };
+    } else {
+      manualItem = {
+        upc: `MANUAL_${manualEntryTaxable ? 'TAX' : 'NONTAX'}_${Date.now()}`,
+        description: manualEntryTaxable ? "Manual Entry (Taxable)" : "Manual Entry (Non-Taxable)",
+        volume: null,
+        quantity: 1,
+        cost: 0,
+        price: amount,
+        taxable: manualEntryTaxable
+      };
+    }
+
+    setCart([...cart, manualItem]);
+    setShowManualEntryModal(false);
+    setManualEntryAmount("");
+    setManualEntryType('manual'); // Reset type
+    setError("");
+    // Refocus the input after manual entry
+    setTimeout(() => inputRef.current?.focus(), 100);
   };
 
   const handlePopulate = async () => {
@@ -668,12 +973,6 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
                     Add
                   </button>
                 </div>
-                <button 
-                  className="scanner-payout-btn" 
-                  onClick={() => setShowPayoutModal(true)}
-                >
-                  💰 Payout
-                </button>
               </div>
               
               {showDropdown && barcode.length > 2 && isNaN(Number(barcode)) && (
@@ -735,6 +1034,7 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
                   <tr>
                     <th>#</th>
                     <th>Description</th>
+                    <th>Taxable</th>
                     <th>Qty</th>
                     <th>Unit Price</th>
                     <th>Total</th>
@@ -746,6 +1046,21 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
                     <tr key={index}>
                       <td className="item-number">{index + 1}</td>
                       <td className="description-cell">{item.description || "N/A"}</td>
+                      <td className="taxable-cell">
+                        {/* Handle different item types */}
+                        {item.price < 0 ? (
+                          <span>-</span>
+                        ) : item.upc.startsWith('MANUAL_') || item.upc.startsWith('LOTTERY_') ? (
+                          <span>{item.taxable ? '✓' : '✗'}</span>
+                        ) : (
+                          <input
+                            type="checkbox"
+                            checked={item.taxable !== false}
+                            onChange={() => toggleTaxable(index)}
+                            className="taxable-checkbox"
+                          />
+                        )}
+                      </td>
                       <td>
                         {/* Credit/payout items have fixed quantity of 1 */}
                         {item.price < 0 ? (
@@ -837,35 +1152,51 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
     </div>
   </div>
 
-        {/* Right Section - Manual Entry Panel */}
+        {/* Right Section - Action Buttons and Summary */}
         <div className="manual-entry-panel">
-          <div className="amount-display">
-            {formatDisplayAmount(manualEntry)}
-          </div>
-          <div className="number-pad">
-            <div className="number-pad-row">
-              <button className="num-pad-btn" onClick={() => handleNumberPadClick('7')}>7</button>
-              <button className="num-pad-btn" onClick={() => handleNumberPadClick('8')}>8</button>
-              <button className="num-pad-btn" onClick={() => handleNumberPadClick('9')}>9</button>
-              <button className="num-pad-btn clear" onClick={() => handleNumberPadClick('C')}>C</button>
-            </div>
-            <div className="number-pad-row">
-              <button className="num-pad-btn" onClick={() => handleNumberPadClick('4')}>4</button>
-              <button className="num-pad-btn" onClick={() => handleNumberPadClick('5')}>5</button>
-              <button className="num-pad-btn" onClick={() => handleNumberPadClick('6')}>6</button>
-              <button className="num-pad-btn backspace" onClick={() => handleNumberPadClick('←')}>←</button>
-            </div>
-            <div className="number-pad-row">
-              <button className="num-pad-btn" onClick={() => handleNumberPadClick('1')}>1</button>
-              <button className="num-pad-btn" onClick={() => handleNumberPadClick('2')}>2</button>
-              <button className="num-pad-btn" onClick={() => handleNumberPadClick('3')}>3</button>
-              <button className="num-pad-btn" onClick={() => handleNumberPadClick('00')}>00</button>
-            </div>
-            <div className="number-pad-row">
-              <button className="num-pad-btn zero" onClick={() => handleNumberPadClick('0')}>0</button>
-              <button className="num-pad-btn dot" onClick={() => handleNumberPadClick('.')}>.</button>
-              <button className="num-pad-btn enter" onClick={() => handleNumberPadClick('Enter')}>Add</button>
-            </div>
+          <div className="action-buttons-vertical">
+            <button 
+              className="action-btn payout-btn" 
+              onClick={() => {
+                setPayoutInitialType(undefined);
+                setShowPayoutModal(true);
+              }}
+            >
+              💰 Payout
+            </button>
+            <button 
+              className="action-btn lottery-btn" 
+              onClick={() => {
+                setManualEntryType('lottery');
+                setManualEntryTaxable(true);
+                setShowManualEntryModal(true);
+                setManualEntryAmount("");
+              }}
+            >
+              🎰 Lottery
+            </button>
+            <button 
+              className="action-btn tax-btn" 
+              onClick={() => {
+                setManualEntryType('manual');
+                setManualEntryTaxable(true);
+                setShowManualEntryModal(true);
+                setManualEntryAmount("");
+              }}
+            >
+              💵 Tax
+            </button>
+            <button 
+              className="action-btn nontax-btn" 
+              onClick={() => {
+                setManualEntryType('manual');
+                setManualEntryTaxable(false);
+                setShowManualEntryModal(true);
+                setManualEntryAmount("");
+              }}
+            >
+              💴 Non-Tax
+            </button>
           </div>
           
           {/* Cart Summary moved here */}
@@ -883,6 +1214,12 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
                 <span>Tax (6%):</span>
                 <span>{formatCurrency(totals.tax)}</span>
               </div>
+              {totals.creditTotal < 0 && (
+                <div className="summary-row" style={{ color: '#dc3545' }}>
+                  <span>Credits:</span>
+                  <span>{formatCurrency(totals.creditTotal)}</span>
+                </div>
+              )}
               <div className="summary-row total">
                 <span>Total:</span>
                 <span>{formatCurrency(totals.total)}</span>
@@ -935,9 +1272,11 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
                 {paymentMethod === 'cash' ? (
                   <div className="cash-payment">
                     <div className="amount-due">
-                      <strong>Amount Due:</strong> {formatCurrency(totals.total)}
+                      <strong>{totals.total <= 0 ? 'Amount Owed to Customer:' : 'Amount Due:'}</strong> {formatCurrency(Math.abs(totals.total))}
                     </div>
                     
+                    {totals.total > 0 ? (
+                    <>
                     {/* Quick Cash Buttons */}
                     <div className="quick-cash-section">
                       <label>Quick Cash:</label>
@@ -1092,14 +1431,21 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
                         }}>C</button>
                       </div>
                     </div>
+                    </>
+                    ) : (
+                      <div className="refund-notice" style={{ padding: '20px', textAlign: 'center' }}>
+                        <p style={{ fontSize: '18px', marginBottom: '10px' }}>No payment required.</p>
+                        <p style={{ fontSize: '20px', fontWeight: 'bold' }}>Amount to give customer: {formatCurrency(Math.abs(totals.total))}</p>
+                      </div>
+                    )}
 
                     <div className="modal-buttons">
                       <button 
                         onClick={processPayment} 
                         className="complete-sale-btn"
-                        disabled={!amountTendered || parseFloat(amountTendered) < totals.total}
+                        disabled={totals.total > 0 && (!amountTendered || parseFloat(amountTendered) < totals.total)}
                       >
-                        Complete Sale
+                        {totals.total <= 0 ? 'Complete Transaction' : 'Complete Sale'}
                       </button>
                       <button onClick={() => setPaymentMethod(null)} className="back-btn">
                         Back
@@ -1109,18 +1455,24 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
                 ) : (
                   <div className="card-payment">
                     <div className="amount-due">
-                      <strong>Amount Due:</strong> {formatCurrency(totals.total)}
+                      <strong>{totals.total <= 0 ? 'Amount Owed to Customer:' : 'Amount Due:'}</strong> {formatCurrency(Math.abs(totals.total))}
                     </div>
-                    <div className="processing">
-                      <div className="spinner"></div>
-                      <p>Processing {paymentMethod} card payment...</p>
-                    </div>
+                    {totals.total > 0 ? (
+                      <div className="processing">
+                        <div className="spinner"></div>
+                        <p>Processing {paymentMethod} card payment...</p>
+                      </div>
+                    ) : (
+                      <div className="refund-notice" style={{ padding: '20px', textAlign: 'center' }}>
+                        <p style={{ fontSize: '18px' }}>Processing credit to {paymentMethod} card...</p>
+                      </div>
+                    )}
                     <div className="modal-buttons">
                       <button 
                         onClick={processPayment} 
                         className="complete-sale-btn"
                       >
-                        Process Payment
+                        {totals.total <= 0 ? 'Complete Transaction' : 'Process Payment'}
                       </button>
                       <button onClick={() => setPaymentMethod(null)} className="back-btn">
                         Back
@@ -1263,8 +1615,82 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
           <div className="payout-modal">
             <Payout 
               onComplete={handlePayoutComplete}
-              onCancel={() => setShowPayoutModal(false)}
+              onCancel={() => {
+                setShowPayoutModal(false);
+                setPayoutInitialType(undefined);
+              }}
+              initialType={payoutInitialType}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Manual Entry Modal */}
+      {showManualEntryModal && (
+        <div className="modal-overlay" onClick={() => setShowManualEntryModal(false)}>
+          <div className="modal-content manual-entry-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>{
+                manualEntryType === 'lottery' 
+                  ? "Lottery Ticket" 
+                  : manualEntryTaxable 
+                    ? "Manual Entry (Taxable)" 
+                    : "Manual Entry (Non-Taxable)"
+              }</h3>
+              <button className="modal-close-btn" onClick={() => {
+                setShowManualEntryModal(false);
+                setManualEntryType('manual'); // Reset type on close
+              }}>×</button>
+            </div>
+            
+            <div className="manual-entry-content">
+              <div className="amount-display">
+                <label>Enter Amount:</label>
+                <div className="amount-value">
+                  ${manualEntryAmount || "0.00"}
+                </div>
+              </div>
+
+              {/* Number Keypad */}
+              <div className="manual-keypad">
+                <div className="keypad-row">
+                  <button className="keypad-btn" onClick={() => setManualEntryAmount(prev => prev + '7')}>7</button>
+                  <button className="keypad-btn" onClick={() => setManualEntryAmount(prev => prev + '8')}>8</button>
+                  <button className="keypad-btn" onClick={() => setManualEntryAmount(prev => prev + '9')}>9</button>
+                </div>
+                <div className="keypad-row">
+                  <button className="keypad-btn" onClick={() => setManualEntryAmount(prev => prev + '4')}>4</button>
+                  <button className="keypad-btn" onClick={() => setManualEntryAmount(prev => prev + '5')}>5</button>
+                  <button className="keypad-btn" onClick={() => setManualEntryAmount(prev => prev + '6')}>6</button>
+                </div>
+                <div className="keypad-row">
+                  <button className="keypad-btn" onClick={() => setManualEntryAmount(prev => prev + '1')}>1</button>
+                  <button className="keypad-btn" onClick={() => setManualEntryAmount(prev => prev + '2')}>2</button>
+                  <button className="keypad-btn" onClick={() => setManualEntryAmount(prev => prev + '3')}>3</button>
+                </div>
+                <div className="keypad-row">
+                  <button className="keypad-btn" onClick={() => setManualEntryAmount(prev => prev + '0')}>0</button>
+                  <button className="keypad-btn" onClick={() => setManualEntryAmount(prev => prev.includes('.') ? prev : prev + '.')}>.</button>
+                  <button className="keypad-btn clear" onClick={() => setManualEntryAmount('')}>C</button>
+                </div>
+              </div>
+
+              <div className="modal-buttons">
+                <button 
+                  onClick={handleManualEntry} 
+                  className="add-to-cart-btn"
+                  disabled={!manualEntryAmount || parseFloat(manualEntryAmount) <= 0}
+                >
+                  Add to Cart
+                </button>
+                <button onClick={() => {
+                  setShowManualEntryModal(false);
+                  setManualEntryType('manual'); // Reset type
+                }} className="cancel-btn">
+                  Cancel
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -7,12 +7,17 @@ type PayoutType = 'selection' | 'lottery' | 'bottle' | 'other-description' | 'ot
 interface PayoutProps {
   onComplete?: (type: string, amount: number, description?: string) => void;
   onCancel?: () => void;
+  initialType?: 'lottery' | 'bottle' | 'other';
 }
 
-const Payout: React.FC<PayoutProps> = ({ onComplete, onCancel }) => {
-  const [currentView, setCurrentView] = useState<PayoutType>('selection');
+const Payout: React.FC<PayoutProps> = ({ onComplete, onCancel, initialType }) => {
+  const [currentView, setCurrentView] = useState<PayoutType>(
+    initialType === 'lottery' ? 'lottery' : 
+    initialType === 'bottle' ? 'bottle' : 
+    'selection'
+  );
   const [otherDescription, setOtherDescription] = useState('');
-  const [selectedType, setSelectedType] = useState<'lottery' | 'bottle' | 'other'>('lottery');
+  const [selectedType, setSelectedType] = useState<'lottery' | 'bottle' | 'other'>(initialType || 'lottery');
 
   const handleTypeSelection = (type: 'lottery' | 'bottle' | 'other') => {
     setSelectedType(type);

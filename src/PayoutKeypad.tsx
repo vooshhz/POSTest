@@ -16,6 +16,40 @@ const PayoutKeypad: React.FC<PayoutKeypadProps> = ({ type, title, onComplete, on
     updateDisplayValue(inputValue);
   }, [inputValue, type]);
 
+  // Handle keyboard input
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Handle number keys
+      if (e.key >= '0' && e.key <= '9') {
+        e.preventDefault();
+        handleNumberClick(e.key);
+      }
+      // Handle backspace
+      else if (e.key === 'Backspace') {
+        e.preventDefault();
+        handleBackspace();
+      }
+      // Handle clear (Delete or c)
+      else if (e.key === 'Delete' || e.key.toLowerCase() === 'c') {
+        e.preventDefault();
+        handleClear();
+      }
+      // Handle Enter for complete
+      else if (e.key === 'Enter') {
+        e.preventDefault();
+        handleComplete();
+      }
+      // Handle Escape for cancel
+      else if (e.key === 'Escape') {
+        e.preventDefault();
+        onCancel();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [inputValue, onCancel]);
+
   const updateDisplayValue = (value: string) => {
     if (type === 'cents') {
       // For cents mode, always show as cents then convert to dollars

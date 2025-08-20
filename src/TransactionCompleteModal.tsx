@@ -15,6 +15,7 @@ interface TransactionCompleteModalProps {
     }>;
     subtotal: number;
     tax: number;
+    creditTotal?: number;
     total: number;
     paymentType: 'cash' | 'debit' | 'credit';
     cashGiven?: number;

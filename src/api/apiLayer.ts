@@ -372,7 +372,29 @@ const webFallbacks: InventoryAPI = {
     if (item) {
       return {
         success: true,
-        data: item
+        data: {
+          ...item,
+          taxable: item.taxable !== undefined ? item.taxable : true // Default to taxable
+        }
+      };
+    }
+    
+    return {
+      success: false,
+      error: 'Item not found in inventory'
+    };
+  },
+  
+  updateItemTaxable: async (upc: string, taxable: boolean) => {
+    const storage = WebStorage.getInstance();
+    const item = storage.getInventoryItem(upc);
+    
+    if (item) {
+      item.taxable = taxable;
+      storage.saveToLocalStorage();
+      return {
+        success: true,
+        message: 'Taxable status updated'
       };
     }
     
@@ -1161,6 +1183,7 @@ class APILayer {
   get addToInventory() { return this.api.addToInventory; }
   get getInventory() { return this.api.getInventory; }
   get checkInventory() { return this.api.checkInventory; }
+  get updateItemTaxable() { return this.api.updateItemTaxable; }
   get searchInventoryByDescription() { return this.api.searchInventoryByDescription; }
   get searchProductsByCategory() { return this.api.searchProductsByCategory; }
   get saveTransaction() { return this.api.saveTransaction; }

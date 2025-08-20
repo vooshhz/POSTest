@@ -1,6 +1,5 @@
 import { api } from './api/apiLayer';
 import { useState, useEffect } from "react";
-import DatePicker from "./components/DatePicker";
 import DateRangePicker from "./components/DateRangePicker";
 import "./DailySales.css";
 
@@ -30,30 +29,32 @@ interface DailySalesData {
 }
 
 export default function DailySales() {
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
-  const [isRangeMode, setIsRangeMode] = useState(false);
+  const todayDate = new Date().toISOString().split('T')[0];
+  const [startDate, setStartDate] = useState(todayDate);
+  const [endDate, setEndDate] = useState(todayDate);
   const [loading, setLoading] = useState(false);
   const [salesData, setSalesData] = useState<DailySalesData | null>(null);
   const [multiDaySalesData, setMultiDaySalesData] = useState<DailySalesData[]>([]);
   const [aggregatedData, setAggregatedData] = useState<DailySalesData | null>(null);
   const [error, setError] = useState("");
+  
+  // Check if it's a single day or a range
+  const isSingleDay = startDate === endDate;
 
   useEffect(() => {
-    if (isRangeMode) {
-      loadDateRangeSales();
-    } else {
+    if (isSingleDay) {
       loadDailySales();
+    } else {
+      loadDateRangeSales();
     }
-  }, [selectedDate, startDate, endDate, isRangeMode]);
+  }, [startDate, endDate]);
 
   const loadDailySales = async () => {
     setLoading(true);
     setError("");
     
     try {
-      const result = await api.getDailySales(selectedDate);
+      const result = await api.getDailySales(startDate);
       
       if (result.success && result.data) {
         setSalesData(result.data);
@@ -79,17 +80,19 @@ export default function DailySales() {
     
     try {
       const allData: DailySalesData[] = [];
-      const start = new Date(startDate);
-      const end = new Date(endDate);
+      const start = new Date(startDate + 'T00:00:00');
+      const end = new Date(endDate + 'T23:59:59');
       
       // Load data for each day in the range
-      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        const dateStr = d.toISOString().split('T')[0];
+      const currentDate = new Date(start);
+      while (currentDate <= end) {
+        const dateStr = currentDate.toISOString().split('T')[0];
         const result = await api.getDailySales(dateStr);
         
         if (result.success && result.data) {
           allData.push(result.data);
         }
+        currentDate.setDate(currentDate.getDate() + 1);
       }
       
       setMultiDaySalesData(allData);
@@ -205,13 +208,13 @@ export default function DailySales() {
   };
 
   const getMaxHourlyAmount = () => {
-    const data = isRangeMode ? aggregatedData : salesData;
+    const data = !isSingleDay ? aggregatedData : salesData;
     if (!data?.hourlyBreakdown.length) return 100;
     return Math.max(...data.hourlyBreakdown.map(h => h.amount));
   };
 
   // Determine which data to display
-  const displayData = isRangeMode ? aggregatedData : salesData;
+  const displayData = !isSingleDay ? aggregatedData : salesData;
 
   if (loading) {
     return (
@@ -225,41 +228,19 @@ export default function DailySales() {
   return (
     <div className="daily-sales-container">
       <div className="daily-sales-header">
-        <h3>Daily Sales Report</h3>
+        <h3>Sales Report - {isSingleDay && startDate === todayDate ? 'Today' : isSingleDay ? new Date(startDate + 'T12:00:00').toLocaleDateString() : `${startDate} to ${endDate}`}</h3>
         <div className="date-controls">
-          <div className="date-mode-toggle">
-            <button 
-              className={`mode-btn ${!isRangeMode ? 'active' : ''}`}
-              onClick={() => setIsRangeMode(false)}
-            >
-              Single Day
-            </button>
-            <button 
-              className={`mode-btn ${isRangeMode ? 'active' : ''}`}
-              onClick={() => setIsRangeMode(true)}
-            >
-              Date Range
-            </button>
-          </div>
           <div className="date-selector">
-            <label>{isRangeMode ? 'Select Date Range:' : 'Select Date:'}</label>
-            {isRangeMode ? (
-              <DateRangePicker
-                startDate={startDate}
-                endDate={endDate}
-                onChange={handleDateRangeChange}
-                max={new Date().toISOString().split('T')[0]}
-                className="date-picker"
-                presetRanges={false}
-              />
-            ) : (
-              <DatePicker
-                value={selectedDate}
-                onChange={setSelectedDate}
-                max={new Date().toISOString().split('T')[0]}
-                className="date-picker"
-              />
-            )}
+            <label>Select Date or Range:</label>
+            <DateRangePicker
+              startDate={startDate}
+              endDate={endDate}
+              onChange={handleDateRangeChange}
+              max={new Date().toISOString().split('T')[0]}
+              className="date-picker"
+              presetRanges={false}
+              allowSingleDate={true}
+            />
           </div>
         </div>
       </div>
@@ -273,16 +254,16 @@ export default function DailySales() {
       {!displayData || displayData.salesCount === 0 ? (
         <div className="no-sales">
           <p>
-            {isRangeMode 
+            {!isSingleDay 
               ? `No sales recorded for date range: ${startDate} to ${endDate}`
-              : `No sales recorded for ${new Date(selectedDate + 'T12:00:00').toLocaleDateString()}`
+              : `No sales recorded for ${new Date(startDate + 'T12:00:00').toLocaleDateString()}`
             }
           </p>
         </div>
       ) : (
         <>
           {/* Period indicator for date range */}
-          {isRangeMode && (
+          {!isSingleDay && (
             <div className="date-range-indicator">
               <strong>Date Range:</strong> {startDate} to {endDate}
             </div>

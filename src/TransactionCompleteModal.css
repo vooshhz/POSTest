@@ -131,31 +131,36 @@
 .modal-actions button {
   padding: 12px 24px;
   font-size: 16px;
-  border: none;
+  border: 1px solid #ddd;
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.3s;
   font-weight: 500;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.receipt-btn {
-  background: #2196F3;
-  color: white;
+.modal-actions .receipt-btn {
+  background-color: #2196F3 !important;
+  color: white !important;
+  border-color: #2196F3;
 }
 
-.receipt-btn:hover {
-  background: #1976D2;
+.modal-actions .receipt-btn:hover {
+  background-color: #1976D2 !important;
+  border-color: #1976D2;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
 }
 
-.close-btn {
-  background: #757575;
-  color: white;
+.modal-actions .close-btn {
+  background-color: #757575 !important;
+  color: white !important;
+  border-color: #757575;
 }
 
-.close-btn:hover {
-  background: #616161;
+.modal-actions .close-btn:hover {
+  background-color: #616161 !important;
+  border-color: #616161;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }

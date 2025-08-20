@@ -193,6 +193,73 @@
   box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
 }
 
+.scanner-lottery-btn {
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 2px 6px rgba(156, 39, 176, 0.2);
+}
+
+.scanner-lottery-btn:hover {
+  background: linear-gradient(135deg, #7b1fa2 0%, #6a1b9a 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(156, 39, 176, 0.3);
+}
+
+.scanner-tax-btn {
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.scanner-tax-btn:hover {
+  background: linear-gradient(135deg, #45a049 0%, #3d8b40 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.scanner-nontax-btn {
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.scanner-nontax-btn:hover {
+  background: linear-gradient(135deg, #7B1FA2 0%, #6A1B9A 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(156, 39, 176, 0.3);
+}
+
 .search-dropdown {
   position: absolute;
   top: 100%;
@@ -515,6 +582,72 @@
   justify-content: flex-start; /* Align items to top */
 }
 
+.action-buttons-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+  width: 100%;
+  padding: 0 10px;
+}
+
+.action-btn {
+  padding: 1rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  width: 100%;
+}
+
+.action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.action-btn.payout-btn {
+  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+  color: white;
+}
+
+.action-btn.payout-btn:hover {
+  background: linear-gradient(135deg, #f57c00 0%, #ef6c00 100%);
+}
+
+.action-btn.lottery-btn {
+  background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%);
+  color: white;
+}
+
+.action-btn.lottery-btn:hover {
+  background: linear-gradient(135deg, #7b1fa2 0%, #6a1b9a 100%);
+}
+
+.action-btn.tax-btn {
+  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+  color: white;
+}
+
+.action-btn.tax-btn:hover {
+  background: linear-gradient(135deg, #45a049 0%, #3d8b40 100%);
+}
+
+.action-btn.nontax-btn {
+  background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+  color: white;
+}
+
+.action-btn.nontax-btn:hover {
+  background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%);
+}
+
 .cart-header {
   display: flex;
   justify-content: space-between;
@@ -630,22 +763,27 @@
   min-width: 200px;
 }
 
-.cart-table th:nth-child(3) { /* Qty */
+.cart-table th:nth-child(3) { /* Taxable */
+  text-align: center;
+  width: 70px;
+}
+
+.cart-table th:nth-child(4) { /* Qty */
   text-align: center;
   width: 100px;
 }
 
-.cart-table th:nth-child(4) { /* Unit Price */
+.cart-table th:nth-child(5) { /* Unit Price */
   text-align: right;
   width: 80px;
 }
 
-.cart-table th:nth-child(5) { /* Total */
+.cart-table th:nth-child(6) { /* Total */
   text-align: right;
   width: 80px;
 }
 
-.cart-table th:nth-child(6) { /* Actions */
+.cart-table th:nth-child(7) { /* Actions */
   text-align: center;
   width: 160px; /* Increased to accommodate larger buttons */
 }
@@ -666,19 +804,23 @@
   text-align: left;
 }
 
-.cart-table td:nth-child(3) { /* Qty */
+.cart-table td:nth-child(3) { /* Taxable */
   text-align: center;
 }
 
-.cart-table td:nth-child(4) { /* Unit Price */
+.cart-table td:nth-child(4) { /* Qty */
+  text-align: center;
+}
+
+.cart-table td:nth-child(5) { /* Unit Price */
   text-align: right;
 }
 
-.cart-table td:nth-child(5) { /* Total */
+.cart-table td:nth-child(6) { /* Total */
   text-align: right;
 }
 
-.cart-table td:nth-child(6) { /* Actions */
+.cart-table td:nth-child(7) { /* Actions */
   text-align: center;
 }
 
@@ -714,6 +856,17 @@
   text-overflow: ellipsis;
   font-weight: 600;
   color: #1a1a1a;
+}
+
+.taxable-cell {
+  text-align: center;
+}
+
+.taxable-checkbox {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  margin: 0;
 }
 
 .quantity-controls {
@@ -1526,4 +1679,78 @@
     margin: 0 auto;
     height: auto;
   }
+}
+
+/* Manual Entry Modal */
+.manual-entry-modal {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  max-width: 400px;
+  width: 90%;
+}
+
+.manual-entry-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.manual-entry-content .amount-display {
+  text-align: center;
+}
+
+.manual-entry-content .amount-display label {
+  display: block;
+  font-size: 1rem;
+  color: #666;
+  margin-bottom: 0.5rem;
+}
+
+.manual-entry-content .amount-value {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #2c3e50;
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 2px solid #dee2e6;
+  min-height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.manual-keypad {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 10px;
+}
+
+.manual-entry-modal .add-to-cart-btn {
+  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+  color: white;
+  padding: 1rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.manual-entry-modal .add-to-cart-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #45a049 0%, #3d8b40 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.manual-entry-modal .add-to-cart-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  opacity: 0.6;
 }

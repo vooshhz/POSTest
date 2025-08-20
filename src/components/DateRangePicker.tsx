@@ -9,6 +9,7 @@ interface DateRangePickerProps {
   max?: string;
   className?: string;
   presetRanges?: boolean;
+  allowSingleDate?: boolean;
 }
 
 export default function DateRangePicker({ 
@@ -18,7 +19,8 @@ export default function DateRangePicker({
   min, 
   max, 
   className,
-  presetRanges = true 
+  presetRanges = true,
+  allowSingleDate = false 
 }: DateRangePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [tempStartDate, setTempStartDate] = useState(startDate);
@@ -108,7 +110,8 @@ export default function DateRangePicker({
     
     const formatSingle = (dateStr: string) => {
       if (!dateStr) return '';
-      const date = new Date(dateStr);
+      // Add 'T12:00:00' to avoid timezone issues when parsing date strings
+      const date = new Date(dateStr + 'T12:00:00');
       return date.toLocaleDateString('en-US', { 
         month: 'short', 
         day: 'numeric',
@@ -127,12 +130,12 @@ export default function DateRangePicker({
     const dateStr = formatDate(date);
     
     if (!selectingEndDate) {
-      // First click - set start date
+      // First click - set start date (and clear end date for range selection)
       setTempStartDate(dateStr);
       setTempEndDate('');
       setSelectingEndDate(true);
     } else {
-      // Second click - set end date
+      // Second click - set end date (or same date for single day)
       if (dateStr < tempStartDate) {
         // If end date is before start date, swap them
         setTempEndDate(tempStartDate);
@@ -334,7 +337,7 @@ export default function DateRangePicker({
 
           <div className="date-range-status">
             {selectingEndDate 
-              ? 'Select end date...' 
+              ? 'Select end date (or click Apply for single day)...' 
               : tempStartDate 
                 ? `${formatDisplayDate(tempStartDate, tempEndDate)}`
                 : 'Select start date...'}

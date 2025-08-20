@@ -12,6 +12,7 @@ interface ReceiptModalProps {
     }>;
     subtotal: number;
     tax: number;
+    creditTotal?: number;
     total: number;
     paymentType: 'cash' | 'debit' | 'credit';
     cashGiven?: number;
@@ -88,6 +89,12 @@ export default function ReceiptModal({ isOpen, onClose, transaction }: ReceiptMo
                 <span>Tax:</span>
                 <span>${transaction.tax.toFixed(2)}</span>
               </div>
+              {transaction.creditTotal && (
+                <div className="total-row">
+                  <span>Credits:</span>
+                  <span>${transaction.creditTotal.toFixed(2)}</span>
+                </div>
+              )}
               <div className="receipt-divider">--------------------------------</div>
               <div className="total-row total">
                 <span>TOTAL:</span>
