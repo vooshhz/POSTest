@@ -7,14 +7,19 @@
     "dev": "vite",
     "build": "tsc && vite build && electron-builder",
     "build:web": "vite build",
-    "start": "node ./server.js",
+    "start": "node server-fly-fixed.js",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "pnpm run build:web && flyctl deploy",
+    "deploy:logs": "flyctl logs",
+    "deploy:ssh": "flyctl ssh console",
+    "backup:web": "backup-web-config.bat"
   },
   "dependencies": {
     "@types/papaparse": "^5.3.16",
     "axios": "^1.6.0",
     "better-sqlite3": "^12.2.0",
+    "cors": "^2.8.5",
     "csv-parse": "^6.1.0",
     "dotenv": "^16.3.1",
     "express": "^5.1.0",

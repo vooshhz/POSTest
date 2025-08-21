@@ -56,7 +56,7 @@ export default function Login({ onLoginSuccess, storeName }: LoginProps) {
     setError("");
 
     try {
-      const result = await (window.api as any).checkUserType(username);
+      const result = await api.checkUserType(username);
       
       if (result.success) {
         setUserRole(result.role || null);

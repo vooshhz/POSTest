@@ -34,7 +34,7 @@ export default function DailySales() {
   const [endDate, setEndDate] = useState(todayDate);
   const [loading, setLoading] = useState(false);
   const [salesData, setSalesData] = useState<DailySalesData | null>(null);
-  const [multiDaySalesData, setMultiDaySalesData] = useState<DailySalesData[]>([]);
+  const [, setMultiDaySalesData] = useState<DailySalesData[]>([]);
   const [aggregatedData, setAggregatedData] = useState<DailySalesData | null>(null);
   const [error, setError] = useState("");
   
@@ -209,7 +209,7 @@ export default function DailySales() {
 
   const getMaxHourlyAmount = () => {
     const data = !isSingleDay ? aggregatedData : salesData;
-    if (!data?.hourlyBreakdown.length) return 100;
+    if (!data?.hourlyBreakdown || data.hourlyBreakdown.length === 0) return 100;
     return Math.max(...data.hourlyBreakdown.map(h => h.amount));
   };
 
@@ -346,7 +346,7 @@ export default function DailySales() {
             <h4>Sales by Hour</h4>
             <div className="hourly-chart">
               {Array.from({ length: 24 }, (_, hour) => {
-                const hourData = displayData.hourlyBreakdown.find(h => h.hour === hour);
+                const hourData = displayData.hourlyBreakdown?.find(h => h.hour === hour);
                 const amount = hourData?.amount || 0;
                 const maxAmount = getMaxHourlyAmount();
                 const height = maxAmount > 0 ? (amount / maxAmount) * 100 : 0;

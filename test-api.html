@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>POS API Test</title>
+</head>
+<body>
+    <h1>POS System API Test</h1>
+    <div id="results"></div>
+    
+    <script>
+        const API_URL = 'https://your-pos-app.fly.dev';
+        const results = document.getElementById('results');
+        
+        async function testAPI() {
+            results.innerHTML = '<h2>Testing API Endpoints...</h2>';
+            
+            // Test health
+            try {
+                const health = await fetch(`${API_URL}/api/health`);
+                const healthData = await health.json();
+                results.innerHTML += `<p>✅ Health Check: ${JSON.stringify(healthData)}</p>`;
+            } catch (e) {
+                results.innerHTML += `<p>❌ Health Check Failed: ${e.message}</p>`;
+            }
+            
+            // Test inventory
+            try {
+                const inventory = await fetch(`${API_URL}/api/inventory`);
+                const inventoryData = await inventory.json();
+                results.innerHTML += `<p>✅ Inventory: ${inventoryData.length} items loaded</p>`;
+                
+                // Show first 3 items
+                if (inventoryData.length > 0) {
+                    results.innerHTML += '<h3>Sample Items:</h3><ul>';
+                    inventoryData.slice(0, 3).forEach(item => {
+                        results.innerHTML += `<li>UPC: ${item.upc}, Price: $${item.price}, Qty: ${item.quantity}</li>`;
+                    });
+                    results.innerHTML += '</ul>';
+                }
+            } catch (e) {
+                results.innerHTML += `<p>❌ Inventory Failed: ${e.message}</p>`;
+            }
+            
+            // Test login
+            try {
+                const login = await fetch(`${API_URL}/api/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: 'kelly', password: '1234' })
+                });
+                const loginData = await login.json();
+                results.innerHTML += `<p>✅ Login Test: ${loginData.success ? 'Success' : 'Failed'} - ${loginData.user ? loginData.user.username : 'No user'}</p>`;
+            } catch (e) {
+                results.innerHTML += `<p>❌ Login Failed: ${e.message}</p>`;
+            }
+            
+            // Test product search
+            try {
+                const search = await fetch(`${API_URL}/api/search-products`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: 'jack' })
+                });
+                const searchData = await search.json();
+                results.innerHTML += `<p>✅ Product Search: Found ${searchData.length} products matching "jack"</p>`;
+            } catch (e) {
+                results.innerHTML += `<p>❌ Product Search Failed: ${e.message}</p>`;
+            }
+            
+            // Test users
+            try {
+                const users = await fetch(`${API_URL}/api/users`);
+                const usersData = await users.json();
+                results.innerHTML += `<p>✅ Users: ${usersData.length} users found</p>`;
+                usersData.forEach(user => {
+                    results.innerHTML += `<p>  - ${user.username} (${user.role})</p>`;
+                });
+            } catch (e) {
+                results.innerHTML += `<p>❌ Users Failed: ${e.message}</p>`;
+            }
+        }
+        
+        // Run tests on load
+        testAPI();
+    </script>
+</body>
+</html>

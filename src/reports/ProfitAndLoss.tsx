@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import DateRangePicker from '../components/DateRangePicker';
+import api from '../api/apiLayer';
 import '../Reports.css';
 
 interface PnLData {
@@ -88,25 +89,25 @@ export default function ProfitAndLoss() {
       const endStr = dateRange.end.toISOString().split('T')[0];
 
       // Get P&L data
-      const pnlResult = await window.api.getPnL(startStr, endStr);
+      const pnlResult = await api.getPnL(startStr, endStr);
       if (pnlResult.success) {
         setPnLData(pnlResult.data);
       }
 
       // Get category performance
-      const categoryResult = await window.api.getCategoryPerformance(startStr, endStr);
+      const categoryResult = await api.getCategoryPerformance(startStr, endStr);
       if (categoryResult.success) {
         setCategoryData(categoryResult.data);
       }
 
       // Get product performance
-      const productResult = await window.api.getProductPerformance(startStr, endStr, 20);
+      const productResult = await api.getProductPerformance(startStr, endStr, 20);
       if (productResult.success) {
         setProductData(productResult.data);
       }
 
       // Get expenses
-      const expenseResult = await window.api.getOperatingExpenses(startStr, endStr);
+      const expenseResult = await api.getOperatingExpenses(startStr, endStr);
       if (expenseResult.success) {
         setExpenses(expenseResult.data);
       }
@@ -118,7 +119,7 @@ export default function ProfitAndLoss() {
       const previousEnd = new Date(dateRange.start);
       previousEnd.setDate(previousEnd.getDate() - 1);
 
-      const comparisonResult = await window.api.comparePnLPeriods(
+      const comparisonResult = await api.comparePnLPeriods(
         { start: startStr, end: endStr },
         { start: previousStart.toISOString().split('T')[0], end: previousEnd.toISOString().split('T')[0] }
       );
@@ -160,7 +161,7 @@ export default function ProfitAndLoss() {
     description: string;
     recurring: boolean;
   }) => {
-    const result = await window.api.addOperatingExpense({
+    const result = await api.addOperatingExpense({
       ...expense,
       date: new Date().toISOString().split('T')[0],
       created_by: 'user'

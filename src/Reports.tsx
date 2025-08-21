@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, Component, ReactNode } from "react";
 import Sales from "./reports/Sales";
 import InventoryAnalysis from "./reports/InventoryAnalysis";
 import ProductPerformance from "./reports/ProductPerformance";
@@ -8,6 +8,34 @@ import ComplianceAudit from "./reports/ComplianceAudit";
 import Replenishment from "./reports/Replenishment";
 import ProfitAndLoss from "./reports/ProfitAndLoss";
 import "./Reports.css";
+
+// Error boundary to catch component errors
+class ErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean, error: string}> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: '' };
+  }
+
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error: error.toString() };
+  }
+
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error('Report component error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '20px', color: 'red' }}>
+          <h3>Error loading report</h3>
+          <p>{this.state.error}</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 type ReportTab = 'sales' | 'inventory-analysis' | 
                  'product-performance' | 'financial' | 
@@ -46,14 +74,16 @@ export default function Reports() {
       </div>
       
       <div className="reports-content">
-        {activeTab === 'sales' && <Sales />}
-        {activeTab === 'pnl' && <ProfitAndLoss />}
-        {activeTab === 'inventory-analysis' && <InventoryAnalysis />}
-        {activeTab === 'product-performance' && <ProductPerformance />}
-        {activeTab === 'replenishment' && <Replenishment />}
-        {activeTab === 'financial' && <FinancialReports />}
-        {activeTab === 'vendor-analysis' && <VendorAnalysis />}
-        {activeTab === 'compliance' && <ComplianceAudit />}
+        <ErrorBoundary>
+          {activeTab === 'sales' && <Sales />}
+          {activeTab === 'pnl' && <ProfitAndLoss />}
+          {activeTab === 'inventory-analysis' && <InventoryAnalysis />}
+          {activeTab === 'product-performance' && <ProductPerformance />}
+          {activeTab === 'replenishment' && <Replenishment />}
+          {activeTab === 'financial' && <FinancialReports />}
+          {activeTab === 'vendor-analysis' && <VendorAnalysis />}
+          {activeTab === 'compliance' && <ComplianceAudit />}
+        </ErrorBoundary>
       </div>
     </div>
   );
