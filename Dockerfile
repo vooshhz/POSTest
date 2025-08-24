@@ -30,4 +30,4 @@ RUN mkdir -p /data
 EXPOSE 8080
 
 # Start server
-CMD ["node", "server-complete.js"]
+CMD ["node", "server-fly-fixed.js"]

@@ -184,8 +184,8 @@ export default function InventoryAnalysis() {
 
         <div className="metric-card">
           <div className="metric-label">Total Items</div>
-          <div className="metric-value">{metrics.totalItems.toLocaleString()}</div>
-          <div className="metric-detail">{metrics.totalQuantity.toLocaleString()} units</div>
+          <div className="metric-value">{(metrics.totalItems || 0).toLocaleString()}</div>
+          <div className="metric-detail">{(metrics.totalQuantity || 0).toLocaleString()} units</div>
         </div>
 
         <div className="metric-card">
@@ -253,7 +253,7 @@ export default function InventoryAnalysis() {
               <tr key={index}>
                 <td>{cat.category}</td>
                 <td>{cat.items}</td>
-                <td>{cat.quantity.toLocaleString()}</td>
+                <td>{(cat.quantity || 0).toLocaleString()}</td>
                 <td className="value-cell">{formatCurrency(cat.value)}</td>
                 <td>
                   <div className="percentage-bar">

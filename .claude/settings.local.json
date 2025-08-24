@@ -46,7 +46,9 @@
       "Bash(pnpm run build:web:*)",
       "Bash(backup-web-config.bat)",
       "Bash(deploy.bat)",
-      "Bash(pnpm run:*)"
+      "Bash(pnpm run:*)",
+      "Bash(start fix-kelly.html)",
+      "Bash(if exist dist rmdir /s /q dist)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

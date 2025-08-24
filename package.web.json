@@ -1,0 +1,47 @@
+{
+  "name": "pos-lite-web",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --config vite.config.web.ts",
+    "build": "tsc && vite build --config vite.config.web.ts",
+    "build:server": "node server-fly-fixed.js",
+    "start": "node server-fly-fixed.js",
+    "lint": "eslint .",
+    "preview": "vite preview --config vite.config.web.ts",
+    "deploy": "npm run build && flyctl deploy",
+    "deploy:logs": "flyctl logs",
+    "deploy:ssh": "flyctl ssh console"
+  },
+  "dependencies": {
+    "@types/papaparse": "^5.3.16",
+    "axios": "^1.6.0",
+    "better-sqlite3": "^12.2.0",
+    "cors": "^2.8.5",
+    "csv-parse": "^6.1.0",
+    "date-fns": "^2.30.0",
+    "dotenv": "^16.3.1",
+    "express": "^5.1.0",
+    "jsbarcode": "^3.12.1",
+    "lucide-react": "^0.539.0",
+    "papaparse": "^5.5.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/node": "^24.2.1",
+    "@types/react": "^18.2.64",
+    "@types/react-dom": "^18.2.21",
+    "@typescript-eslint/eslint-plugin": "^7.1.1",
+    "@typescript-eslint/parser": "^7.1.1",
+    "@vitejs/plugin-react": "^4.2.1",
+    "eslint": "^8.57.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.5",
+    "tsx": "^4.20.3",
+    "typescript": "^5.2.2",
+    "vite": "^5.1.6"
+  }
+}

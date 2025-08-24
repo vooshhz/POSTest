@@ -36,12 +36,12 @@ export default function ProductPerformance() {
       <div className="performance-grid">
         <div className="metric-card">
           <div className="metric-label">Top Performer</div>
-          <div className="metric-value">{products[0]?.description || 'N/A'}</div>
+          <div className="metric-value">{products?.[0]?.description || 'N/A'}</div>
         </div>
         
         <div className="metric-card">
           <div className="metric-label">Total Products</div>
-          <div className="metric-value">{products.length}</div>
+          <div className="metric-value">{products?.length || 0}</div>
         </div>
       </div>
 

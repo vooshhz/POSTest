@@ -120,6 +120,7 @@ export default function WeeklySummary({ periodType: propPeriodType, customDate }
   };
 
   const formatPercent = (value: number) => {
+    if (value === undefined || value === null) return '0%';
     const prefix = value > 0 ? '+' : '';
     return `${prefix}${value.toFixed(1)}%`;
   };
@@ -141,7 +142,7 @@ export default function WeeklySummary({ periodType: propPeriodType, customDate }
     );
   }
 
-  if (!data) {
+  if (!data || !data.dailyData || data.dailyData.length === 0) {
     return (
       <div className="weekly-summary-container">
         <div className="no-data">No data available for selected period</div>
@@ -149,7 +150,9 @@ export default function WeeklySummary({ periodType: propPeriodType, customDate }
     );
   }
 
-  const maxSales = Math.max(...data.dailyData.map(d => d.sales));
+  const maxSales = data.dailyData && data.dailyData.length > 0 
+    ? Math.max(...data.dailyData.map(d => d.sales || 0)) 
+    : 1;
 
   return (
     <div className="weekly-summary-container">
@@ -201,7 +204,7 @@ export default function WeeklySummary({ periodType: propPeriodType, customDate }
 
         <div className="metric-card">
           <div className="metric-label">Total Transactions</div>
-          <div className="metric-value">{data.totalTransactions.toLocaleString()}</div>
+          <div className="metric-value">{(data.totalTransactions || 0).toLocaleString()}</div>
           {data.weekOverWeek && (
             <div className={`metric-change ${data.weekOverWeek.transactions >= 0 ? 'positive' : 'negative'}`}>
               {formatPercent(data.weekOverWeek.transactions)} vs previous
@@ -211,48 +214,53 @@ export default function WeeklySummary({ periodType: propPeriodType, customDate }
 
         <div className="metric-card">
           <div className="metric-label">Items Sold</div>
-          <div className="metric-value">{data.totalItems.toLocaleString()}</div>
+          <div className="metric-value">{(data.totalItems || 0).toLocaleString()}</div>
         </div>
 
         <div className="metric-card">
           <div className="metric-label">Avg Daily Sales</div>
-          <div className="metric-value">{formatCurrency(data.avgDailySales)}</div>
+          <div className="metric-value">{formatCurrency(data.avgDailySales || 0)}</div>
         </div>
 
         <div className="metric-card">
           <div className="metric-label">Avg Transaction</div>
-          <div className="metric-value">{formatCurrency(data.avgTransactionValue)}</div>
+          <div className="metric-value">{formatCurrency(data.avgTransactionValue || 0)}</div>
         </div>
       </div>
 
       {/* Best/Worst Days */}
       <div className="performance-cards">
-        <div className="performance-card best">
-          <h4>Best Day</h4>
-          <div className="performance-date">
-            {new Date(data.bestDay.date).toLocaleDateString()}
+        {data.bestDay && data.bestDay.date && (
+          <div className="performance-card best">
+            <h4>Best Day</h4>
+            <div className="performance-date">
+              {new Date(data.bestDay.date).toLocaleDateString()}
+            </div>
+            <div className="performance-value">
+              {formatCurrency(data.bestDay.sales || 0)}
+            </div>
           </div>
-          <div className="performance-value">
-            {formatCurrency(data.bestDay.sales)}
-          </div>
-        </div>
+        )}
 
-        <div className="performance-card worst">
-          <h4>Worst Day</h4>
-          <div className="performance-date">
-            {new Date(data.worstDay.date).toLocaleDateString()}
+        {data.worstDay && data.worstDay.date && (
+          <div className="performance-card worst">
+            <h4>Worst Day</h4>
+            <div className="performance-date">
+              {new Date(data.worstDay.date).toLocaleDateString()}
+            </div>
+            <div className="performance-value">
+              {formatCurrency(data.worstDay.sales || 0)}
+            </div>
           </div>
-          <div className="performance-value">
-            {formatCurrency(data.worstDay.sales)}
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Daily Sales Chart */}
-      <div className="daily-sales-chart">
-        <h4>Daily Sales Trend</h4>
-        <div className="chart-container">
-          {data.dailyData.map((day, index) => (
+      {data.dailyData && data.dailyData.length > 0 && (
+        <div className="daily-sales-chart">
+          <h4>Daily Sales Trend</h4>
+          <div className="chart-container">
+            {data.dailyData.map((day, index) => (
             <div key={index} className="day-column">
               <div className="day-bar-wrapper">
                 <div 
@@ -271,24 +279,26 @@ export default function WeeklySummary({ periodType: propPeriodType, customDate }
                 })}
               </div>
             </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Top Categories */}
-      <div className="top-categories">
-        <h4>Top Categories</h4>
-        <table>
-          <thead>
-            <tr>
-              <th>Category</th>
-              <th>Revenue</th>
-              <th>Items Sold</th>
-              <th>% of Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.topCategories.map((category, index) => (
+      {data.topCategories && data.topCategories.length > 0 && (
+        <div className="top-categories">
+          <h4>Top Categories</h4>
+          <table>
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Revenue</th>
+                <th>Items Sold</th>
+                <th>% of Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.topCategories.map((category, index) => (
               <tr key={index}>
                 <td>
                   <div className="category-rank">
@@ -296,16 +306,17 @@ export default function WeeklySummary({ periodType: propPeriodType, customDate }
                     {category.category || 'Uncategorized'}
                   </div>
                 </td>
-                <td className="revenue-cell">{formatCurrency(category.sales)}</td>
-                <td className="items-cell">{category.items.toLocaleString()}</td>
+                <td className="revenue-cell">{formatCurrency(category.sales || 0)}</td>
+                <td className="items-cell">{(category.items || 0).toLocaleString()}</td>
                 <td className="percent-cell">
-                  {((category.sales / data.totalSales) * 100).toFixed(1)}%
+                  {data.totalSales ? ((category.sales / data.totalSales) * 100).toFixed(1) : '0'}%
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
-      </div>
+        </div>
+      )}
 
       {/* Summary Stats */}
       <div className="period-summary">

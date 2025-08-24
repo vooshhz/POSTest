@@ -5,8 +5,11 @@
 
 // Get the base URL for API calls
 const getApiUrl = () => {
-  // In production on Fly.io, use relative URLs
-  // In development, you might want to use a different URL
+  // Use environment variable if available, otherwise use relative URLs
+  if (import.meta.env?.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  // In production, use relative URLs (same origin)
   return '';
 };
 
@@ -16,7 +19,13 @@ const makeApiCall = async (endpoint: string, method: string = 'GET', body?: any)
       method,
       headers: {
         'Content-Type': 'application/json',
+        // Add auth token if available in localStorage
+        ...(localStorage.getItem('authToken') && {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        })
       },
+      // Include credentials for CORS
+      credentials: 'include',
     };
     
     if (body) {
@@ -169,24 +178,10 @@ export const webApi = {
 
   // User management
   checkUserType: async (username: string) => {
-    // For web version, we'll check if user exists first
+    // Use the dedicated endpoint to check user type
     try {
-      const users = await makeApiCall('/users');
-      const user = users.find((u: any) => u.username === username);
-      
-      if (user) {
-        return {
-          success: true,
-          role: user.role,
-          requiresPin: user.role === 'cashier',
-          requiresPassword: user.role !== 'cashier'
-        };
-      } else {
-        return {
-          success: false,
-          error: 'User not found'
-        };
-      }
+      const result = await makeApiCall('/check-user-type', 'POST', { username });
+      return result;
     } catch (error) {
       return {
         success: false,
@@ -198,6 +193,10 @@ export const webApi = {
   userLogin: async (username: string, password: string) => {
     try {
       const result = await makeApiCall('/login', 'POST', { username, password });
+      // Store user in localStorage after successful login
+      if (result.success && result.user) {
+        localStorage.setItem('currentUser', JSON.stringify(result.user));
+      }
       return result;
     } catch (error) {
       return {
@@ -208,9 +207,13 @@ export const webApi = {
   },
 
   userLoginPin: async (username: string, pin: string) => {
-    // For PIN login, we'll use password field since our server doesn't have separate PIN auth
+    // Use the dedicated PIN login endpoint
     try {
-      const result = await makeApiCall('/login', 'POST', { username, password: pin });
+      const result = await makeApiCall('/login-pin', 'POST', { username, pin });
+      // Store user in localStorage after successful login
+      if (result.success && result.user) {
+        localStorage.setItem('currentUser', JSON.stringify(result.user));
+      }
       return result;
     } catch (error) {
       return {
@@ -220,12 +223,45 @@ export const webApi = {
     }
   },
 
+  userLogout: async () => {
+    // Clear user from localStorage
+    localStorage.removeItem('currentUser');
+    return { success: true };
+  },
+
+  getCurrentUser: async () => {
+    // Get user from localStorage
+    try {
+      const userStr = localStorage.getItem('currentUser');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        return {
+          success: true,
+          user: user
+        };
+      }
+    } catch (error) {
+      console.error('Error getting current user:', error);
+    }
+    return {
+      success: false,
+      user: null
+    };
+  },
+
   getUsers: async () => {
     try {
-      const result = await makeApiCall('/users');
-      return result || [];
+      const users = await makeApiCall('/users');
+      return {
+        success: true,
+        users: users || []
+      };
     } catch (error) {
-      return [];
+      return {
+        success: false,
+        users: [],
+        error: 'Failed to load users'
+      };
     }
   },
 
@@ -287,6 +323,15 @@ export const webApi = {
   addUser: async (userData: any) => {
     try {
       const result = await makeApiCall('/add-user', 'POST', userData);
+      return result;
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  removeUser: async (userId: number) => {
+    try {
+      const result = await makeApiCall(`/remove-user/${userId}`, 'DELETE');
       return result;
     } catch (error: any) {
       return { success: false, error: error.message };
@@ -453,6 +498,52 @@ export const webApi = {
       return result;
     } catch (error) {
       return { status: 'error', error: (error as any).message };
+    }
+  },
+
+  // Test data generation endpoints
+  generateTestInventory: async (params: any) => {
+    try {
+      const result = await makeApiCall('/generate-test-inventory', 'POST', params);
+      return result;
+    } catch (error) {
+      return { success: false, error: (error as any).message };
+    }
+  },
+
+  clearInventory: async () => {
+    try {
+      const result = await makeApiCall('/clear-inventory', 'POST', {});
+      return result;
+    } catch (error) {
+      return { success: false, error: (error as any).message };
+    }
+  },
+
+  clearAllData: async () => {
+    try {
+      const result = await makeApiCall('/clear-all-data', 'POST', {});
+      return result;
+    } catch (error) {
+      return { success: false, error: (error as any).message };
+    }
+  },
+
+  generateTestSales: async (params: any) => {
+    try {
+      const result = await makeApiCall('/generate-test-sales', 'POST', params);
+      return result;
+    } catch (error) {
+      return { success: false, error: (error as any).message };
+    }
+  },
+
+  clearTransactions: async () => {
+    try {
+      const result = await makeApiCall('/clear-transactions', 'POST', {});
+      return result;
+    } catch (error) {
+      return { success: false, error: (error as any).message };
     }
   }
 };

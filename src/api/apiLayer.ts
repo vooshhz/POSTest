@@ -1,18 +1,13 @@
 /**
- * Web-compatible API layer that wraps window.api calls
- * Provides fallback implementations for web environments
+ * Web API layer for POS system
+ * Uses HTTP requests to communicate with backend server
  */
 
 // Import the web API layer for HTTP requests
 import { webApi } from './webApiLayer';
 
-// Type imports from preload
-type InventoryAPI = typeof window.api;
-
-// Check if running in Electron environment
-const isElectron = () => {
-  return typeof window !== 'undefined' && window.api !== undefined;
-};
+// Web-only implementation - no Electron support
+const isElectron = () => false; // Always use web API
 
 // Mock data storage for web fallbacks
 class WebStorage {
@@ -1167,17 +1162,12 @@ const webFallbacks: InventoryAPI = {
 
 // Create the unified API layer
 class APILayer {
-  private api: any; // Using any to allow both Electron API and web API
+  private api: any; // Web API only
   
   constructor() {
-    if (isElectron()) {
-      // Use the real Electron API
-      this.api = window.api;
-    } else {
-      // Use web API for HTTP requests
-      this.api = webApi;
-      console.log('Running in web mode - using HTTP API');
-    }
+    // Always use web API for HTTP requests
+    this.api = webApi;
+    console.log('Running in web mode - using HTTP API');
   }
   
   // Expose all API methods
@@ -1232,6 +1222,12 @@ class APILayer {
   get closeTill() { return this.api.closeTill; }
   get resetTill() { return this.api.resetTill; }
   get updateTillCash() { return this.api.updateTillCash; }
+  get getPnL() { return this.api.getPnL; }
+  get getCategoryPerformance() { return this.api.getCategoryPerformance; }
+  get getProductPerformance() { return this.api.getProductPerformance; }
+  get getOperatingExpenses() { return this.api.getOperatingExpenses; }
+  get comparePnLPeriods() { return this.api.comparePnLPeriods; }
+  get addOperatingExpense() { return this.api.addOperatingExpense; }
 }
 
 // Export singleton instance

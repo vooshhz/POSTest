@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test PIN Authentication</title>
+</head>
+<body>
+    <h1>Test PIN Authentication on Fly.io</h1>
+    
+    <h2>Test Regular Login</h2>
+    <input id="username" placeholder="Username" value="admin">
+    <input id="password" type="password" placeholder="Password" value="admin123">
+    <button onclick="testLogin()">Test Login</button>
+    
+    <h2>Test PIN Login</h2>
+    <input id="pin-username" placeholder="Username" value="kelly">
+    <input id="pin" placeholder="PIN" value="1234">
+    <button onclick="testPinLogin()">Test PIN Login</button>
+    
+    <h2>Create User with PIN</h2>
+    <input id="new-username" placeholder="Username" value="kelly">
+    <input id="new-password" type="password" placeholder="Password" value="kelly123">
+    <input id="new-pin" placeholder="PIN" value="1234">
+    <button onclick="createUser()">Create User</button>
+    
+    <div id="result" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc;"></div>
+    
+    <script>
+        const API_URL = 'https://your-pos-app.fly.dev/api';
+        
+        async function testLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch(`${API_URL}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await response.json();
+                document.getElementById('result').innerHTML = `
+                    <h3>Regular Login Result:</h3>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                document.getElementById('result').innerHTML = `Error: ${error.message}`;
+            }
+        }
+        
+        async function testPinLogin() {
+            const username = document.getElementById('pin-username').value;
+            const pin = document.getElementById('pin').value;
+            
+            try {
+                const response = await fetch(`${API_URL}/login-pin`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, pin })
+                });
+                const data = await response.json();
+                document.getElementById('result').innerHTML = `
+                    <h3>PIN Login Result:</h3>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                document.getElementById('result').innerHTML = `Error: ${error.message}`;
+            }
+        }
+        
+        async function createUser() {
+            const username = document.getElementById('new-username').value;
+            const password = document.getElementById('new-password').value;
+            const pin = document.getElementById('new-pin').value;
+            
+            try {
+                const response = await fetch(`${API_URL}/create-user`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        username, 
+                        password, 
+                        pin,
+                        role: 'cashier',
+                        fullName: 'Kelly Smith'
+                    })
+                });
+                const data = await response.json();
+                document.getElementById('result').innerHTML = `
+                    <h3>Create User Result:</h3>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                document.getElementById('result').innerHTML = `Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

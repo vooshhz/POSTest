@@ -118,7 +118,7 @@ export default function Login({ onLoginSuccess, storeName }: LoginProps) {
     setError("");
 
     try {
-      const result = await (window.api as any).userLoginPin(username, pinToSubmit);
+      const result = await api.userLoginPin(username, pinToSubmit);
       
       if (result.success && result.user) {
         onLoginSuccess(result.user);

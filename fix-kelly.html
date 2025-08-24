@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fix Kelly's Account</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+        .success {
+            border-color: #4CAF50;
+            background-color: #e8f5e9;
+        }
+        .error {
+            border-color: #f44336;
+            background-color: #ffebee;
+        }
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .test-section {
+            margin-top: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Fix Kelly's Account on your-pos-app.fly.dev</h1>
+    
+    <div>
+        <h2>Step 1: Check All Users</h2>
+        <button onclick="listUsers()">List All Users</button>
+    </div>
+    
+    <div>
+        <h2>Step 2: Setup Kelly's Account</h2>
+        <button onclick="setupKelly()">Setup Kelly (username: kelly, PIN: 1234)</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Step 3: Test Kelly's Login</h2>
+        <h3>Test with Password</h3>
+        <button onclick="testPasswordLogin()">Test Password Login (kelly/kelly123)</button>
+        
+        <h3>Test with PIN</h3>
+        <button onclick="testPinLogin()">Test PIN Login (kelly/1234)</button>
+    </div>
+    
+    <div id="result" class="result"></div>
+    
+    <script>
+        const API_URL = 'https://your-pos-app.fly.dev/api';
+        
+        function showResult(message, isSuccess = true) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = `result ${isSuccess ? 'success' : 'error'}`;
+            resultDiv.innerHTML = message;
+        }
+        
+        async function listUsers() {
+            try {
+                const response = await fetch(`${API_URL}/list-all-users`);
+                const data = await response.json();
+                
+                let html = '<h3>All Users in Database:</h3>';
+                html += `<p>Total users: ${data.total}</p>`;
+                html += '<ul>';
+                
+                data.users.forEach(user => {
+                    html += `<li>
+                        <strong>${user.username}</strong> (${user.role})
+                        <br>Full Name: ${user.full_name || 'Not set'}
+                        <br>Has PIN: ${user.has_pin ? 'Yes' : 'No'}
+                        ${user.has_pin ? `<br>PIN Length: ${user.pin_length} chars` : ''}
+                        ${user.pin ? `<br>PIN Value: ${user.pin}` : ''}
+                    </li><br>`;
+                });
+                
+                html += '</ul>';
+                html += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                
+                showResult(html, true);
+            } catch (error) {
+                showResult(`Error: ${error.message}`, false);
+            }
+        }
+        
+        async function setupKelly() {
+            try {
+                const response = await fetch(`${API_URL}/setup-kelly`);
+                const data = await response.json();
+                
+                let html = `<h3>${data.message}</h3>`;
+                html += '<p><strong>Kelly\'s Account Details:</strong></p>';
+                html += '<ul>';
+                html += `<li>Username: <strong>${data.user.username}</strong></li>`;
+                html += `<li>Password: <strong>${data.user.password}</strong></li>`;
+                html += `<li>PIN: <strong>${data.user.pin}</strong></li>`;
+                html += `<li>Role: <strong>${data.user.role}</strong></li>`;
+                html += '</ul>';
+                html += '<p style="color: green;">✓ Kelly can now login with either password or PIN!</p>';
+                html += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                
+                showResult(html, true);
+            } catch (error) {
+                showResult(`Error: ${error.message}`, false);
+            }
+        }
+        
+        async function testPasswordLogin() {
+            try {
+                const response = await fetch(`${API_URL}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        username: 'kelly', 
+                        password: 'kelly123' 
+                    })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResult(`
+                        <h3>✓ Password Login Successful!</h3>
+                        <p>Kelly can login with password: kelly123</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `, true);
+                } else {
+                    showResult(`
+                        <h3>✗ Password Login Failed</h3>
+                        <p>Error: ${data.error}</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `, false);
+                }
+            } catch (error) {
+                showResult(`Error: ${error.message}`, false);
+            }
+        }
+        
+        async function testPinLogin() {
+            try {
+                const response = await fetch(`${API_URL}/login-pin`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        username: 'kelly', 
+                        pin: '1234' 
+                    })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResult(`
+                        <h3>✓ PIN Login Successful!</h3>
+                        <p>Kelly can login with PIN: 1234</p>
+                        <p>Now go to <a href="https://your-pos-app.fly.dev" target="_blank">your-pos-app.fly.dev</a> and try logging in!</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `, true);
+                } else {
+                    showResult(`
+                        <h3>✗ PIN Login Failed</h3>
+                        <p>Error: ${data.error}</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `, false);
+                }
+            } catch (error) {
+                showResult(`Error: ${error.message}`, false);
+            }
+        }
+        
+        // Load users on page load
+        window.onload = () => {
+            listUsers();
+        };
+    </script>
+</body>
+</html>
