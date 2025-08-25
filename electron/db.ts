@@ -5,11 +5,10 @@ import Database from "better-sqlite3";
 import path from "node:path";
 import fs from "node:fs";
 import Papa from "papaparse";
+import { getDatabasePaths } from "./database-paths";
 
-// Separate database connections
-const productsDbPath = path.join(process.cwd(), "LiquorDatabase.db");
-const inventoryDbPath = path.join(process.cwd(), "LiquorInventory.db");
-const storeInfoDbPath = path.join(process.cwd(), "StoreInformation.db");
+// Get database paths based on environment (dev vs production)
+const { productsDbPath, inventoryDbPath, storeInfoDbPath } = getDatabasePaths();
 
 let productsDb: Database.Database | null = null;
 let inventoryDb: Database.Database | null = null;
@@ -3403,7 +3402,7 @@ function registerTimeClock(ipcMain: IpcMain) {
   ipcMain.handle("get-current-shift", async (_, userId: number) => {
     try {
       const storeDb = getStoreInfoDb();
-      const today = new Date().toISOString().split('T')[0];
+      // const today = new Date().toISOString().split('T')[0];
       
       // Get the current active shift (punch_out is null)
       const shift = storeDb.prepare(`

@@ -59,13 +59,13 @@ const PayoutKeypad: React.FC<PayoutKeypadProps> = ({ type, title, onComplete, on
     }
   };
 
-  const getInputLabel = () => {
+  /* const getInputLabel = () => {
     if (type === 'cents') {
       const cents = parseInt(inputValue) || 0;
       return `${cents} ¢`;
     }
     return displayValue;
-  };
+  }; */
 
   return (
     <div className="payout-keypad-container">

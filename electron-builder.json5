@@ -1,38 +1,113 @@
 // @see - https://www.electron.build/configuration/configuration
 {
   "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
-  "appId": "YourAppID",
-  "asar": true,
-  "productName": "YourAppName",
+  "appId": "com.liquorpos.poslite",
+  "asar": false, // Disable asar for better native module support
+  "productName": "LiquorPOS Lite",
+  "npmRebuild": true,
+  "buildDependenciesFromSource": false,
+  "nodeGypRebuild": false,
   "directories": {
-    "output": "release/${version}"
+    "output": "release/${version}",
+    "buildResources": "build"
   },
   "files": [
     "dist",
-    "dist-electron"
+    "dist-electron",
+    "node_modules/better-sqlite3/**/*",
+    "node_modules/bindings/**/*",
+    "node_modules/file-uri-to-path/**/*",
+    "node_modules/node-addon-api/**/*",
+    "!**/*.{ts,tsx}",
+    "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
+    "!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
+    "!**/node_modules/*.d.ts",
+    "!**/node_modules/.bin",
+    "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}",
+    "!.editorconfig",
+    "!**/._*",
+    "!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,.gitignore,.gitattributes}",
+    "!**/{__pycache__,thumbs.db,.flowconfig,.idea,.vs,.nyc_output}",
+    "!**/{appveyor.yml,.travis.yml,circle.yml}",
+    "!**/{npm-debug.log,yarn.lock,.yarn-integrity,.yarn-metadata.json}"
   ],
+  "extraResources": [
+    {
+      "from": "./LiquorDatabase.db",
+      "to": "databases/LiquorDatabase.db"
+    },
+    {
+      "from": "./LiquorInventory.db",
+      "to": "databases/LiquorInventory.db"
+    },
+    {
+      "from": "./StoreInformation.db",
+      "to": "databases/StoreInformation.db"
+    }
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64"]
+      }
+    ],
+    "icon": "icon.ico",
+    "artifactName": "LiquorPOS-Setup-${version}-${arch}.${ext}",
+    "publisherName": "LiquorPOS Solutions",
+    "verifyUpdateCodeSignature": false,
+    "requestedExecutionLevel": "requireAdministrator"
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": true,
+    "allowElevation": true,
+    "allowToChangeInstallationDirectory": true,
+    "installerIcon": "icon.ico",
+    "uninstallerIcon": "icon.ico",
+    "installerHeaderIcon": "icon.ico",
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "LiquorPOS Lite",
+    "menuCategory": "LiquorPOS",
+    // "include": "build/installer.nsh",
+    // "installerSidebar": "build/installerSidebar.bmp",
+    // "uninstallerSidebar": "build/uninstallerSidebar.bmp",
+    "license": "build/license.txt",
+    "deleteAppDataOnUninstall": false,
+    "displayLanguageSelector": false,
+    "warningsAsErrors": false,
+    "artifactName": "LiquorPOS-Setup-${version}.${ext}",
+    "uninstallDisplayName": "LiquorPOS Lite",
+    "differentialPackage": false
+  },
+  "portable": {
+    "artifactName": "LiquorPOS-Portable-${version}.${ext}"
+  },
+  "fileAssociations": [
+    {
+      "ext": "lpos",
+      "name": "LiquorPOS Data File",
+      "description": "LiquorPOS Data File",
+      "icon": "icon.ico",
+      "role": "Editor"
+    }
+  ],
+  "protocols": [
+    {
+      "name": "liquorpos",
+      "schemes": ["liquorpos"]
+    }
+  ],
+  "publish": {
+    "provider": "generic",
+    "url": "https://your-update-server.com/releases/"
+  },
   "mac": {
     "target": [
       "dmg"
     ],
     "artifactName": "${productName}-Mac-${version}-Installer.${ext}"
-  },
-  "win": {
-    "target": [
-      {
-        "target": "nsis",
-        "arch": [
-          "x64"
-        ]
-      }
-    ],
-    "artifactName": "${productName}-Windows-${version}-Setup.${ext}"
-  },
-  "nsis": {
-    "oneClick": false,
-    "perMachine": false,
-    "allowToChangeInstallationDirectory": true,
-    "deleteAppDataOnUninstall": false
   },
   "linux": {
     "target": [

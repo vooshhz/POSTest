@@ -27,7 +27,13 @@
       "WebSearch",
       "Bash(del \"C:\\Users\\aadha\\Projects\\POSTest\\src\\YTDTest.tsx\")",
       "Bash(dir:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(del \"node_modules/.pnpm/lucide-react@0.539.0_react@18.3.1/node_modules/lucide-react/dist/esm/icons/chrome.js\")",
+      "Bash(pnpm run:*)",
+      "Bash(tsc)",
+      "Bash(vite build)",
+      "Bash(set CSC_IDENTITY_AUTO_DISCOVERY=false)",
+      "Bash(pnpm list:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

@@ -35,7 +35,7 @@ export default function DailySales() {
   const [isRangeMode, setIsRangeMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [salesData, setSalesData] = useState<DailySalesData | null>(null);
-  const [multiDaySalesData, setMultiDaySalesData] = useState<DailySalesData[]>([]);
+  // const [multiDaySalesData, setMultiDaySalesData] = useState<DailySalesData[]>([]);
   const [aggregatedData, setAggregatedData] = useState<DailySalesData | null>(null);
   const [error, setError] = useState("");
 
@@ -56,7 +56,7 @@ export default function DailySales() {
       
       if (result.success && result.data) {
         setSalesData(result.data);
-        setMultiDaySalesData([]);
+        // setMultiDaySalesData([]);
       } else {
         setError(result.error || "Failed to load sales data");
         setSalesData(null);
@@ -91,7 +91,7 @@ export default function DailySales() {
         }
       }
       
-      setMultiDaySalesData(allData);
+      // setMultiDaySalesData(allData);
       
       // Aggregate the data for display
       if (allData.length > 0) {
@@ -103,7 +103,7 @@ export default function DailySales() {
     } catch (err) {
       setError("Failed to load sales data for date range");
       console.error(err);
-      setMultiDaySalesData([]);
+      // setMultiDaySalesData([]);
       setAggregatedData(null);
     } finally {
       setLoading(false);

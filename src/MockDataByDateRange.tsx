@@ -145,7 +145,7 @@ export default function MockDataByDateRange() {
     date: Date,
     remainingInventory: { [upc: string]: number }
   ) => {
-    const dayOfWeek = date.getDay();
+    // const dayOfWeek = date.getDay();
     
     const transactionsToday = Math.round(100 * (0.9 + Math.random() * 0.2)); // 90-110 transactions
     const transactions = [];
@@ -260,7 +260,7 @@ export default function MockDataByDateRange() {
       // Step 5: Generate daily transactions
       const totalDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
       const remainingInventory = { ...inventoryReqs };
-      let allTransactions = [];
+      let allTransactions: any[] = [];
       let totalRevenue = 0;
       let totalItems = 0;
       
