@@ -7,16 +7,16 @@ type PayoutType = 'selection' | 'buy-lottery' | 'lottery-payout' | 'bottle' | 'm
 interface PayoutProps {
   onComplete?: (type: string, amount: number, description?: string) => void;
   onCancel?: () => void;
-  initialType?: 'lottery-payout' | 'bottle' | null;
+  initialType?: 'lottery-payout' | 'bottle' | 'other' | null;
 }
 
 const Payout: React.FC<PayoutProps> = ({ onComplete, onCancel, initialType }) => {
   const [currentView, setCurrentView] = useState<PayoutType>(
-    initialType ? initialType : 'selection'
+    initialType === 'other' ? 'other-description' : (initialType ? initialType : 'selection')
   );
   const [otherDescription, setOtherDescription] = useState('');
   const [selectedType, setSelectedType] = useState<'buy-lottery' | 'lottery-payout' | 'bottle' | 'misc-tax' | 'misc-non-tax' | 'other'>(
-    initialType || 'lottery-payout'
+    initialType === 'other' ? 'other' : (initialType || 'lottery-payout')
   );
 
   const handleTypeSelection = (type: 'buy-lottery' | 'lottery-payout' | 'bottle' | 'misc-tax' | 'misc-non-tax' | 'other') => {
@@ -59,8 +59,13 @@ const Payout: React.FC<PayoutProps> = ({ onComplete, onCancel, initialType }) =>
     if (currentView === 'other-amount') {
       setCurrentView('other-description');
     } else if (currentView === 'other-description') {
-      setCurrentView('selection');
-      setOtherDescription('');
+      // If we started with 'other' type, cancel directly
+      if (initialType === 'other' && onCancel) {
+        onCancel();
+      } else {
+        setCurrentView('selection');
+        setOtherDescription('');
+      }
     } else if (currentView !== 'selection') {
       setCurrentView('selection');
     } else if (onCancel) {

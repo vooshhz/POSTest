@@ -71,7 +71,7 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const [discountItemIndex, setDiscountItemIndex] = useState<number | null>(null);
   const [discountAmount, setDiscountAmount] = useState("");
-  const [selectedType, setSelectedType] = useState<'lottery-payout' | 'bottle' | null>(null);
+  const [selectedType, setSelectedType] = useState<'lottery-payout' | 'bottle' | 'other' | null>(null);
   const [showLotteryModal, setShowLotteryModal] = useState(false);
   const [lotteryAmount, setLotteryAmount] = useState("");
   const [showLotteryPayoutKeypad, setShowLotteryPayoutKeypad] = useState(false);
@@ -949,7 +949,7 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
                 <button 
                   className="quick-action-btn other-payout"
                   onClick={() => {
-                    setSelectedType(null);
+                    setSelectedType('other');
                     setShowPayoutModal(true);
                   }}
                 >

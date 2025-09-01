@@ -3294,7 +3294,12 @@ async function updateTillForCashTransaction(amount: number, isReturn: boolean) {
     
     // Round amount to nearest dollar
     const roundedAmount = Math.round(amount);
-    const cashDelta = isReturn ? -Math.abs(roundedAmount) : Math.abs(roundedAmount);
+    const isPayout = amount < 0;
+    
+    // For payouts, we're removing cash from the till
+    // For sales, we're adding cash to the till
+    // For returns, we're removing cash from the till
+    const cashDelta = (isPayout || isReturn) ? -Math.abs(roundedAmount) : Math.abs(roundedAmount);
     
     // Calculate denomination changes (simplified - uses common bills)
     let remainingAmount = Math.abs(roundedAmount);
@@ -3321,12 +3326,14 @@ async function updateTillForCashTransaction(amount: number, isReturn: boolean) {
     
     onesDelta = remainingAmount;
     
-    // Apply sign based on transaction type
+    // Apply sign based on transaction type (negative for payouts/returns, positive for sales)
     const sign = cashDelta > 0 ? 1 : -1;
     
     // Update cash in/out tracking
-    const cashInUpdate = isReturn ? 0 : roundedAmount;
-    const cashOutUpdate = isReturn ? roundedAmount : 0;
+    // For negative amounts (payouts), update cash_out
+    // For positive amounts (sales), update cash_in
+    const cashInUpdate = (isReturn || isPayout) ? 0 : Math.abs(roundedAmount);
+    const cashOutUpdate = (isReturn || isPayout) ? Math.abs(roundedAmount) : 0;
     
     invDb.prepare(`
       UPDATE daily_till 
