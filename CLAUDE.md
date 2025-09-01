@@ -1,10 +1,10 @@
 # CLAUDE.md
 
-This file provides comprehensive guidance to Claude Code (claude.ai/code) when working with the POS system codebase.
+This file provides comprehensive guidance to Claude Code (claude.ai/code) when working with the POS Lite system codebase.
 
 ## Project Overview
 
-This is an Electron-based Point of Sale (POS) system designed for liquor store inventory management. The system provides complete retail operations including product scanning, inventory tracking, transaction processing, reporting, and user management.
+This is an Electron-based Point of Sale (POS) system designed for liquor store inventory management. The system provides complete retail operations including product scanning, inventory tracking, transaction processing, reporting, and user management with both online and offline capabilities.
 
 ## Technology Stack
 
@@ -83,6 +83,8 @@ The system uses three separate SQLite databases for different purposes:
 
 - `till_settings` - Cash drawer configuration
 - `daily_till` - Daily cash drawer tracking and reconciliation
+- `employee_time_clock` - Employee time tracking
+- `payouts` - Cash drawer payouts
 
 #### 3. StoreInformation.db (Store & User Management)
 **Purpose**: Store configuration and user management
@@ -112,11 +114,16 @@ The system uses three separate SQLite databases for different purposes:
 - `TillSettings.tsx` - Till configuration
 - `TransactionCompleteModal.tsx` - Payment processing
 - `ReceiptModal.tsx` - Receipt display/print
+- `Payouts.tsx` - Cash drawer payout management
 
 **Inventory Management:**
 - `InventoryList.tsx` - Main inventory management interface
 - `InventoryAdjustments.tsx` - Manual inventory adjustments
 - `InventoryTransactions.tsx` - Inventory transaction history
+
+**Employee Management:**
+- `EmployeeTimeClock.tsx` - Employee clock in/out interface
+- `TimeClockReports.tsx` - Employee time tracking reports
 
 **Reporting (`src/reports/`):**
 - `Sales.tsx` - Sales reports and analytics
@@ -177,6 +184,15 @@ window.api = {
   // Till operations
   getTillSettings: () => Promise<TillSettings>
   updateTillSettings: (settings: TillSettings) => Promise<void>
+  
+  // Employee operations
+  clockIn: (userId: number) => Promise<void>
+  clockOut: (userId: number) => Promise<void>
+  getEmployeeTimeClocks: (dateRange?: DateRange) => Promise<TimeClockEntry[]>
+  
+  // Payout operations
+  createPayout: (payout: Payout) => Promise<void>
+  getPayouts: (dateRange?: DateRange) => Promise<Payout[]>
 }
 ```
 
@@ -203,6 +219,12 @@ window.api = {
 3. All changes tracked in `inventory_adjustments` table
 4. Real-time quantity updates during transactions
 5. Reports generated from combined database queries
+
+### Offline Mode
+1. System detects network connectivity status
+2. All operations continue working with local databases
+3. Data synchronization queued when offline
+4. Automatic sync when connection restored
 
 ## State Management
 
@@ -264,6 +286,7 @@ window.api = {
 - Verify inventory calculations after transactions
 - Test edge cases (negative inventory, etc.)
 - Validate receipt calculations
+- Test offline mode operations
 
 ## Common Tasks
 
@@ -291,6 +314,7 @@ window.api = {
 - **Products not found**: Check if CSV import completed
 - **Inventory mismatch**: Review inventory_adjustments table
 - **Transaction failures**: Check payment type constraints
+- **Sync issues**: Check offline queue status
 
 ### Build Issues
 - **Native modules**: Run `pnpm rebuild` after electron version change
@@ -304,7 +328,7 @@ window.api = {
 
 ## File Structure
 ```
-POSTest/
+pos-lite/
 ├── electron/              # Main process code
 │   ├── main.ts           # App lifecycle
 │   ├── db.ts             # Database operations
@@ -329,12 +353,14 @@ POSTest/
 - Use indexes for frequently queried columns
 - Implement virtual scrolling for large lists
 - Cache frequently accessed data
+- Optimize offline sync operations
 
 ### User Experience
 - Provide immediate feedback for all actions
 - Show loading states during async operations
 - Validate input before submission
 - Maintain focus management for keyboard users
+- Clear offline/online status indicators
 
 ### Code Quality
 - Follow ESLint rules consistently
@@ -347,6 +373,7 @@ POSTest/
 - Validate all user inputs
 - Use prepared statements for SQL
 - Implement proper session management
+- Secure offline data storage
 
 ## Important Notes
 
@@ -356,3 +383,6 @@ POSTest/
 - **User actions require authentication** and are logged for audit purposes
 - **Cash drawer reconciliation** required at shift changes
 - **Tax calculations** use store-configured rates
+- **Offline mode** maintains full functionality without network
+- **Employee time tracking** integrated with payroll systems
+- **Payout tracking** for cash drawer management

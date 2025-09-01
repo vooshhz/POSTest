@@ -217,19 +217,26 @@ export default function App() {
 
   const checkStoreInfo = async () => {
     try {
-      const result = await window.api.checkStoreInfo();
+      // Use the new checkInitialSetup API that doesn't require auth
+      const setupResult = await window.api.checkInitialSetup();
       
-      if (result.success) {
-        if (result.hasStoreInfo && result.data) {
-          setNeedsSetup(false);
-          setStoreName(result.data.store_name);
-          // Update window title with store name
-          document.title = `${result.data.store_name} - POS System`;
-        } else {
+      if (setupResult.success) {
+        if (setupResult.needsSetup) {
           setNeedsSetup(true);
+          console.log('Setup needed - Store info:', setupResult.hasStoreInfo, 
+                      'Users:', setupResult.hasUsers, 
+                      'User count:', setupResult.userCount);
+        } else {
+          setNeedsSetup(false);
+          if (setupResult.storeData) {
+            setStoreName(setupResult.storeData.store_name);
+            // Update window title with store name
+            document.title = `${setupResult.storeData.store_name} - POS System`;
+          }
         }
       } else {
-        // If check fails, assume setup is needed
+        // If the check failed, assume setup is needed
+        console.error('Failed to check initial setup:', setupResult.error);
         setNeedsSetup(true);
       }
     } catch (error) {
@@ -274,6 +281,14 @@ export default function App() {
     if (user.role === 'cashier') {
       setShowTimeClock(true);
     }
+  };
+
+  const handleDevAccess = () => {
+    // Allow direct access to developer tools without login
+    setCurrentUser({ username: 'dev', role: 'admin', fullName: 'Developer Mode' });
+    setIsAuthenticated(true);
+    setNeedsSetup(false); // Bypass setup screen
+    setCurrentView('developer');
   };
 
   const handleLogout = async () => {
@@ -335,12 +350,12 @@ export default function App() {
 
   // Show setup if needed
   if (needsSetup) {
-    return <StoreSetup onComplete={handleSetupComplete} onCancel={handleSetupCancel} />;
+    return <StoreSetup onComplete={handleSetupComplete} onCancel={handleSetupCancel} onDevAccess={handleDevAccess} />;
   }
 
   // Show login if not authenticated
   if (!isAuthenticated) {
-    return <Login onLoginSuccess={handleLoginSuccess} storeName={storeName} />;
+    return <Login onLoginSuccess={handleLoginSuccess} onDevAccess={handleDevAccess} storeName={storeName} />;
   }
 
   /* Commented out CSV import functionality - preserved for future use
@@ -392,12 +407,17 @@ export default function App() {
           onCancel={cancelLogout}
         />
       )}
+      
       <div className="nav-tabs-left">
         <button 
-          className={`nav-tab developer-tab ${currentView === "developer" ? "active" : ""}`}
+          className={`nav-tab dev-tab ${currentView === "developer" ? "active" : ""}`}
           onClick={() => setCurrentView("developer")}
+          style={{
+            backgroundColor: currentView === "developer" ? '#ff6b00' : '#ff8c00',
+            color: 'white'
+          }}
         >
-          Dev
+          🔧 DEV
         </button>
         <button 
           className={`nav-tab settings-tab ${currentView === "settings" ? "active" : ""}`}

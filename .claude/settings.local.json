@@ -33,7 +33,11 @@
       "Bash(tsc)",
       "Bash(vite build)",
       "Bash(set CSC_IDENTITY_AUTO_DISCOVERY=false)",
-      "Bash(pnpm list:*)"
+      "Bash(pnpm list:*)",
+      "Bash(git checkout:*)",
+      "Bash(pandoc:*)",
+      "Bash(npm run build:*)",
+      "Bash(del /S /Q \"%LOCALAPPDATA%\\electron-builder\\Cache\\winCodeSign\")"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

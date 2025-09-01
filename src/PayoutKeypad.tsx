@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './PayoutKeypad.css';
 
 interface PayoutKeypadProps {
@@ -6,9 +6,10 @@ interface PayoutKeypadProps {
   title: string;
   onComplete: (amount: number) => void;
   onCancel: () => void;
+  isMiscPayout?: boolean;
 }
 
-const PayoutKeypad: React.FC<PayoutKeypadProps> = ({ type, title, onComplete, onCancel }) => {
+const PayoutKeypad: React.FC<PayoutKeypadProps> = ({ type, title, onComplete, onCancel, isMiscPayout = false }) => {
   const [inputValue, setInputValue] = useState('0');
   const [displayValue, setDisplayValue] = useState('$0.00');
 
@@ -58,6 +59,43 @@ const PayoutKeypad: React.FC<PayoutKeypadProps> = ({ type, title, onComplete, on
       setInputValue('0');
     }
   };
+
+  // Handle keyboard input
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    // Number keys (both numpad and regular)
+    if ((e.key >= '0' && e.key <= '9') || (e.code >= 'Numpad0' && e.code <= 'Numpad9')) {
+      e.preventDefault();
+      const num = e.key >= '0' && e.key <= '9' ? e.key : e.code.slice(-1);
+      handleNumberClick(num);
+    }
+    // Backspace
+    else if (e.key === 'Backspace') {
+      e.preventDefault();
+      handleBackspace();
+    }
+    // Delete or Clear
+    else if (e.key === 'Delete' || e.key === 'c' || e.key === 'C') {
+      e.preventDefault();
+      handleClear();
+    }
+    // Enter to complete
+    else if (e.key === 'Enter') {
+      e.preventDefault();
+      handleComplete();
+    }
+    // Escape to cancel
+    else if (e.key === 'Escape') {
+      e.preventDefault();
+      onCancel();
+    }
+  }, [inputValue]);
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleKeyDown]);
 
   /* const getInputLabel = () => {
     if (type === 'cents') {
@@ -123,7 +161,7 @@ const PayoutKeypad: React.FC<PayoutKeypadProps> = ({ type, title, onComplete, on
           onClick={handleComplete}
           disabled={parseInt(inputValue) === 0}
         >
-          Complete Payout
+          {isMiscPayout ? 'Pay Add' : 'Complete Payout'}
         </button>
       </div>
     </div>

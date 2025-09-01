@@ -52,24 +52,36 @@
 
 .payout-buttons {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 30px;
-  max-width: 900px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  max-width: 1000px;
   margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+  .payout-buttons {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .payout-buttons {
+    grid-template-columns: 1fr;
+  }
 }
 
 .payout-type-button {
   background: white;
   border: 2px solid #e0e0e0;
-  border-radius: 16px;
-  padding: 40px 20px;
+  border-radius: 12px;
+  padding: 30px 15px;
   cursor: pointer;
   transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 15px;
-  min-height: 250px;
+  gap: 10px;
+  min-height: 200px;
 }
 
 .payout-type-button:hover {
@@ -95,6 +107,24 @@
   color: white;
 }
 
+.payout-type-button.misc-tax {
+  border-color: #9C27B0;
+}
+
+.payout-type-button.misc-tax:hover {
+  background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%);
+  color: white;
+}
+
+.payout-type-button.misc-non-tax {
+  border-color: #607D8B;
+}
+
+.payout-type-button.misc-non-tax:hover {
+  background: linear-gradient(135deg, #607D8B 0%, #455A64 100%);
+  color: white;
+}
+
 .payout-type-button.other {
   border-color: #FF9800;
 }
@@ -105,17 +135,18 @@
 }
 
 .payout-icon {
-  font-size: 64px;
+  font-size: 48px;
 }
 
 .payout-label {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: bold;
 }
 
 .payout-desc {
-  font-size: 14px;
+  font-size: 13px;
   opacity: 0.8;
+  text-align: center;
 }
 
 .payout-description {

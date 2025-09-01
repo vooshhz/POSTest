@@ -131,6 +131,15 @@ interface InventoryAPI {
     data?: any;
     error?: string;
   }>;
+  checkInitialSetup: () => Promise<{
+    success: boolean;
+    needsSetup: boolean;
+    hasStoreInfo: boolean;
+    hasUsers: boolean;
+    userCount: number;
+    storeData?: any;
+    error?: string;
+  }>;
   saveStoreInfo: (storeInfo: {
     store_name: string;
     address_line1: string;
@@ -211,6 +220,11 @@ interface InventoryAPI {
       inventory: number;
       adjustments: number;
     };
+    error?: string;
+  }>;
+  factoryReset: () => Promise<{
+    success: boolean;
+    message?: string;
     error?: string;
   }>;
   getDailySales: (date: string) => Promise<{
@@ -642,6 +656,7 @@ const api: InventoryAPI = {
   getTransactions: () => ipcRenderer.invoke("get-transactions"),
   openTransactionDetails: (transaction) => ipcRenderer.invoke("open-transaction-details", transaction),
   checkStoreInfo: () => ipcRenderer.invoke("check-store-info"),
+  checkInitialSetup: () => ipcRenderer.invoke("check-initial-setup"),
   saveStoreInfo: (storeInfo) => ipcRenderer.invoke("save-store-info", storeInfo),
   getStoreInfo: () => ipcRenderer.invoke("get-store-info"),
   getInventoryTransactions: () => ipcRenderer.invoke("get-inventory-transactions"),
@@ -651,6 +666,7 @@ const api: InventoryAPI = {
   generateTestSales: (params) => ipcRenderer.invoke("generate-test-sales", params),
   clearTransactions: () => ipcRenderer.invoke("clear-transactions"),
   clearAllData: () => ipcRenderer.invoke("clear-all-data"),
+  factoryReset: () => ipcRenderer.invoke("factory-reset"),
   getDailySales: (date) => ipcRenderer.invoke("get-daily-sales", date),
   getWeeklySummary: (date, periodType) => ipcRenderer.invoke("get-weekly-summary", date, periodType),
   getInventoryAnalysis: () => ipcRenderer.invoke("get-inventory-analysis"),

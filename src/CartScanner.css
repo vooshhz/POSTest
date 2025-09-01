@@ -68,7 +68,7 @@
 }
 
 .populate-btn {
-  background: #646cff;
+  background: #ff9800;
   color: white;
   border: none;
   padding: 8px 20px;
@@ -80,7 +80,7 @@
 }
 
 .populate-btn:hover {
-  background: #535bf2;
+  background: #f57c00;
 }
 
 .main-content {
@@ -317,96 +317,7 @@
 }
 
 
-.amount-display {
-  background: #2c2c2c;
-  color: #00ff00;
-  font-size: 2.2rem; /* Increased font size */
-  font-family: 'Courier New', monospace;
-  font-weight: bold;
-  padding: 1rem 1.25rem; /* Increased padding */
-  border-radius: 8px;
-  text-align: right;
-  min-width: 330px; /* Increased by 50% from 220px */
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
-  letter-spacing: 1px;
-}
-
-.number-pad {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  width: 100%;
-  margin-bottom: 0; /* Remove bottom margin */
-}
-
-.number-pad-row {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: center;
-}
-
-.num-pad-btn {
-  width: 85px; /* Increased from 55px */
-  height: 70px; /* Increased from 45px */
-  font-size: 1.6rem; /* Increased from 1.1rem */
-  font-weight: 600;
-  background: white;
-  border: 2px solid #ddd;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.1s;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.num-pad-btn:hover {
-  background: #f5f5f5;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-}
-
-.num-pad-btn:active {
-  transform: translateY(0);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-.num-pad-btn.clear {
-  background: #ff6b6b;
-  color: white;
-  border-color: #ff5252;
-}
-
-.num-pad-btn.clear:hover {
-  background: #ff5252;
-}
-
-.num-pad-btn.backspace {
-  background: #ffa94d;
-  color: white;
-  border-color: #fd7e14;
-}
-
-.num-pad-btn.backspace:hover {
-  background: #fd7e14;
-}
-
-.num-pad-btn.zero {
-  width: 85px; /* Same as regular buttons for alignment */
-}
-
-.num-pad-btn.dot {
-  width: 85px; /* Same as regular buttons for alignment */
-}
-
-.num-pad-btn.enter {
-  width: 178px; /* Wider to make row flush with row above */
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border-color: transparent;
-}
-
-.num-pad-btn.enter:hover {
-  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-}
+/* Old number pad styles removed - no longer needed */
 
 .error-message {
   background: #fee;
@@ -500,19 +411,142 @@
   box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
 }
 
-.manual-entry-panel {
+.quick-actions-panel {
   background: rgba(255, 255, 255, 0.95);
   border-radius: 8px;
   padding: 1rem;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 0.5rem; /* Reduced gap to move elements closer */
+  gap: 1.5rem;
   flex-shrink: 0;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  width: 420px; /* Increased by 50% from 280px */
+  width: 320px;
   height: 100%;
   justify-content: flex-start; /* Align items to top */
+}
+
+.payout-buttons-section {
+  background: white;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.payout-buttons-section h3 {
+  margin: 0 0 1rem 0;
+  color: #333;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.quick-action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.lottery-buttons-row,
+.payout-buttons-row,
+.misc-buttons-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.quick-action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 8px;
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-align: center;
+  height: 70px;
+  width: 100%;
+}
+
+.quick-action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.quick-action-btn .action-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.quick-action-btn .action-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #333;
+  white-space: normal;
+  line-height: 1.2;
+  word-wrap: break-word;
+  text-align: center;
+}
+
+.quick-action-btn.buy-lottery {
+  border-color: #ffc107;
+  background: linear-gradient(135deg, #fff8e1 0%, #fff3e0 100%);
+}
+
+.quick-action-btn.buy-lottery:hover {
+  border-color: #ff9800;
+  background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+}
+
+.quick-action-btn.lottery-payout {
+  border-color: #4caf50;
+  background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);
+}
+
+.quick-action-btn.lottery-payout:hover {
+  border-color: #388e3c;
+  background: linear-gradient(135deg, #c8e6c9 0%, #dcedc8 100%);
+}
+
+.quick-action-btn.bottle-can {
+  border-color: #2196f3;
+  background: linear-gradient(135deg, #e3f2fd 0%, #e1f5fe 100%);
+}
+
+.quick-action-btn.bottle-can:hover {
+  border-color: #1976d2;
+  background: linear-gradient(135deg, #bbdefb 0%, #b3e5fc 100%);
+}
+
+.quick-action-btn.other-payout {
+  border-color: #ff5722;
+  background: linear-gradient(135deg, #fbe9e7 0%, #ffebee 100%);
+}
+
+.quick-action-btn.other-payout:hover {
+  border-color: #e64a19;
+  background: linear-gradient(135deg, #ffccbc 0%, #ffcdd2 100%);
+}
+
+.quick-action-btn.misc-tax {
+  border-color: #9c27b0;
+  background: linear-gradient(135deg, #f3e5f5 0%, #fce4ec 100%);
+}
+
+.quick-action-btn.misc-tax:hover {
+  border-color: #7b1fa2;
+  background: linear-gradient(135deg, #e1bee7 0%, #f8bbd0 100%);
+}
+
+.quick-action-btn.misc-nontax {
+  border-color: #607d8b;
+  background: linear-gradient(135deg, #eceff1 0%, #e0e0e0 100%);
+}
+
+.quick-action-btn.misc-nontax:hover {
+  border-color: #455a64;
+  background: linear-gradient(135deg, #cfd8dc 0%, #bdbdbd 100%);
 }
 
 .cart-header {
@@ -625,27 +659,32 @@
   width: 30px;
 }
 
-.cart-table th:nth-child(2) { /* Description */
+.cart-table th:nth-child(2) { /* Taxable */
+  text-align: center;
+  width: 70px;
+}
+
+.cart-table th:nth-child(3) { /* Description */
   text-align: left;
   min-width: 200px;
 }
 
-.cart-table th:nth-child(3) { /* Qty */
+.cart-table th:nth-child(4) { /* Qty */
   text-align: center;
   width: 100px;
 }
 
-.cart-table th:nth-child(4) { /* Unit Price */
+.cart-table th:nth-child(5) { /* Unit Price */
   text-align: right;
-  width: 80px;
+  width: 90px;
 }
 
-.cart-table th:nth-child(5) { /* Total */
+.cart-table th:nth-child(6) { /* Tax Amount */
   text-align: right;
-  width: 80px;
+  width: 90px;
 }
 
-.cart-table th:nth-child(6) { /* Actions */
+.cart-table th:nth-child(7) { /* Actions */
   text-align: center;
   width: 160px; /* Increased to accommodate larger buttons */
 }
@@ -656,6 +695,22 @@
   color: #222;
   font-size: 16px; /* Increased from 14px */
   font-weight: 500;
+}
+
+.taxable-cell {
+  text-align: center !important;
+}
+
+.taxable-indicator {
+  font-weight: 600;
+  color: #666;
+  font-size: 14px;
+}
+
+.tax-amount-cell {
+  text-align: right !important;
+  font-weight: 500;
+  color: #666;
 }
 
 .cart-table td:nth-child(1) { /* # */
@@ -843,6 +898,132 @@
   font-weight: 600;
 }
 
+/* Lottery Modal */
+.lottery-modal {
+  background: white;
+  border-radius: 12px;
+  padding: 0;
+  width: 450px;
+  max-width: 90%;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.lottery-modal .modal-header {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.lottery-modal .modal-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 1.2rem;
+  flex: 1;
+}
+
+.lottery-modal .modal-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.lottery-modal .modal-content {
+  padding: 1.5rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.lottery-input-group {
+  margin-bottom: 1.5rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.lottery-input-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #666;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.lottery-amount-input {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1.2rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  transition: border-color 0.3s;
+  -moz-appearance: textfield; /* Firefox */
+  box-sizing: border-box;
+  display: block;
+}
+
+/* Remove spinner arrows for Chrome, Safari, Edge */
+.lottery-amount-input::-webkit-outer-spin-button,
+.lottery-amount-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.lottery-amount-input:focus {
+  outline: none;
+  border-color: #ffc107;
+  box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.1);
+}
+
+.lottery-modal .modal-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.lottery-modal .ok-btn {
+  padding: 0.75rem 2rem;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.lottery-modal .ok-btn:hover {
+  background: #45a049;
+}
+
+.lottery-modal .cancel-btn {
+  padding: 0.75rem 2rem;
+  background: #f5f5f5;
+  color: #666;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.lottery-modal .cancel-btn:hover {
+  background: #e0e0e0;
+  border-color: #ccc;
+}
+
 /* Discount Modal */
 .discount-modal {
   background: white;
@@ -1017,6 +1198,17 @@
 
 .discount-modal .cancel-btn:hover {
   background: #e0e0e0;
+}
+
+.payout-keypad-modal {
+  background: white;
+  border-radius: 12px;
+  padding: 1rem;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
 }
 
 .payout-modal {
@@ -1520,9 +1712,9 @@
     min-height: 400px;
   }
   
-  .manual-entry-panel {
+  .quick-actions-panel {
     width: 100%;
-    max-width: 600px; /* Increased from 400px */
+    max-width: 600px;
     margin: 0 auto;
     height: auto;
   }

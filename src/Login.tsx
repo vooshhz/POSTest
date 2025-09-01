@@ -3,10 +3,11 @@ import "./Login.css";
 
 interface LoginProps {
   onLoginSuccess: (user: any) => void;
+  onDevAccess?: () => void;
   storeName?: string;
 }
 
-export default function Login({ onLoginSuccess, storeName }: LoginProps) {
+export default function Login({ onLoginSuccess, onDevAccess, storeName }: LoginProps) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [pin, setPin] = useState("");
@@ -240,6 +241,39 @@ export default function Login({ onLoginSuccess, storeName }: LoginProps) {
 
   return (
     <div className="login-container">
+      {onDevAccess && (
+        <button
+          type="button"
+          onClick={onDevAccess}
+          style={{
+            position: 'fixed',
+            top: '0',
+            left: '0',
+            margin: '10px',
+            backgroundColor: '#ff8c00',
+            color: 'white',
+            border: 'none',
+            padding: '8px 16px',
+            borderRadius: '6px',
+            fontSize: '12px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            zIndex: 9999,
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+            transition: 'all 0.2s'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = '#ff6b00';
+            e.currentTarget.style.transform = 'translateY(-1px)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = '#ff8c00';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}
+        >
+          🔧 DEV
+        </button>
+      )}
       <div className="login-background">
         <div className="bg-gradient"></div>
       </div>

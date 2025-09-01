@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './StoreSetup.css';
 
 interface StoreInfo {
@@ -24,10 +24,12 @@ interface AdminUser {
 interface StoreSetupProps {
   onComplete: () => void;
   onCancel: () => void;
+  onDevAccess?: () => void;
 }
 
-export function StoreSetup({ onComplete, onCancel }: StoreSetupProps) {
+export function StoreSetup({ onComplete, onCancel, onDevAccess }: StoreSetupProps) {
   const [currentStep, setCurrentStep] = useState<'store' | 'admin'>('store');
+  const [hasExistingAdmin, setHasExistingAdmin] = useState<boolean | null>(null);
   const [formData, setFormData] = useState<StoreInfo>({
     store_name: 'Deerings Market',
     address_line1: '1142 Barlow St',
@@ -50,6 +52,30 @@ export function StoreSetup({ onComplete, onCancel }: StoreSetupProps) {
   
   const [errors, setErrors] = useState<Partial<Record<keyof (StoreInfo & AdminUser), string>>>({});
   const [saving, setSaving] = useState(false);
+
+  // Check if admin user already exists when component mounts
+  useEffect(() => {
+    checkForExistingAdmin();
+  }, []);
+
+  const checkForExistingAdmin = async () => {
+    try {
+      const result = await window.api.getUsers();
+      if (result.success && result.users) {
+        const adminExists = result.users.some((user: any) => user.role === 'admin');
+        setHasExistingAdmin(adminExists);
+        
+        if (adminExists) {
+          console.log('Admin user already exists, skipping admin creation step');
+        }
+      } else {
+        setHasExistingAdmin(false);
+      }
+    } catch (error) {
+      console.error('Error checking for existing admin:', error);
+      setHasExistingAdmin(false);
+    }
+  };
 
   const validateStoreForm = (): boolean => {
     const newErrors: Partial<Record<keyof StoreInfo, string>> = {};
@@ -119,7 +145,29 @@ export function StoreSetup({ onComplete, onCancel }: StoreSetupProps) {
       return;
     }
 
-    setCurrentStep('admin');
+    // If admin already exists, save store info and complete setup
+    if (hasExistingAdmin) {
+      setSaving(true);
+      try {
+        const storeResult = await window.api.saveStoreInfo(formData);
+        
+        if (!storeResult.success) {
+          alert('Failed to save store information: ' + (storeResult.error || 'Unknown error'));
+          setSaving(false);
+          return;
+        }
+        
+        // Complete setup without creating admin
+        onComplete();
+      } catch (error) {
+        console.error('Setup error:', error);
+        alert('Failed to complete setup');
+        setSaving(false);
+      }
+    } else {
+      // No admin exists, proceed to admin creation step
+      setCurrentStep('admin');
+    }
   };
 
   const handleFinalSubmit = async (e: React.FormEvent) => {
@@ -200,6 +248,40 @@ export function StoreSetup({ onComplete, onCancel }: StoreSetupProps) {
 
   return (
     <div className="store-setup-overlay">
+      {/* DEV Button - Always visible in top-left */}
+      {onDevAccess && (
+        <button
+          type="button"
+          onClick={onDevAccess}
+          style={{
+            position: 'fixed',
+            top: '0',
+            left: '0',
+            margin: '10px',
+            backgroundColor: '#ff8c00',
+            color: 'white',
+            border: 'none',
+            padding: '8px 16px',
+            borderRadius: '6px',
+            fontSize: '12px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            zIndex: 9999,
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+            transition: 'all 0.2s'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = '#ff6b00';
+            e.currentTarget.style.transform = 'translateY(-1px)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = '#ff8c00';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}
+        >
+          🔧 DEV
+        </button>
+      )}
       <div className="store-setup-container">
         <div className="store-setup-header">
           <h1>{currentStep === 'store' ? 'Store Setup' : 'Administrator Account'}</h1>
@@ -223,6 +305,18 @@ export function StoreSetup({ onComplete, onCancel }: StoreSetupProps) {
 
         {currentStep === 'store' ? (
         <form onSubmit={handleStoreSubmit} className="store-setup-form">
+          {hasExistingAdmin && (
+            <div style={{
+              background: '#d4edda',
+              border: '1px solid #c3e6cb',
+              borderRadius: '6px',
+              padding: '12px',
+              marginBottom: '20px',
+              color: '#155724'
+            }}>
+              ℹ️ An administrator account already exists. You only need to update the store information.
+            </div>
+          )}
           <div className="form-section">
             <h2>Basic Information</h2>
             
@@ -396,9 +490,9 @@ export function StoreSetup({ onComplete, onCancel }: StoreSetupProps) {
             <button
               type="submit"
               className="submit-btn"
-              disabled={saving}
+              disabled={saving || hasExistingAdmin === null}
             >
-              Continue to Admin Setup
+              {saving ? 'Saving...' : (hasExistingAdmin ? 'Complete Setup' : 'Continue to Admin Setup')}
             </button>
           </div>
         </form>

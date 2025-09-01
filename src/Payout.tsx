@@ -2,22 +2,29 @@ import React, { useState } from 'react';
 import PayoutKeypad from './PayoutKeypad';
 import './Payout.css';
 
-type PayoutType = 'selection' | 'lottery' | 'bottle' | 'other-description' | 'other-amount';
+type PayoutType = 'selection' | 'buy-lottery' | 'lottery-payout' | 'bottle' | 'misc-tax' | 'misc-non-tax' | 'other-description' | 'other-amount';
 
 interface PayoutProps {
   onComplete?: (type: string, amount: number, description?: string) => void;
   onCancel?: () => void;
+  initialType?: 'lottery-payout' | 'bottle' | null;
 }
 
-const Payout: React.FC<PayoutProps> = ({ onComplete, onCancel }) => {
-  const [currentView, setCurrentView] = useState<PayoutType>('selection');
+const Payout: React.FC<PayoutProps> = ({ onComplete, onCancel, initialType }) => {
+  const [currentView, setCurrentView] = useState<PayoutType>(
+    initialType ? initialType : 'selection'
+  );
   const [otherDescription, setOtherDescription] = useState('');
-  const [selectedType, setSelectedType] = useState<'lottery' | 'bottle' | 'other'>('lottery');
+  const [selectedType, setSelectedType] = useState<'buy-lottery' | 'lottery-payout' | 'bottle' | 'misc-tax' | 'misc-non-tax' | 'other'>(
+    initialType || 'lottery-payout'
+  );
 
-  const handleTypeSelection = (type: 'lottery' | 'bottle' | 'other') => {
+  const handleTypeSelection = (type: 'buy-lottery' | 'lottery-payout' | 'bottle' | 'misc-tax' | 'misc-non-tax' | 'other') => {
     setSelectedType(type);
     if (type === 'other') {
       setCurrentView('other-description');
+    } else if (type === 'misc-tax' || type === 'misc-non-tax') {
+      setCurrentView(type);
     } else {
       setCurrentView(type);
     }
@@ -31,8 +38,11 @@ const Payout: React.FC<PayoutProps> = ({ onComplete, onCancel }) => {
   };
 
   const handleAmountComplete = (amount: number) => {
-    const typeLabel = selectedType === 'lottery' ? 'Lottery Payout' :
+    const typeLabel = selectedType === 'buy-lottery' ? 'Buy Lottery' :
+                      selectedType === 'lottery-payout' ? 'Lottery Payout' :
                       selectedType === 'bottle' ? 'Bottle/Can Return' :
+                      selectedType === 'misc-tax' ? 'Misc Tax' :
+                      selectedType === 'misc-non-tax' ? 'Misc Non-Tax' :
                       `Other: ${otherDescription}`;
     
     if (onComplete) {
@@ -42,7 +52,7 @@ const Payout: React.FC<PayoutProps> = ({ onComplete, onCancel }) => {
     // Reset state
     setCurrentView('selection');
     setOtherDescription('');
-    setSelectedType('lottery');
+    setSelectedType('lottery-payout');
   };
 
   const handleBack = () => {
@@ -73,10 +83,19 @@ const Payout: React.FC<PayoutProps> = ({ onComplete, onCancel }) => {
           <div className="payout-buttons">
             <button 
               className="payout-type-button lottery"
-              onClick={() => handleTypeSelection('lottery')}
+              onClick={() => handleTypeSelection('buy-lottery')}
             >
               <div className="payout-icon">🎰</div>
-              <div className="payout-label">Lottery</div>
+              <div className="payout-label">Buy Lottery</div>
+              <div className="payout-desc">Lottery purchase</div>
+            </button>
+
+            <button 
+              className="payout-type-button lottery"
+              onClick={() => handleTypeSelection('lottery-payout')}
+            >
+              <div className="payout-icon">💰</div>
+              <div className="payout-label">Lottery Payout</div>
               <div className="payout-desc">Lottery winnings payout</div>
             </button>
 
@@ -87,6 +106,24 @@ const Payout: React.FC<PayoutProps> = ({ onComplete, onCancel }) => {
               <div className="payout-icon">🍾</div>
               <div className="payout-label">Bottle/Can</div>
               <div className="payout-desc">Container deposit return</div>
+            </button>
+
+            <button 
+              className="payout-type-button misc-tax"
+              onClick={() => handleTypeSelection('misc-tax')}
+            >
+              <div className="payout-icon">📋</div>
+              <div className="payout-label">Misc Tax</div>
+              <div className="payout-desc">Miscellaneous taxable</div>
+            </button>
+
+            <button 
+              className="payout-type-button misc-non-tax"
+              onClick={() => handleTypeSelection('misc-non-tax')}
+            >
+              <div className="payout-icon">📄</div>
+              <div className="payout-label">Misc Non-Tax</div>
+              <div className="payout-desc">Miscellaneous non-taxable</div>
             </button>
 
             <button 
@@ -121,14 +158,18 @@ const Payout: React.FC<PayoutProps> = ({ onComplete, onCancel }) => {
         </div>
       )}
 
-      {(currentView === 'lottery' || currentView === 'bottle' || currentView === 'other-amount') && (
+      {(currentView === 'buy-lottery' || currentView === 'lottery-payout' || currentView === 'bottle' || currentView === 'misc-tax' || currentView === 'misc-non-tax' || currentView === 'other-amount') && (
         <PayoutKeypad
           type={currentView === 'bottle' ? 'cents' : 'dollars'}
           title={
-            currentView === 'lottery' ? 'Enter Lottery Payout Amount' :
+            currentView === 'buy-lottery' ? 'Enter Buy Lottery Amount' :
+            currentView === 'lottery-payout' ? 'Enter Lottery Payout Amount' :
             currentView === 'bottle' ? 'Enter Bottle/Can Return Amount' :
+            currentView === 'misc-tax' ? 'Enter Misc Tax Amount' :
+            currentView === 'misc-non-tax' ? 'Enter Misc Non-Tax Amount' :
             `Enter Amount for: ${otherDescription}`
           }
+          isMiscPayout={currentView === 'misc-tax' || currentView === 'misc-non-tax'}
           onComplete={handleAmountComplete}
           onCancel={handleBack}
         />

@@ -3,6 +3,7 @@ import "./CartScanner.css";
 import TransactionCompleteModal from "./TransactionCompleteModal";
 import TillDashboard from "./TillDashboard";
 import Payout from "./Payout";
+import PayoutKeypad from "./PayoutKeypad";
 
 interface CartItem {
   upc: string;
@@ -12,6 +13,7 @@ interface CartItem {
   cost: number;
   price: number;
   discount?: number;
+  taxable?: boolean;
 }
 
 interface CartScannerProps {
@@ -57,7 +59,6 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
     timestamp: string;
   } | undefined>(undefined);
   const [transactionError, setTransactionError] = useState("");
-  const [manualEntry, setManualEntry] = useState("");
   const [searchResults, setSearchResults] = useState<Array<{
     upc: string;
     description: string | null;
@@ -70,6 +71,12 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const [discountItemIndex, setDiscountItemIndex] = useState<number | null>(null);
   const [discountAmount, setDiscountAmount] = useState("");
+  const [selectedType, setSelectedType] = useState<'lottery-payout' | 'bottle' | null>(null);
+  const [showLotteryModal, setShowLotteryModal] = useState(false);
+  const [lotteryAmount, setLotteryAmount] = useState("");
+  const [showLotteryPayoutKeypad, setShowLotteryPayoutKeypad] = useState(false);
+  const [showMiscTaxKeypad, setShowMiscTaxKeypad] = useState(false);
+  const [showMiscNonTaxKeypad, setShowMiscNonTaxKeypad] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -158,7 +165,8 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
             volume: result.data.volume,
             quantity: 1,
             cost: result.data.cost,
-            price: result.data.price
+            price: result.data.price,
+            taxable: true // Default to taxable
           };
           setCart([...cart, newItem]);
         }
@@ -167,10 +175,21 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
         setBarcode("");
         inputRef.current?.focus();
       } else {
-        // Instead of showing error, open modal to add to inventory
-        setScannedUpc(barcode.trim());
-        setShowAddModal(true);
-        setBarcode("");
+        // Check if this is a special item (lottery, misc, payout) that shouldn't be in inventory
+        const specialPrefixes = ['LOTTERY-', 'MISC-TAX-', 'MISC-NONTAX-', 'PAYOUT_'];
+        const isSpecialItem = specialPrefixes.some(prefix => barcode.trim().startsWith(prefix));
+        
+        if (isSpecialItem) {
+          // Don't show error or modal for special items, just clear the barcode
+          setError("This is a special item that doesn't require inventory tracking");
+          setBarcode("");
+          setTimeout(() => setError(""), 3000); // Clear error after 3 seconds
+        } else {
+          // Regular item not in inventory - open modal to add
+          setScannedUpc(barcode.trim());
+          setShowAddModal(true);
+          setBarcode("");
+        }
       }
     } catch (err) {
       setError("Failed to add item to cart");
@@ -252,12 +271,28 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
   };
 
   const calculateTotals = () => {
-    const subtotal = cart.reduce((sum, item) => {
+    let taxableSubtotal = 0;
+    let nonTaxableSubtotal = 0;
+    
+    cart.forEach(item => {
       const itemTotal = item.price * item.quantity;
       const discount = (item.discount || 0) * item.quantity;
-      return sum + (itemTotal - discount);
-    }, 0);
-    const tax = subtotal * 0.06; // Michigan 6% sales tax
+      const netAmount = itemTotal - discount;
+      
+      // Check taxable property first, then fall back to UPC check
+      const isTaxable = item.taxable !== undefined 
+        ? item.taxable 
+        : !item.upc.includes('NONTAX');
+      
+      if (isTaxable) {
+        taxableSubtotal += netAmount;
+      } else {
+        nonTaxableSubtotal += netAmount;
+      }
+    });
+    
+    const subtotal = taxableSubtotal + nonTaxableSubtotal;
+    const tax = taxableSubtotal * 0.06; // Michigan 6% sales tax only on taxable items
     const total = subtotal + tax;
     const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
     const totalDiscount = cart.reduce((sum, item) => sum + ((item.discount || 0) * item.quantity), 0);
@@ -267,7 +302,9 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
       subtotal,
       tax,
       total,
-      totalDiscount
+      totalDiscount,
+      taxableSubtotal,
+      nonTaxableSubtotal
     };
   };
 
@@ -373,6 +410,16 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
   };
 
   const handleAddToInventory = async () => {
+    // Check if this is a special item that shouldn't be added to inventory
+    const specialPrefixes = ['LOTTERY-', 'MISC-TAX-', 'MISC-NONTAX-', 'PAYOUT_'];
+    const isSpecialItem = specialPrefixes.some(prefix => scannedUpc.startsWith(prefix));
+    
+    if (isSpecialItem) {
+      alert("This is a special system-generated item that cannot be added to inventory");
+      closeAddModal();
+      return;
+    }
+
     const cost = parseFloat(inventoryForm.cost);
     const price = parseFloat(inventoryForm.price);
     const quantity = parseInt(inventoryForm.quantity);
@@ -407,7 +454,8 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
             volume: checkResult.data.volume,
             quantity: 1,
             cost: checkResult.data.cost,
-            price: checkResult.data.price
+            price: checkResult.data.price,
+            taxable: true // Default to taxable for inventory items
           };
           setCart([...cart, newItem]);
         }
@@ -424,59 +472,6 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
   };
 
   const totals = calculateTotals();
-
-  // Number pad functions
-  const handleNumberPadClick = (value: string) => {
-    if (value === 'C') {
-      setManualEntry("");
-    } else if (value === '←') {
-      setManualEntry(prev => prev.slice(0, -1));
-    } else if (value === '.') {
-      if (!manualEntry.includes('.')) {
-        setManualEntry(prev => prev + value);
-      }
-    } else if (value === 'Enter') {
-      handleManualPriceAdd();
-    } else {
-      // Limit to 2 decimal places if decimal exists
-      if (manualEntry.includes('.')) {
-        const parts = manualEntry.split('.');
-        if (parts[1].length < 2) {
-          setManualEntry(prev => prev + value);
-        }
-      } else {
-        setManualEntry(prev => prev + value);
-      }
-    }
-  };
-
-  const handleManualPriceAdd = () => {
-    if (!manualEntry || parseFloat(manualEntry) <= 0) {
-      setError("Please enter a valid amount");
-      return;
-    }
-
-    const price = parseFloat(manualEntry);
-    const manualItem: CartItem = {
-      upc: `MANUAL-${Date.now()}`,
-      description: "Manual Entry",
-      volume: null,
-      quantity: 1,
-      cost: 0,
-      price: price
-    };
-
-    setCart([...cart, manualItem]);
-    setManualEntry("");
-    setError("");
-  };
-
-  const formatDisplayAmount = (amount: string) => {
-    if (!amount) return "$0.00";
-    const num = parseFloat(amount);
-    if (isNaN(num)) return "$0.00";
-    return `$${num.toFixed(2)}`;
-  };
 
   const openDiscountModal = (index: number) => {
     // Don't allow discounts on credit/payout items
@@ -522,6 +517,73 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
     setCart(updatedCart);
   };
 
+  const handleLotteryPurchase = () => {
+    const amount = parseFloat(lotteryAmount);
+    if (isNaN(amount) || amount <= 0) {
+      alert("Please enter a valid amount");
+      return;
+    }
+
+    const lotteryItem: CartItem = {
+      upc: `LOTTERY-${Date.now()}`,
+      description: "Lottery Ticket",
+      volume: null,
+      quantity: 1,
+      cost: 0,
+      price: amount,
+      taxable: false // Lottery tickets are NOT taxable
+    };
+    
+    setCart([...cart, lotteryItem]);
+    setShowLotteryModal(false);
+    setLotteryAmount("");
+  };
+
+  const handleLotteryPayoutComplete = (amount: number) => {
+    const payoutItem: CartItem = {
+      upc: `PAYOUT_LOTTERY_${Date.now()}`,
+      description: "Lottery Payout",
+      volume: null,
+      quantity: 1,
+      cost: 0,
+      price: -amount, // Negative for payout
+      taxable: false // Payouts are not taxable
+    };
+    
+    setCart([...cart, payoutItem]);
+    setShowLotteryPayoutKeypad(false);
+  };
+
+  const handleMiscTaxComplete = (amount: number) => {
+    const miscTaxItem: CartItem = {
+      upc: `MISC-TAX-${Date.now()}`,
+      description: "Miscellaneous (Taxable)",
+      volume: null,
+      quantity: 1,
+      cost: 0,
+      price: amount,
+      taxable: true // Explicitly taxable
+    };
+    
+    setCart([...cart, miscTaxItem]);
+    setShowMiscTaxKeypad(false);
+  };
+
+  const handleMiscNonTaxComplete = (amount: number) => {
+    const miscNonTaxItem: CartItem = {
+      upc: `MISC-NONTAX-${Date.now()}`,
+      description: "Miscellaneous (Non-Taxable)",
+      volume: null,
+      quantity: 1,
+      cost: 0,
+      price: amount,
+      taxable: false // Explicitly non-taxable
+    };
+    
+    setCart([...cart, miscNonTaxItem]);
+    setShowMiscNonTaxKeypad(false);
+  };
+
   const handlePayoutComplete = (type: string, amount: number, description?: string) => {
     // Generate proper UPC based on payout type
     let upcPrefix = 'PAYOUT_';
@@ -540,7 +602,8 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
       volume: description || null,
       quantity: 1,
       cost: 0,
-      price: -amount // Negative amount for credit
+      price: -amount, // Negative amount for credit
+      taxable: false // Payouts are not taxable
     };
     
     setCart([...cart, payoutItem]);
@@ -667,12 +730,6 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
                     Add
                   </button>
                 </div>
-                <button 
-                  className="scanner-payout-btn" 
-                  onClick={() => setShowPayoutModal(true)}
-                >
-                  💰 Payout
-                </button>
               </div>
               
               {showDropdown && barcode.length > 2 && isNaN(Number(barcode)) && (
@@ -733,17 +790,28 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
                 <thead>
                   <tr>
                     <th>#</th>
+                    <th>Taxable</th>
                     <th>Description</th>
                     <th>Qty</th>
                     <th>Unit Price</th>
-                    <th>Total</th>
+                    <th>Tax Amount</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {cart.map((item, index) => (
+                  {cart.map((item, index) => {
+                    const isTaxable = item.taxable !== undefined ? item.taxable : !item.upc.includes('NONTAX');
+                    const itemSubtotal = (item.price - (item.discount || 0)) * item.quantity;
+                    const taxAmount = isTaxable ? itemSubtotal * 0.06 : 0;
+                    
+                    return (
                     <tr key={index}>
                       <td className="item-number">{index + 1}</td>
+                      <td className="taxable-cell">
+                        <span className="taxable-indicator">
+                          {isTaxable ? "Yes" : "No"}
+                        </span>
+                      </td>
                       <td className="description-cell">{item.description || "N/A"}</td>
                       <td>
                         {/* Credit/payout items have fixed quantity of 1 */}
@@ -783,8 +851,8 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
                           formatCurrency(item.price)
                         )}
                       </td>
-                      <td className="total-cell">
-                        {formatCurrency((item.price - (item.discount || 0)) * item.quantity)}
+                      <td className="tax-amount-cell">
+                        {taxAmount > 0 ? formatCurrency(taxAmount) : "-"}
                       </td>
                       <td>
                         <div className="item-actions">
@@ -816,7 +884,8 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -836,38 +905,84 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
     </div>
   </div>
 
-        {/* Right Section - Manual Entry Panel */}
-        <div className="manual-entry-panel">
-          <div className="amount-display">
-            {formatDisplayAmount(manualEntry)}
-          </div>
-          <div className="number-pad">
-            <div className="number-pad-row">
-              <button className="num-pad-btn" onClick={() => handleNumberPadClick('7')}>7</button>
-              <button className="num-pad-btn" onClick={() => handleNumberPadClick('8')}>8</button>
-              <button className="num-pad-btn" onClick={() => handleNumberPadClick('9')}>9</button>
-              <button className="num-pad-btn clear" onClick={() => handleNumberPadClick('C')}>C</button>
-            </div>
-            <div className="number-pad-row">
-              <button className="num-pad-btn" onClick={() => handleNumberPadClick('4')}>4</button>
-              <button className="num-pad-btn" onClick={() => handleNumberPadClick('5')}>5</button>
-              <button className="num-pad-btn" onClick={() => handleNumberPadClick('6')}>6</button>
-              <button className="num-pad-btn backspace" onClick={() => handleNumberPadClick('←')}>←</button>
-            </div>
-            <div className="number-pad-row">
-              <button className="num-pad-btn" onClick={() => handleNumberPadClick('1')}>1</button>
-              <button className="num-pad-btn" onClick={() => handleNumberPadClick('2')}>2</button>
-              <button className="num-pad-btn" onClick={() => handleNumberPadClick('3')}>3</button>
-              <button className="num-pad-btn" onClick={() => handleNumberPadClick('00')}>00</button>
-            </div>
-            <div className="number-pad-row">
-              <button className="num-pad-btn zero" onClick={() => handleNumberPadClick('0')}>0</button>
-              <button className="num-pad-btn dot" onClick={() => handleNumberPadClick('.')}>.</button>
-              <button className="num-pad-btn enter" onClick={() => handleNumberPadClick('Enter')}>Add</button>
+        {/* Right Section - Quick Actions Panel */}
+        <div className="quick-actions-panel">
+          {/* Payout Buttons */}
+          <div className="payout-buttons-section">
+            <h3>Quick Actions</h3>
+            <div className="quick-action-buttons">
+              <div className="lottery-buttons-row">
+                <button 
+                  className="quick-action-btn buy-lottery"
+                  onClick={() => {
+                    setShowLotteryModal(true);
+                    setLotteryAmount("");
+                  }}
+                >
+                  <div className="action-icon">🎰</div>
+                  <div className="action-label">Buy Lottery</div>
+                </button>
+
+                <button 
+                  className="quick-action-btn lottery-payout"
+                  onClick={() => {
+                    setShowLotteryPayoutKeypad(true);
+                  }}
+                >
+                  <div className="action-icon">💵</div>
+                  <div className="action-label">Lottery Payout</div>
+                </button>
+              </div>
+
+              <div className="payout-buttons-row">
+                <button 
+                  className="quick-action-btn bottle-can"
+                  onClick={() => {
+                    setSelectedType('bottle');
+                    setShowPayoutModal(true);
+                  }}
+                >
+                  <div className="action-icon">🍾</div>
+                  <div className="action-label">Bottle/Can</div>
+                </button>
+
+                <button 
+                  className="quick-action-btn other-payout"
+                  onClick={() => {
+                    setSelectedType(null);
+                    setShowPayoutModal(true);
+                  }}
+                >
+                  <div className="action-icon">💸</div>
+                  <div className="action-label">Other Payout</div>
+                </button>
+              </div>
+
+              <div className="misc-buttons-row">
+                <button 
+                  className="quick-action-btn misc-tax"
+                  onClick={() => {
+                    setShowMiscTaxKeypad(true);
+                  }}
+                >
+                  <div className="action-icon">📋</div>
+                  <div className="action-label">Misc. TAX</div>
+                </button>
+
+                <button 
+                  className="quick-action-btn misc-nontax"
+                  onClick={() => {
+                    setShowMiscNonTaxKeypad(true);
+                  }}
+                >
+                  <div className="action-icon">📄</div>
+                  <div className="action-label">Misc. Non-TAX</div>
+                </button>
+              </div>
             </div>
           </div>
           
-          {/* Cart Summary moved here */}
+          {/* Cart Summary */}
           <div className="cart-summary">
             <div className="summary-totals">
               <div className="summary-row">
@@ -1256,13 +1371,120 @@ export default function CartScanner({ barcode, setBarcode, cart, setCart, error,
         </div>
       )}
 
-      {/* Payout Modal */}
+      {/* Lottery Amount Modal */}
+      {showLotteryModal && (
+        <div className="modal-overlay" onClick={() => setShowLotteryModal(false)}>
+          <div className="lottery-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Enter Lottery Amount</h3>
+              <button 
+                className="modal-close-btn" 
+                onClick={() => setShowLotteryModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-content">
+              <div className="lottery-input-group">
+                <label>Amount ($)</label>
+                <input
+                  type="text"
+                  value={lotteryAmount}
+                  onChange={(e) => {
+                    // Only allow numbers and decimal point
+                    const value = e.target.value;
+                    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                      setLotteryAmount(value);
+                    }
+                  }}
+                  placeholder="0.00"
+                  className="lottery-amount-input"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleLotteryPurchase();
+                    } else if (e.key === 'Escape') {
+                      setShowLotteryModal(false);
+                      setLotteryAmount("");
+                    }
+                  }}
+                />
+              </div>
+              <div className="modal-buttons">
+                <button 
+                  onClick={handleLotteryPurchase} 
+                  className="ok-btn"
+                >
+                  OK
+                </button>
+                <button 
+                  onClick={() => {
+                    setShowLotteryModal(false);
+                    setLotteryAmount("");
+                  }} 
+                  className="cancel-btn"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lottery Payout Keypad */}
+      {showLotteryPayoutKeypad && (
+        <div className="modal-overlay">
+          <div className="payout-keypad-modal">
+            <PayoutKeypad
+              type="dollars"
+              title="Enter Lottery Payout Amount"
+              onComplete={handleLotteryPayoutComplete}
+              onCancel={() => setShowLotteryPayoutKeypad(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Misc Tax Keypad */}
+      {showMiscTaxKeypad && (
+        <div className="modal-overlay">
+          <div className="payout-keypad-modal">
+            <PayoutKeypad
+              type="dollars"
+              title="Enter Miscellaneous (Taxable) Amount"
+              onComplete={handleMiscTaxComplete}
+              onCancel={() => setShowMiscTaxKeypad(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Misc Non-Tax Keypad */}
+      {showMiscNonTaxKeypad && (
+        <div className="modal-overlay">
+          <div className="payout-keypad-modal">
+            <PayoutKeypad
+              type="dollars"
+              title="Enter Miscellaneous (Non-Taxable) Amount"
+              onComplete={handleMiscNonTaxComplete}
+              onCancel={() => setShowMiscNonTaxKeypad(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Payout Modal - for bottle/can and other payouts */}
       {showPayoutModal && (
         <div className="modal-overlay">
           <div className="payout-modal">
             <Payout 
               onComplete={handlePayoutComplete}
-              onCancel={() => setShowPayoutModal(false)}
+              onCancel={() => {
+                setShowPayoutModal(false);
+                setSelectedType(null);
+              }}
+              initialType={selectedType}
             />
           </div>
         </div>

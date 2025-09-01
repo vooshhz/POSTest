@@ -28,6 +28,7 @@ function getProductsDb() {
 // Get store info database
 function getStoreInfoDb() {
   if (!storeInfoDb) {
+    console.log("Creating new StoreInfo database connection at:", storeInfoDbPath);
     storeInfoDb = new Database(storeInfoDbPath);
     // Create store_info table if it doesn't exist
     storeInfoDb.exec(`
@@ -96,14 +97,11 @@ function getStoreInfoDb() {
       console.log("✅ Added PIN column to users table");
     }
     
-    // Create default admin user if no users exist
+    // Don't auto-create admin user - let the setup process handle it
+    // This allows for proper initial setup after factory reset
     const userCount = storeInfoDb.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number };
     if (userCount.count === 0) {
-      storeInfoDb.prepare(`
-        INSERT INTO users (username, password, role, full_name) 
-        VALUES ('admin', 'admin', 'admin', 'Administrator')
-      `).run();
-      console.log("✅ Default admin user created (username: admin, password: admin)");
+      console.log("📌 No users found. Please complete initial setup to create admin user.");
     }
   }
   return storeInfoDb;
@@ -137,8 +135,7 @@ function getInventoryDb() {
         change_given REAL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         created_by_user_id INTEGER,
-        created_by_username TEXT,
-        FOREIGN KEY (created_by_user_id) REFERENCES users(id)
+        created_by_username TEXT
       );
       CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(created_at);
       CREATE INDEX IF NOT EXISTS idx_transactions_user ON transactions(created_by_user_id);
@@ -158,8 +155,7 @@ function getInventoryDb() {
         created_by TEXT DEFAULT 'system',
         created_by_user_id INTEGER,
         created_by_username TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (created_by_user_id) REFERENCES users(id)
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
       CREATE INDEX IF NOT EXISTS idx_adjustments_upc ON inventory_adjustments(upc);
       CREATE INDEX IF NOT EXISTS idx_adjustments_date ON inventory_adjustments(created_at);
@@ -204,6 +200,28 @@ function getInventoryDb() {
         closed_at DATETIME
       );
       CREATE INDEX IF NOT EXISTS idx_daily_till_date ON daily_till(date);
+      
+      CREATE TABLE IF NOT EXISTS payouts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        amount REAL NOT NULL,
+        reason TEXT NOT NULL,
+        created_by_user_id INTEGER,
+        created_by_username TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_payouts_date ON payouts(created_at);
+      
+      CREATE TABLE IF NOT EXISTS employee_time_clock (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        punch_in DATETIME NOT NULL,
+        punch_out DATETIME,
+        shift_date DATE NOT NULL,
+        duration_minutes INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_employee_clock_user ON employee_time_clock(user_id);
+      CREATE INDEX IF NOT EXISTS idx_employee_clock_date ON employee_time_clock(shift_date);
     `);
     
     // Add migration for existing databases
@@ -334,9 +352,54 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
     }
   });
 
+  // Check if system needs initial setup (no auth required)
+  ipcMain.handle("check-initial-setup", async () => {
+    try {
+      // First check if databases exist - if not, we need setup
+      if (!fs.existsSync(storeInfoDbPath) || !fs.existsSync(inventoryDbPath)) {
+        console.log("Initial setup check - Databases do not exist, needs setup");
+        return {
+          success: true,
+          needsSetup: true,
+          hasStoreInfo: false,
+          hasUsers: false,
+          userCount: 0,
+          storeData: null
+        };
+      }
+      
+      const storeDb = getStoreInfoDb();
+      
+      // Check for store info
+      const storeInfo = storeDb.prepare("SELECT * FROM store_info LIMIT 1").get();
+      
+      // Check for any users
+      const userCount = storeDb.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number };
+      
+      console.log("Initial setup check - Store info:", !!storeInfo, "User count:", userCount.count);
+      
+      return {
+        success: true,
+        needsSetup: !storeInfo || userCount.count === 0,
+        hasStoreInfo: !!storeInfo,
+        hasUsers: userCount.count > 0,
+        userCount: userCount.count,
+        storeData: storeInfo || null
+      };
+    } catch (error) {
+      console.error("Check initial setup error:", error);
+      return {
+        success: false,
+        needsSetup: true,
+        error: error instanceof Error ? error.message : "Failed to check initial setup"
+      };
+    }
+  });
+
   // Save store info
   ipcMain.handle("save-store-info", async (_, storeInfo) => {
     try {
+      console.log("Saving store info:", storeInfo);
       const storeDb = getStoreInfoDb();
       
       // Check if store info already exists
@@ -923,9 +986,13 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
         
         // Deduct each item from inventory and record adjustments
         for (const item of items) {
-          // Skip inventory checks for payout/credit items (negative price or PAYOUT UPC)
-          if (item.price < 0 || item.upc.startsWith('PAYOUT_')) {
-            continue; // Payouts don't affect inventory
+          // Skip inventory checks for special items that don't track inventory
+          const specialPrefixes = ['PAYOUT_', 'LOTTERY-', 'MISC-TAX-', 'MISC-NONTAX-'];
+          const isSpecialItem = specialPrefixes.some(prefix => item.upc.startsWith(prefix));
+          
+          // Skip inventory checks for payout/credit items or special items
+          if (item.price < 0 || isSpecialItem) {
+            continue; // These don't affect inventory
           }
           
           // Check current quantity and get item details
@@ -1314,10 +1381,11 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
 
   // Register test inventory handlers
   registerGenerateTestInventory(ipcMain);
-  registerClearInventory(ipcMain);
+  // Removed - now handled in main registerInventoryIpc function with better implementation
   registerGenerateTestSales(ipcMain);
-  registerClearTransactions(ipcMain);
-  registerClearAllData(ipcMain);
+  // Removed - now handled in main registerInventoryIpc function with better implementation
+  // registerClearTransactions(ipcMain);
+  // registerClearAllData(ipcMain);
   registerWeeklySummary(ipcMain);
   registerInventoryAnalysis(ipcMain);
   registerUserManagement(ipcMain);
@@ -1447,28 +1515,7 @@ function registerGenerateTestInventory(ipcMain: IpcMain) {
   });
 }
 
-// Clear all inventory for testing
-function registerClearInventory(ipcMain: IpcMain) {
-  ipcMain.handle("clear-inventory", async () => {
-    try {
-      // Initialize database if needed
-      const invDb = getInventoryDb();
-
-      // Delete all inventory records
-      invDb.prepare("DELETE FROM inventory").run();
-
-      return {
-        success: true
-      };
-    } catch (error) {
-      console.error("Error clearing inventory:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to clear inventory"
-      };
-    }
-  });
-}
+// Removed old registerClearInventory - now handled in main registerInventoryIpc function
 
 // Generate test sales for development
 function registerGenerateTestSales(ipcMain: IpcMain) {
@@ -1673,8 +1720,8 @@ function registerGenerateTestSales(ipcMain: IpcMain) {
           
           // Save the transaction with specific date
           const stmt = invDb.prepare(`
-            INSERT INTO transactions (items, subtotal, tax, total, payment_type, cash_given, change_given, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO transactions (items, subtotal, tax, total, payment_type, cash_given, change_given, created_at, created_by_user_id, created_by_username)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `);
           
           const result = stmt.run(
@@ -1685,7 +1732,9 @@ function registerGenerateTestSales(ipcMain: IpcMain) {
             transaction.payment_type,
             transaction.cash_given,
             transaction.change_given,
-            sale.saleDate.toISOString()
+            sale.saleDate.toISOString(),
+            null,  // No specific user ID for test data
+            'test_generator'
           );
           
           const transactionId = result.lastInsertRowid;
@@ -1790,88 +1839,9 @@ function registerGenerateTestSales(ipcMain: IpcMain) {
   });
 }
 
-// Clear all transactions for testing
-function registerClearTransactions(ipcMain: IpcMain) {
-  ipcMain.handle("clear-transactions", async () => {
-    try {
-      const invDb = getInventoryDb();
-      
-      // Delete all transactions and related adjustments
-      invDb.prepare("BEGIN TRANSACTION").run();
-      
-      try {
-        // Delete all transactions
-        invDb.prepare("DELETE FROM transactions").run();
-        
-        // Delete sales-related adjustments
-        invDb.prepare("DELETE FROM inventory_adjustments WHERE adjustment_type = 'sale'").run();
-        
-        invDb.prepare("COMMIT").run();
-        
-        return {
-          success: true
-        };
-      } catch (error) {
-        invDb.prepare("ROLLBACK").run();
-        throw error;
-      }
-    } catch (error) {
-      console.error("Error clearing transactions:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to clear transactions"
-      };
-    }
-  });
-}
+// Removed old registerClearTransactions - now handled in main registerInventoryIpc function
 
-// Clear ALL data - complete database reset
-function registerClearAllData(ipcMain: IpcMain) {
-  ipcMain.handle("clear-all-data", async () => {
-    try {
-      const invDb = getInventoryDb();
-      
-      // Delete everything in a transaction
-      invDb.prepare("BEGIN TRANSACTION").run();
-      
-      try {
-        // Get counts before deletion for reporting
-        const transCount = invDb.prepare("SELECT COUNT(*) as count FROM transactions").get() as { count: number };
-        const invCount = invDb.prepare("SELECT COUNT(*) as count FROM inventory").get() as { count: number };
-        const adjCount = invDb.prepare("SELECT COUNT(*) as count FROM inventory_adjustments").get() as { count: number };
-        
-        // Delete all data
-        invDb.prepare("DELETE FROM transactions").run();
-        invDb.prepare("DELETE FROM inventory").run();
-        invDb.prepare("DELETE FROM inventory_adjustments").run();
-        
-        // Reset autoincrement counters
-        invDb.prepare("DELETE FROM sqlite_sequence WHERE name IN ('transactions', 'inventory', 'inventory_adjustments')").run();
-        
-        invDb.prepare("COMMIT").run();
-        
-        return {
-          success: true,
-          message: `Cleared ${transCount.count} transactions, ${invCount.count} inventory items, and ${adjCount.count} adjustments`,
-          deleted: {
-            transactions: transCount.count,
-            inventory: invCount.count,
-            adjustments: adjCount.count
-          }
-        };
-      } catch (error) {
-        invDb.prepare("ROLLBACK").run();
-        throw error;
-      }
-    } catch (error) {
-      console.error("Error clearing all data:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to clear all data"
-      };
-    }
-  });
-}
+// Removed old registerClearAllData - now handled in main registerInventoryIpc function
 
 // Get Inventory Analysis handler
 function registerInventoryAnalysis(ipcMain: IpcMain) {
@@ -2438,22 +2408,38 @@ function registerUserManagement(ipcMain: IpcMain) {
     fullName: string;
   }) => {
     try {
+      console.log("Adding user during setup:", userData.username);
       const storeDb = getStoreInfoDb();
       
-      // Check if any users exist (should be empty during initial setup)
-      const userCount = storeDb.prepare("SELECT COUNT(*) as count FROM users").get() as any;
-      if (userCount.count > 0) {
+      // Check if this specific username already exists
+      const existingUser = storeDb.prepare("SELECT username FROM users WHERE username = ?").get(userData.username);
+      if (existingUser) {
+        // Get all users for debugging
+        const allUsers = storeDb.prepare("SELECT username, role FROM users").all();
+        console.error("User already exists. All users:", allUsers);
         return {
           success: false,
-          error: "Users already exist. Use normal add-user for additional users."
+          error: `Username '${userData.username}' is already taken. Please choose a different username.`
         };
       }
       
-      // Insert the first admin user
+      // During initial setup, we allow creating the first admin
+      // Check if this is truly the first user
+      const userCount = storeDb.prepare("SELECT COUNT(*) as count FROM users").get() as any;
+      if (userCount.count > 0 && userData.role !== 'admin') {
+        return {
+          success: false,
+          error: "Initial setup can only create admin users."
+        };
+      }
+      
+      // Insert the user
       const result = storeDb.prepare(`
         INSERT INTO users (username, password, role, full_name) 
         VALUES (?, ?, ?, ?)
       `).run(userData.username, userData.password, userData.role, userData.fullName);
+      
+      console.log(`Created setup user: ${userData.username} (${userData.role})`);
       
       return {
         success: true,
@@ -2461,6 +2447,15 @@ function registerUserManagement(ipcMain: IpcMain) {
       };
     } catch (error) {
       console.error("Add setup user error:", error);
+      
+      // Check if it's a unique constraint error
+      if (error instanceof Error && error.message.includes('UNIQUE constraint')) {
+        return {
+          success: false,
+          error: `Username '${userData.username}' is already taken.`
+        };
+      }
+      
       return {
         success: false,
         error: error instanceof Error ? error.message : "Failed to create admin user"
@@ -2679,9 +2674,13 @@ function registerUserManagement(ipcMain: IpcMain) {
       
       // Deduct items from inventory and record adjustments
       for (const item of items) {
-        // Skip inventory checks for payout/credit items (negative price or PAYOUT UPC)
-        if (item.price < 0 || item.upc.startsWith('PAYOUT_')) {
-          continue; // Payouts don't affect inventory
+        // Skip inventory checks for special items that don't track inventory
+        const specialPrefixes = ['PAYOUT_', 'LOTTERY-', 'MISC-TAX-', 'MISC-NONTAX-'];
+        const isSpecialItem = specialPrefixes.some(prefix => item.upc.startsWith(prefix));
+        
+        // Skip inventory checks for payout/credit items or special items
+        if (item.price < 0 || isSpecialItem) {
+          continue; // These don't affect inventory
         }
         
         // Update inventory quantity
@@ -2908,8 +2907,9 @@ ipcMain.handle("add-to-inventory-with-date", async (_, item: InventoryItem & { c
             tax,
             total,
             payment_type,
+            created_by_user_id,
             created_by_username
-          ) VALUES (?, ?, ?, ?, ?, ?, ?)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `);
         
         const result = insertTransaction.run(
@@ -2919,6 +2919,7 @@ ipcMain.handle("add-to-inventory-with-date", async (_, item: InventoryItem & { c
           tax,
           total,
           transaction.payment_method || 'cash',
+          null,  // No specific user ID for mock data
           'mock_generator'
         );
         
@@ -3569,6 +3570,208 @@ function registerTimeClock(ipcMain: IpcMain) {
       return {
         success: false,
         error: error instanceof Error ? error.message : "Failed to get time clock entries"
+      };
+    }
+  });
+
+  // Clear inventory data
+  ipcMain.handle("clear-inventory", async () => {
+    try {
+      const inventoryDb = getInventoryDb();
+      
+      // Clear inventory and adjustments
+      inventoryDb.exec(`
+        DELETE FROM inventory;
+        DELETE FROM inventory_adjustments;
+      `);
+      
+      return {
+        success: true,
+        message: "Inventory data cleared successfully"
+      };
+    } catch (error) {
+      console.error("Clear inventory error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to clear inventory"
+      };
+    }
+  });
+
+  // Clear transactions
+  ipcMain.handle("clear-transactions", async () => {
+    try {
+      const inventoryDb = getInventoryDb();
+      
+      // Clear only transactions
+      inventoryDb.exec(`
+        DELETE FROM transactions;
+      `);
+      
+      return {
+        success: true,
+        message: "Transaction data cleared successfully"
+      };
+    } catch (error) {
+      console.error("Clear transactions error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to clear transactions"
+      };
+    }
+  });
+
+  // Clear ALL data (complete reset - DELETES StoreInformation.db)
+  ipcMain.handle("clear-all-data", async () => {
+    try {
+      console.log("Clearing all data - will delete StoreInformation.db");
+      
+      // First, close the store info database connection
+      if (storeInfoDb) {
+        storeInfoDb.close();
+        storeInfoDb = null;
+        console.log("Closed store info database connection");
+      }
+      
+      // Delete StoreInformation.db completely
+      try {
+        if (fs.existsSync(storeInfoDbPath)) {
+          fs.unlinkSync(storeInfoDbPath);
+          console.log("Deleted StoreInformation.db successfully");
+        }
+        
+        // Also delete any journal files
+        const journalFiles = [
+          storeInfoDbPath + '-journal',
+          storeInfoDbPath + '-wal', 
+          storeInfoDbPath + '-shm'
+        ];
+        
+        journalFiles.forEach(file => {
+          if (fs.existsSync(file)) {
+            fs.unlinkSync(file);
+            console.log(`Deleted ${path.basename(file)}`);
+          }
+        });
+      } catch (deleteError) {
+        console.error("Error deleting StoreInformation.db:", deleteError);
+      }
+      
+      // Clear all inventory-related tables
+      const inventoryDb = getInventoryDb();
+      inventoryDb.exec(`
+        DELETE FROM inventory;
+        DELETE FROM inventory_adjustments;
+        DELETE FROM transactions;
+        DELETE FROM daily_till;
+        UPDATE till_settings SET 
+          enabled = 0,
+          ones = 0,
+          fives = 0,
+          tens = 0,
+          twenties = 0,
+          fifties = 0,
+          hundreds = 0;
+      `);
+      
+      // Clear current user session
+      currentUser = null;
+      
+      return {
+        success: true,
+        message: "All data cleared successfully! Store information has been completely deleted.\nThe application will restart to complete the reset."
+      };
+    } catch (error) {
+      console.error("Clear all data error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to clear all data"
+      };
+    }
+  });
+
+  // Clear EVERYTHING including store info and users (factory reset)
+  ipcMain.handle("factory-reset", async () => {
+    try {
+      console.log("Starting complete factory reset...");
+      
+      // Close store info database connection first
+      if (storeInfoDb) {
+        storeInfoDb.close();
+        storeInfoDb = null;
+        console.log("Closed store info database connection");
+      }
+      
+      // Delete StoreInformation.db completely
+      try {
+        if (fs.existsSync(storeInfoDbPath)) {
+          fs.unlinkSync(storeInfoDbPath);
+          console.log("Deleted StoreInformation.db successfully");
+        }
+        
+        // Also delete any journal files
+        const journalFiles = [
+          storeInfoDbPath + '-journal',
+          storeInfoDbPath + '-wal', 
+          storeInfoDbPath + '-shm'
+        ];
+        
+        journalFiles.forEach(file => {
+          if (fs.existsSync(file)) {
+            fs.unlinkSync(file);
+            console.log(`Deleted ${path.basename(file)}`);
+          }
+        });
+      } catch (deleteError) {
+        console.error("Error deleting StoreInformation.db:", deleteError);
+      }
+      
+      // Clear inventory database too
+      const inventoryDatabase = getInventoryDb();
+      
+      // Just clear all data from inventory tables, don't drop/recreate
+      console.log("Clearing all inventory data...");
+      inventoryDatabase.exec(`
+        DELETE FROM inventory;
+        DELETE FROM transactions;
+        DELETE FROM inventory_adjustments;
+        DELETE FROM daily_till;
+        DELETE FROM payouts;
+        DELETE FROM employee_time_clock;
+        UPDATE till_settings SET 
+          enabled = 0,
+          ones = 0,
+          fives = 0,
+          tens = 0,
+          twenties = 0,
+          fifties = 0,
+          hundreds = 0;
+      `);
+      
+      console.log("Inventory data cleared");
+      
+      // Clear current user session
+      currentUser = null;
+      
+      // Close and nullify inventory connection to force recreation
+      if (inventoryDb) {
+        inventoryDb.close();
+        inventoryDb = null;
+      }
+      
+      // StoreInfoDb was already closed and nullified before deletion
+      
+      console.log("Factory reset completed successfully");
+      
+      return {
+        success: true,
+        message: "Factory reset complete! All data has been permanently deleted.\nThe application will restart to complete the reset."
+      };
+    } catch (error) {
+      console.error("Factory reset error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to perform factory reset"
       };
     }
   });

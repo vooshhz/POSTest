@@ -143,10 +143,10 @@ export function TransactionDetails() {
               <tbody>
                 {parseItems(transaction.items).map((item, index) => (
                   <tr key={index}>
-                    <td className="item-description">{item.description}</td>
-                    <td className="item-quantity">{item.quantity}</td>
-                    <td className="item-price">${item.price.toFixed(2)}</td>
-                    <td className="item-total">${item.total.toFixed(2)}</td>
+                    <td className="item-description">{item.description || 'Unknown Item'}</td>
+                    <td className="item-quantity">{item.quantity || 0}</td>
+                    <td className="item-price">${(item.price || 0).toFixed(2)}</td>
+                    <td className="item-total">${(item.total || (item.price || 0) * (item.quantity || 0)).toFixed(2)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -159,15 +159,15 @@ export function TransactionDetails() {
           <div className="summary-grid">
             <div className="summary-row">
               <span className="summary-label">Subtotal:</span>
-              <span className="summary-value">${transaction.subtotal.toFixed(2)}</span>
+              <span className="summary-value">${(transaction.subtotal || 0).toFixed(2)}</span>
             </div>
             <div className="summary-row">
               <span className="summary-label">Tax:</span>
-              <span className="summary-value">${transaction.tax.toFixed(2)}</span>
+              <span className="summary-value">${(transaction.tax || 0).toFixed(2)}</span>
             </div>
             <div className="summary-row total-row">
               <span className="summary-label">Total:</span>
-              <span className="summary-value">${transaction.total.toFixed(2)}</span>
+              <span className="summary-value">${(transaction.total || 0).toFixed(2)}</span>
             </div>
           </div>
 
@@ -182,7 +182,7 @@ export function TransactionDetails() {
               <div className="cash-details">
                 <div className="cash-row">
                   <span>Cash Given:</span>
-                  <span>${transaction.cash_given.toFixed(2)}</span>
+                  <span>${(transaction.cash_given || 0).toFixed(2)}</span>
                 </div>
                 <div className="cash-row">
                   <span>Change:</span>

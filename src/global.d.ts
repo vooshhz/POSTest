@@ -115,6 +115,15 @@ export interface InventoryAPI {
     data?: any;
     error?: string;
   }>;
+  checkInitialSetup: () => Promise<{
+    success: boolean;
+    needsSetup: boolean;
+    hasStoreInfo: boolean;
+    hasUsers: boolean;
+    userCount: number;
+    storeData?: any;
+    error?: string;
+  }>;
   saveStoreInfo: (storeInfo: {
     store_name: string;
     address_line1: string;
@@ -216,6 +225,11 @@ export interface InventoryAPI {
       inventory: number;
       adjustments: number;
     };
+    error?: string;
+  }>;
+  factoryReset: () => Promise<{
+    success: boolean;
+    message?: string;
     error?: string;
   }>;
   getDailySales: (date: string) => Promise<{
