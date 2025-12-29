@@ -8,7 +8,7 @@ export function getDatabasePaths() {
   if (isDev) {
     // Development paths - use current working directory
     return {
-      productsDbPath: path.join(process.cwd(), 'LiquorDatabase.db'),
+      productsDbPath: path.join(process.cwd(), 'ProductCatalog.db'),
       inventoryDbPath: path.join(process.cwd(), 'LiquorInventory.db'),
       storeInfoDbPath: path.join(process.cwd(), 'StoreInformation.db')
     };
@@ -26,7 +26,7 @@ export function getDatabasePaths() {
     const resourcesPath = process.resourcesPath;
     
     const databases = [
-      { name: 'LiquorDatabase.db', varName: 'productsDbPath' },
+      { name: 'ProductCatalog.db', varName: 'productsDbPath' },
       { name: 'LiquorInventory.db', varName: 'inventoryDbPath' },
       { name: 'StoreInformation.db', varName: 'storeInfoDbPath' }
     ];

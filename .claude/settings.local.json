@@ -39,7 +39,9 @@
       "Bash(npm run build:*)",
       "Bash(del /S /Q \"%LOCALAPPDATA%\\electron-builder\\Cache\\winCodeSign\")",
       "Bash(findstr:*)",
-      "Bash(more:*)"
+      "Bash(more:*)",
+      "Bash(ren \"INVENTORY DATABASE\" \"MasterCatalogs\")",
+      "Bash(tsc:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

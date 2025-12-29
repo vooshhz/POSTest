@@ -632,14 +632,14 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
       
       // Search in products database
       const query = `
-        SELECT 
-          "UPC" as upc,
-          "Category Name" as category,
-          "Item Description" as description,
-          "Bottle Volume (ml)" as volume,
-          "Pack" as pack
-        FROM products 
-        WHERE "UPC" = ?
+        SELECT
+          upc,
+          category,
+          name as description,
+          volume_metric as volume,
+          pack_size as pack
+        FROM products
+        WHERE upc = ?
       `;
       
       const product = prodDb.prepare(query).get(upc) as Product | undefined;
@@ -695,12 +695,12 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
       // Enrich with product details
       const enrichedItems = (inventoryItems as Record<string, unknown>[]).map((item: Record<string, unknown>) => {
         const product = prodDb.prepare(`
-          SELECT 
-            "Item Description" as description,
-            "Category Name" as category,
-            "Bottle Volume (ml)" as volume
-          FROM products 
-          WHERE "UPC" = ?
+          SELECT
+            name as description,
+            category,
+            volume_metric as volume
+          FROM products
+          WHERE upc = ?
         `).get(item.upc as string) as { description?: string; category?: string; volume?: string } | undefined;
         
         return {
@@ -738,14 +738,14 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
         // Get product details from products database
         const prodDb = getProductsDb();
         const product = prodDb.prepare(`
-          SELECT 
-            "Item Description" as description,
-            "Category Name" as category,
-            "Bottle Volume (ml)" as volume
-          FROM products 
-          WHERE "UPC" = ?
+          SELECT
+            name as description,
+            category,
+            volume_metric as volume
+          FROM products
+          WHERE upc = ?
         `).get(upc) as { description?: string; category?: string; volume?: string } | undefined;
-        
+
         return {
           success: true,
           data: {
@@ -788,14 +788,14 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
       const searchResults = [];
       for (const item of inventoryItems) {
         const product = prodDb.prepare(`
-          SELECT 
-            "Item Description" as description,
-            "Category Name" as category,
-            "Bottle Volume (ml)" as volume
-          FROM products 
-          WHERE "UPC" = ?
+          SELECT
+            name as description,
+            category,
+            volume_metric as volume
+          FROM products
+          WHERE upc = ?
         `).get(item.upc) as { description?: string; category?: string; volume?: string } | undefined;
-        
+
         if (product?.description && product.description.toLowerCase().includes(searchTerm.toLowerCase())) {
           searchResults.push({
             upc: item.upc,
@@ -830,15 +830,15 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
       
       // Search products by category or description
       const products = prodDb.prepare(`
-        SELECT 
-          "UPC" as upc,
-          "Item Description" as description,
-          "Category Name" as category,
-          "Bottle Volume (ml)" as volume,
-          "Pack" as pack,
-          "State Bottle Retail" as price
-        FROM products 
-        WHERE "Category Name" LIKE ? OR "Item Description" LIKE ?
+        SELECT
+          upc,
+          name as description,
+          category,
+          volume_metric as volume,
+          pack_size as pack,
+          price
+        FROM products
+        WHERE category LIKE ? OR name LIKE ?
         LIMIT 100
       `).all(`%${category}%`, `%${category}%`) as Array<{
         upc: string;
@@ -1145,8 +1145,8 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
         let productInfo = null;
         try {
           productInfo = prodDb.prepare(`
-            SELECT "Item Description" as description, "Category Name" as category
-            FROM products WHERE "UPC" = ?
+            SELECT name as description, category
+            FROM products WHERE upc = ?
           `).get(adj.upc) as any;
         } catch (err) {
           // Products database might not be available
@@ -1310,8 +1310,8 @@ export function registerInventoryIpc(ipcMain: IpcMain) {
               let description = item.description || 'Unknown Product';
               try {
                 const product = prodDb.prepare(`
-                  SELECT "Item Description" as description 
-                  FROM products WHERE "UPC" = ?
+                  SELECT name as description
+                  FROM products WHERE upc = ?
                 `).get(item.upc) as any;
                 if (product?.description) {
                   description = product.description;
@@ -1409,9 +1409,9 @@ function registerGenerateTestInventory(ipcMain: IpcMain) {
 
       // Get random products from the catalog
       const randomProducts = prodDb.prepare(`
-        SELECT "UPC" as upc, "Item Description" as description, "Bottle Volume (ml)" as size
+        SELECT upc, name as description, volume_metric as size
         FROM products
-        WHERE "UPC" IS NOT NULL
+        WHERE upc IS NOT NULL
         ORDER BY RANDOM()
         LIMIT ?
       `).all(params.itemCount) as Array<{
@@ -1559,8 +1559,8 @@ function registerGenerateTestSales(ipcMain: IpcMain) {
         let description = `Test Item ${item.upc}`;
         try {
           const product = prodDb.prepare(`
-            SELECT "Item Description" as description 
-            FROM products WHERE "UPC" = ?
+            SELECT name as description
+            FROM products WHERE upc = ?
           `).get(item.upc) as { description?: string } | undefined;
           if (product?.description) {
             description = product.description;
@@ -1909,10 +1909,10 @@ function registerInventoryAnalysis(ipcMain: IpcMain) {
       if (productsDb) {
         try {
           const products = productsDb.prepare(`
-            SELECT 
-              "UPC" as upc, 
-              "Category Name" as category,
-              "Item Description" as description
+            SELECT
+              upc,
+              category,
+              name as description
             FROM products
           `).all() as Array<{ upc: string; category: string | null; description: string | null }>;
           
@@ -2141,7 +2141,7 @@ function registerWeeklySummary(ipcMain: IpcMain) {
       if (productsDb) {
         try {
           // Attach products database to inventory database for the query
-          invDb.exec(`ATTACH DATABASE '${path.join(__dirname, "..", "LiquorDatabase.db")}' AS products_db`);
+          invDb.exec(`ATTACH DATABASE '${path.join(__dirname, "..", "ProductCatalog.db")}' AS products_db`);
           
           topCategories = invDb.prepare(`
             SELECT 
@@ -2826,21 +2826,20 @@ ipcMain.handle("add-to-inventory-with-date", async (_, item: InventoryItem & { c
       const prodDb = getProductsDb();
       
       // Get random products from the database using correct column names
+      // Note: cost/price in catalog are just reference values - stores set their own
       const products = prodDb.prepare(`
-        SELECT 
-          "UPC" as upc,
-          "Item Description" as description,
-          "Bottle Volume (ml)" as volume,
-          "State Bottle Cost" as wac,
-          "State Bottle Retail" as retail,
-          "Category Name" as category,
-          "Vendor Name" as subcategory
-        FROM products 
-        WHERE "UPC" IS NOT NULL 
-          AND "Item Description" IS NOT NULL
-          AND "State Bottle Cost" > 0
-          AND "State Bottle Retail" > 0
-        ORDER BY RANDOM() 
+        SELECT
+          upc,
+          name as description,
+          volume_metric as volume,
+          COALESCE(cost, 0) as wac,
+          COALESCE(price, 0) as retail,
+          category,
+          sub_category as subcategory
+        FROM products
+        WHERE upc IS NOT NULL
+          AND name IS NOT NULL
+        ORDER BY RANDOM()
         LIMIT ?
       `).all(count);
       
