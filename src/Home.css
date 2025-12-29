@@ -64,28 +64,32 @@
   background: linear-gradient(90deg, #3B82F6, #2563EB);
 }
 
-/* Grid layout for 5 buttons (admin/manager view) */
-.home-grid-five {
+.databasetools-button::before {
+  background: linear-gradient(90deg, #059669, #047857);
+}
+
+/* Grid layout for 6 buttons (admin/manager view) */
+.home-grid-six {
   grid-template-columns: repeat(3, 1fr);
   max-width: 1000px;
 }
 
-.home-grid-five .home-button {
+.home-grid-six .home-button {
   min-height: 200px;
   padding: 30px;
 }
 
-.home-grid-five .button-icon {
+.home-grid-six .button-icon {
   font-size: 40px;
   margin-bottom: 15px;
 }
 
-.home-grid-five .button-title {
+.home-grid-six .button-title {
   font-size: 22px;
   margin-bottom: 8px;
 }
 
-.home-grid-five .button-description {
+.home-grid-six .button-description {
   font-size: 13px;
 }
 

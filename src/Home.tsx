@@ -7,9 +7,9 @@ interface HomeProps {
 }
 
 const Home: React.FC<HomeProps> = ({ onNavigate, userRole }) => {
-  // Determine if we have 5 buttons (admin/manager with time tracking)
-  const hasFiveButtons = userRole === 'admin' || userRole === 'manager';
-  const gridClassName = hasFiveButtons ? 'home-grid home-grid-five' : 'home-grid';
+  // Determine if we have 6 buttons (admin/manager with time tracking and database tools)
+  const hasSixButtons = userRole === 'admin' || userRole === 'manager';
+  const gridClassName = hasSixButtons ? 'home-grid home-grid-six' : 'home-grid';
   
   return (
     <div className="home-container">
@@ -53,13 +53,24 @@ const Home: React.FC<HomeProps> = ({ onNavigate, userRole }) => {
         )}
 
         {(userRole === 'admin' || userRole === 'manager') && (
-          <button 
+          <button
             className="home-button timetracking-button"
             onClick={() => onNavigate('timetracking')}
           >
             <div className="button-icon">⏰</div>
             <div className="button-title">Time Tracking</div>
             <div className="button-description">Employee Hours & Shifts</div>
+          </button>
+        )}
+
+        {(userRole === 'admin' || userRole === 'manager') && (
+          <button
+            className="home-button databasetools-button"
+            onClick={() => onNavigate('databasetools')}
+          >
+            <div className="button-icon">🗄️</div>
+            <div className="button-title">Database Tools</div>
+            <div className="button-description">Import & Manage Data</div>
           </button>
         )}
       </div>

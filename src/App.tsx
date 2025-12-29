@@ -5,6 +5,7 @@ import InventoryList from "./InventoryList";
 import { TransactionHistory } from "./TransactionHistory";
 import { StoreSetup } from "./StoreSetup";
 import Developer from "./Developer";
+import DatabaseTools from "./DatabaseTools";
 import Reports from "./Reports";
 import Settings from "./Settings";
 import Login from "./Login";
@@ -180,7 +181,7 @@ const LogoutConfirmDialog: React.FC<LogoutConfirmDialogProps> = ({ currentUser, 
 
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<"home" | "scanner" | "inventory" | "transactions" | "reports" | "developer" | "settings" | "timetracking">("home");
+  const [currentView, setCurrentView] = useState<"home" | "scanner" | "inventory" | "transactions" | "reports" | "developer" | "settings" | "timetracking" | "databasetools">("home");
   const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
   const [storeName, setStoreName] = useState<string>("");
   const [inventoryRefreshKey, setInventoryRefreshKey] = useState(0);
@@ -505,6 +506,15 @@ export default function App() {
             <div style={{ padding: '2rem', textAlign: 'center' }}>
               <h2>Access Denied</h2>
               <p>Time tracking is only available to managers and administrators.</p>
+            </div>
+          )
+        ) : currentView === "databasetools" ? (
+          currentUser?.role !== 'cashier' ? (
+            <DatabaseTools />
+          ) : (
+            <div style={{ padding: '2rem', textAlign: 'center' }}>
+              <h2>Access Denied</h2>
+              <p>Database tools are only available to managers and administrators.</p>
             </div>
           )
         ) : (

@@ -1,0 +1,748 @@
+.database-tools-container {
+  padding: 1.5rem;
+  max-width: 95%;
+  margin: 0 auto;
+  height: calc(100vh - 160px);
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.database-tools-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.database-tools-header h2 {
+  margin: 0;
+  color: #333;
+  font-size: 1.5rem;
+}
+
+.database-tools-tabs-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 1rem;
+  border-bottom: 2px solid #e0e0e0;
+  padding-bottom: 0;
+}
+
+.database-tools-tabs {
+  display: flex;
+  gap: 1rem;
+  flex-shrink: 0;
+}
+
+.database-tools-tab {
+  padding: 0.75rem 1.5rem;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: #666;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: -2px;
+}
+
+.database-tools-tab:hover {
+  color: #059669;
+  background: rgba(5, 150, 105, 0.05);
+}
+
+.database-tools-tab.active {
+  color: #059669;
+  border-bottom-color: #059669;
+  background: rgba(5, 150, 105, 0.1);
+  font-weight: 600;
+}
+
+.database-tools-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: -2px;
+}
+
+.column-settings-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(5, 150, 105, 0.3);
+}
+
+.column-settings-btn:hover {
+  background: linear-gradient(135deg, #047857 0%, #059669 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(5, 150, 105, 0.4);
+}
+
+.settings-icon {
+  font-size: 1.1rem;
+}
+
+.database-tools-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  gap: 0.75rem;
+}
+
+/* Refresh button */
+.refresh-btn {
+  padding: 0.5rem 0.75rem;
+  background: #e2e8f0;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.refresh-btn:hover {
+  background: #cbd5e1;
+  transform: rotate(180deg);
+}
+
+.refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Sub-tabs for Liquor, Beverages, Beer */
+.database-sub-tabs {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  padding: 0.25rem;
+  background: #f1f5f9;
+  border-radius: 8px;
+}
+
+.database-sub-tab {
+  padding: 0.6rem 1.25rem;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #64748b;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.database-sub-tab:hover {
+  background: rgba(255, 255, 255, 0.5);
+  color: #334155;
+}
+
+.database-sub-tab.active {
+  background: white;
+  color: #059669;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.sub-tab-count {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.database-sub-tab.active .sub-tab-count {
+  color: #059669;
+}
+
+/* Column Settings Panel */
+.column-settings-panel {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem;
+  flex-shrink: 0;
+}
+
+.column-settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.column-settings-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #333;
+}
+
+.column-settings-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.settings-action-btn {
+  padding: 0.4rem 0.75rem;
+  background: #e2e8f0;
+  color: #475569;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.settings-action-btn:hover {
+  background: #cbd5e1;
+  color: #1e293b;
+}
+
+.settings-close-btn {
+  padding: 0.4rem 0.6rem;
+  background: #fee2e2;
+  color: #dc2626;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.settings-close-btn:hover {
+  background: #fecaca;
+}
+
+.column-checkboxes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.5rem;
+  max-height: 200px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.column-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.85rem;
+  color: #333;
+}
+
+.column-checkbox-label:hover {
+  border-color: #059669;
+  background: #f0fdf4;
+}
+
+.column-checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #059669;
+  cursor: pointer;
+}
+
+.column-checkbox-label span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Database Table */
+.database-table-wrapper {
+  flex: 1;
+  overflow: auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: white;
+  min-height: 0;
+}
+
+.database-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+}
+
+.database-table thead {
+  background: #f5f5f5;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.database-table th {
+  padding: 0.6rem 0.8rem;
+  text-align: center;
+  font-weight: 600;
+  color: #666;
+  font-size: 0.85rem;
+  border-bottom: 2px solid #ddd;
+  white-space: nowrap;
+  background: #f5f5f5;
+}
+
+.database-table td {
+  padding: 0.5rem 0.8rem;
+  border-bottom: 1px solid #eee;
+  color: #333;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  max-width: 250px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.database-table tbody tr:hover {
+  background: #f9f9ff;
+}
+
+.database-loading,
+.database-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 300px;
+  color: #666;
+}
+
+.database-loading .loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e2e8f0;
+  border-top-color: #059669;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.database-empty p {
+  margin: 0.5rem 0;
+  font-size: 1.1rem;
+}
+
+.database-empty-hint {
+  font-size: 0.9rem !important;
+  color: #999;
+}
+
+.load-btn {
+  margin-top: 1rem;
+  padding: 0.6rem 1.5rem;
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.load-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+}
+
+/* Error message */
+.database-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #dc2626;
+  flex-shrink: 0;
+}
+
+.retry-btn {
+  padding: 0.4rem 1rem;
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.retry-btn:hover {
+  background: #b91c1c;
+}
+
+/* Search Bar */
+.database-search-container {
+  flex-shrink: 0;
+  margin-bottom: 0.5rem;
+}
+
+.database-search-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.database-search-wrapper .search-icon {
+  position: absolute;
+  left: 12px;
+  font-size: 1rem;
+  z-index: 1;
+}
+
+.database-search-input {
+  width: 100%;
+  padding: 0.75rem 2.5rem 0.75rem 2.5rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  background: white;
+}
+
+.database-search-input:focus {
+  outline: none;
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+}
+
+.database-search-input::placeholder {
+  color: #94a3b8;
+}
+
+.search-clear-btn {
+  position: absolute;
+  right: 12px;
+  background: #e2e8f0;
+  border: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  color: #64748b;
+  transition: all 0.2s;
+}
+
+.search-clear-btn:hover {
+  background: #cbd5e1;
+  color: #334155;
+}
+
+/* Search Dropdown */
+.database-search-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 2px solid #059669;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.database-search-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.database-search-item:last-child {
+  border-bottom: none;
+}
+
+.database-search-item:hover,
+.database-search-item.selected {
+  background: #f0fdf4;
+}
+
+.database-search-item.highlighted {
+  background: #d1fae5;
+  border-left: 3px solid #059669;
+}
+
+.database-search-item .search-item-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.database-search-item .search-item-name {
+  font-weight: 500;
+  color: #333;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.database-search-item .search-item-brand {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.database-search-item .search-item-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+  flex-shrink: 0;
+  margin-left: 1rem;
+}
+
+.database-search-item .search-item-upc {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  font-family: monospace;
+}
+
+.database-search-item .search-item-price {
+  font-weight: 600;
+  color: #059669;
+  font-size: 0.95rem;
+}
+
+.database-search-no-results {
+  padding: 1rem;
+  text-align: center;
+  color: #64748b;
+  font-style: italic;
+}
+
+/* Highlighted row in table */
+.database-table tbody tr.row-highlighted {
+  background: #d1fae5 !important;
+  animation: highlight-pulse 2s ease-in-out;
+}
+
+@keyframes highlight-pulse {
+  0%, 100% { background: #d1fae5; }
+  50% { background: #a7f3d0; }
+}
+
+/* Footer and Pagination */
+.database-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  font-size: 0.85rem;
+  color: #64748b;
+  flex-shrink: 0;
+  gap: 1rem;
+}
+
+.pagination-info {
+  flex-shrink: 0;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.pagination-btn {
+  padding: 0.4rem 0.6rem;
+  background: #e2e8f0;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #475569;
+  font-weight: 600;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: #cbd5e1;
+  color: #1e293b;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pagination-pages {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 0 0.5rem;
+}
+
+.pagination-page {
+  padding: 0.4rem 0.7rem;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #475569;
+  min-width: 32px;
+}
+
+.pagination-page:hover {
+  border-color: #059669;
+  color: #059669;
+}
+
+.pagination-page.active {
+  background: #059669;
+  border-color: #059669;
+  color: white;
+  font-weight: 600;
+}
+
+.pagination-ellipsis {
+  padding: 0 0.3rem;
+  color: #94a3b8;
+}
+
+/* Custom scrollbar for search dropdown */
+.database-search-dropdown::-webkit-scrollbar {
+  width: 8px;
+}
+
+.database-search-dropdown::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.database-search-dropdown::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 4px;
+}
+
+.database-search-dropdown::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Custom scrollbar for settings panel */
+.column-checkboxes::-webkit-scrollbar {
+  width: 6px;
+}
+
+.column-checkboxes::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.column-checkboxes::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+.column-checkboxes::-webkit-scrollbar-thumb:hover {
+  background: #aaa;
+}
+
+/* Custom scrollbar for the table */
+.database-table-wrapper::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.database-table-wrapper::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.database-table-wrapper::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.database-table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+@media (max-width: 768px) {
+  .database-tools-container {
+    height: calc(100vh - 150px);
+  }
+
+  .column-checkboxes {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+
+  .column-settings-header {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+
+  .column-settings-actions {
+    flex-wrap: wrap;
+  }
+
+  .database-footer {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  .pagination-controls {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .pagination-pages {
+    order: 1;
+    width: 100%;
+    justify-content: center;
+    margin: 0.5rem 0;
+  }
+}

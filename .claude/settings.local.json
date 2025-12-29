@@ -37,7 +37,9 @@
       "Bash(git checkout:*)",
       "Bash(pandoc:*)",
       "Bash(npm run build:*)",
-      "Bash(del /S /Q \"%LOCALAPPDATA%\\electron-builder\\Cache\\winCodeSign\")"
+      "Bash(del /S /Q \"%LOCALAPPDATA%\\electron-builder\\Cache\\winCodeSign\")",
+      "Bash(findstr:*)",
+      "Bash(more:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

@@ -3782,6 +3782,60 @@ function registerTimeClock(ipcMain: IpcMain) {
       };
     }
   });
+
+  // Read master inventory databases for Database Tools
+  ipcMain.handle("read-database-excel", async (_event, fileType: 'liquor' | 'beverages' | 'beer') => {
+    try {
+      const fileMap: Record<string, { db: string; table: string }> = {
+        'liquor': { db: 'MasterLiquor.db', table: 'liquor' },
+        'beverages': { db: 'MasterBeverages.db', table: 'beverages' },
+        'beer': { db: 'MasterBeer.db', table: 'beer' }
+      };
+
+      const fileInfo = fileMap[fileType];
+      if (!fileInfo) {
+        return { success: false, error: `Unknown file type: ${fileType}` };
+      }
+
+      // Use process.cwd() for development path
+      const dbPath = path.join(process.cwd(), 'INVENTORY DATABASE', fileInfo.db);
+
+      console.log(`Looking for database at: ${dbPath}`);
+
+      if (!fs.existsSync(dbPath)) {
+        console.log('Database not found at:', dbPath);
+        return {
+          success: false,
+          error: `Database not found: ${fileInfo.db}. Please run the conversion script first.`
+        };
+      }
+
+      console.log(`Reading database: ${dbPath}`);
+
+      // Open the database in read-only mode
+      const db = new Database(dbPath, { readonly: true });
+
+      // Get all items from the table
+      const items = db.prepare(`SELECT * FROM ${fileInfo.table}`).all();
+
+      db.close();
+
+      console.log(`Loaded ${items.length} items from ${fileInfo.db}`);
+
+      return {
+        success: true,
+        data: items,
+        count: items.length,
+        fileType
+      };
+    } catch (error) {
+      console.error('Error reading database:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to read database'
+      };
+    }
+  });
 }
 
 // Cleanup on app quit

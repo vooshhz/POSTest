@@ -641,6 +641,12 @@ interface InventoryAPI {
     success: boolean;
     error?: string;
   }>;
+  // Database Tools
+  readDatabaseExcel: (fileType: 'liquor' | 'beverages' | 'beer') => Promise<{
+    success: boolean;
+    data?: Array<Record<string, string | number | null>>;
+    error?: string;
+  }>;
 }
 
 // Expose protected methods to the renderer
@@ -698,7 +704,9 @@ const api: InventoryAPI = {
   initializeTill: (denominations) => ipcRenderer.invoke("initialize-till", denominations),
   closeTill: () => ipcRenderer.invoke("close-till"),
   resetTill: () => ipcRenderer.invoke("reset-till"),
-  updateTillCash: (amount, isReturn) => ipcRenderer.invoke("update-till-cash", amount, isReturn)
+  updateTillCash: (amount, isReturn) => ipcRenderer.invoke("update-till-cash", amount, isReturn),
+  // Database Tools
+  readDatabaseExcel: (fileType: 'liquor' | 'beverages' | 'beer') => ipcRenderer.invoke("read-database-excel", fileType)
 };
 
 contextBridge.exposeInMainWorld("api", api);
